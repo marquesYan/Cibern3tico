@@ -9,6 +9,9 @@ namespace Linux
     {
         Rect _window;
         TextEditor _textEditor;
+        protected string InputBuffer;
+        protected Vector2 InputBufferSize;
+
         float _currentOpenTerm;
         float _openTarget;
         Vector2 _scrollPosition;
@@ -58,7 +61,16 @@ namespace Linux
             GUI.FocusControl("command_text_field");
         }
 
-        public void Initialize() {
+        public void Input(string label) {
+            InputBuffer = label;
+            InputBufferSize = InputStyle.CalcSize(new GUIContent(label));
+        }
+
+        public void ClearInput() {
+            InputBuffer = null;
+        }
+
+        void Initialize() {
             if (ConsoleFont == null) {
                 ConsoleFont = Font.CreateDynamicFontFromOSFont("Courier New", 16);
                 Debug.LogWarning("Command Console Warning: Please assign a font.");
@@ -149,10 +161,9 @@ namespace Linux
 
             GUILayout.BeginHorizontal();
 
-            // if (draw_shell) {
-            //     if (InputCaret != "") {
-            //         GUILayout.Label(InputCaret, InputStyle, GUILayout.Width(ConsoleFont.fontSize));
-            //     }
+            if (InputBuffer != null) {
+                GUILayout.Label(InputBuffer, InputStyle, GUILayout.Width(InputBufferSize.x));
+            }
 
             GUI.SetNextControlName("command_text_field");
             LastTextInput = GUILayout.TextField(LastTextInput, InputStyle);
