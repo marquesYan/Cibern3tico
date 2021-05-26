@@ -1,6 +1,4 @@
 using UnityEngine;
-using System.IO;
-using System.Threading;
 using System.Text;
 using System.Collections;
 using UnityEngine.Assertions;
@@ -60,12 +58,13 @@ namespace CommandTerminal
         float current_open_t;
         float open_target;
         float real_window_size;
-        string command_text;
+        public string command_text;
         string cached_command_text;
         protected Vector2 scroll_position;
         GUIStyle window_style;
         GUIStyle label_style;
         GUIStyle input_style;
+
 
         public static CommandLog Buffer { get; private set; }
         public static CommandShell Shell { get; private set; }
@@ -301,8 +300,14 @@ namespace CommandTerminal
 
         void DrawLogs() {
             foreach (var log in Buffer.Logs) {
-                label_style.normal.textColor = GetLogColor(log.type);
-                GUILayout.Label(log.message, label_style);
+                switch (log.message) {
+                    // case "^L": ScrollAllDown(); break;
+                    // case "^S": Buffer.Clear(); break;
+                    default:
+                        label_style.normal.textColor = GetLogColor(log.type);
+                        GUILayout.Label(log.message, label_style);
+                        break;
+                }
             }
         }
 
@@ -341,7 +346,7 @@ namespace CommandTerminal
             window = new Rect(0, current_open_t - real_window_size, Screen.width, real_window_size);
         }
 
-        void EnterCommand() {
+        protected virtual void EnterCommand() {
             Log(TerminalLogType.Input, "{0}", command_text);
             Shell.RunCommand(command_text);
             History.Push(command_text);
