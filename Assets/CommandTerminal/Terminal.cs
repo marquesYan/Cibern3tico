@@ -108,7 +108,7 @@ namespace CommandTerminal
                         return;
                     }
                     real_window_size = open_target;
-                    scroll_position.y = int.MaxValue;
+                    ScrollAllDown();
                     break;
                 }
                 case TerminalState.OpenFull:
@@ -120,6 +120,10 @@ namespace CommandTerminal
             }
 
             state = new_state;
+        }
+
+        protected void ScrollAllDown() {
+            scroll_position.y = int.MaxValue;
         }
 
         public void ToggleState(TerminalState new_state) {
@@ -347,7 +351,7 @@ namespace CommandTerminal
             }
 
             command_text = "";
-            scroll_position.y = int.MaxValue;
+            ScrollAllDown();
         }
 
         void CompleteCommand() {
@@ -360,7 +364,7 @@ namespace CommandTerminal
             } else if (completion_length > 1) {
                 // Print possible completions
                 Log(string.Join("    ", completion_buffer));
-                scroll_position.y = int.MaxValue;
+                ScrollAllDown();
             }
         }
 
@@ -374,7 +378,7 @@ namespace CommandTerminal
 
         void HandleUnityLog(string message, string stack_trace, LogType type) {
             Buffer.HandleLog(message, stack_trace, (TerminalLogType)type);
-            scroll_position.y = int.MaxValue;
+            ScrollAllDown();
         }
 
         Color GetLogColor(TerminalLogType type) {

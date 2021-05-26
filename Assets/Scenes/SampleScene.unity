@@ -266,4 +266,5 @@ MonoBehaviour:
   InputColor: {r: 0, g: 1, b: 1, a: 1}
   WarningColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   ErrorColor: {r: 1, g: 0, b: 0, a: 1}
-  boot_delay: 0.00001
+  boot_delay: 0.000496
+  hostname: hacker1
