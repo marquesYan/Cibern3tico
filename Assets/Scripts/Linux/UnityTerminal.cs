@@ -47,6 +47,31 @@ namespace Linux
             GUILayout.Label(message, LabelStyle);
         }
 
+        protected override void OnEventRecv()
+        {   
+            base.OnEventRecv();
+            // if (Event.current.Equals(Event.KeyboardEvent("return"))) {
+            //     EnterCommand();
+            // } else if (Event.current.Equals(Event.KeyboardEvent("up"))) {
+            //     command_text = History.Previous();
+            //     move_cursor = true;
+            // } else if (Event.current.Equals(Event.KeyboardEvent("down"))) {
+            //     command_text = History.Next();
+            // } else if (Event.current.Equals(Event.KeyboardEvent(ToggleHotkey))) {
+            //     ToggleState(TerminalState.OpenSmall);
+            // } else if (Event.current.Equals(Event.KeyboardEvent(ToggleFullHotkey))) {
+            //     ToggleState(TerminalState.OpenFull);
+            // } else if (Event.current.Equals(Event.KeyboardEvent("tab"))) {
+            //     CompleteCommand();
+            //     move_cursor = true; // Wait till next draw call
+            // }
+        }
+
+        protected override bool HasReturnEvent()
+        {
+            return ((Event)LastEvent).Equals(Event.KeyboardEvent("return"));
+        }
+
         public override void MoveCursorToEnd() {
             if (_textEditor == null) {
                 _textEditor = (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
@@ -61,9 +86,16 @@ namespace Linux
             GUI.FocusControl("command_text_field");
         }
 
-        public void Input(string label) {
+        public void Input(string label, System.Action<string> onRead) {
             InputBuffer = label;
             InputBufferSize = InputStyle.CalcSize(new GUIContent(label));
+
+            System.Action<string> InputReadWrapper = textInput => {
+                onRead(LastTextInput);
+                LastTextInput = "";
+            };
+
+            SubscribeRead(InputReadWrapper);
         }
 
         public void ClearInput() {
@@ -142,22 +174,6 @@ namespace Linux
             GUILayout.EndScrollView();
 
             LastEvent = Event.current;
-
-            // if (Event.current.Equals(Event.KeyboardEvent("return"))) {
-            //     EnterCommand();
-            // } else if (Event.current.Equals(Event.KeyboardEvent("up"))) {
-            //     command_text = History.Previous();
-            //     move_cursor = true;
-            // } else if (Event.current.Equals(Event.KeyboardEvent("down"))) {
-            //     command_text = History.Next();
-            // } else if (Event.current.Equals(Event.KeyboardEvent(ToggleHotkey))) {
-            //     ToggleState(TerminalState.OpenSmall);
-            // } else if (Event.current.Equals(Event.KeyboardEvent(ToggleFullHotkey))) {
-            //     ToggleState(TerminalState.OpenFull);
-            // } else if (Event.current.Equals(Event.KeyboardEvent("tab"))) {
-            //     CompleteCommand();
-            //     move_cursor = true; // Wait till next draw call
-            // }
 
             GUILayout.BeginHorizontal();
 

@@ -84,7 +84,18 @@ namespace Linux
             Terminal.Write("Fedora 32 (Thirty Two)");
             Terminal.Write("Kernel " + kernel_version + " on an x86_64 (tty)");
             Terminal.Write("");
-            Terminal.Input("hacker1.localdomain login: ");
+            
+            Terminal.Input("hacker1.localdomain login:", OnLogin);
+        }
+
+        void OnLogin(string login) {
+            Debug.Log("Login: " + login);
+
+            Terminal.Input("Password:", OnPassword);
+        }
+
+        void OnPassword(string password) {
+            Debug.Log("Password: " + password);
         }
 
         void MakeLinuxDefaultDirectories() {

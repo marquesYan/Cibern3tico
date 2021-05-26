@@ -1,6 +1,7 @@
+using System.IO;
 using System.Text;
+using System.Threading;
 using System.Collections;
-using UnityEngine;
 
 namespace Linux.PseudoTerminal
 {
@@ -12,14 +13,24 @@ namespace Linux.PseudoTerminal
     {
         protected BufferedStreamWriter Buffer;
 
+        protected event System.Action<string> OnEOL;
+
         bool _moveCursorToEnd = false;
         int _moveYAxis = -1;
         int _moveXAxis = -1;
 
+        object _lastEvent;
+
         public bool IsFirstDraw { get; protected set; }
 
-        public Event LastEvent { get; protected set; }
-        public string LastTextInput { get; protected set; }
+        public object LastEvent { 
+            get { return _lastEvent; }
+            protected set {
+                _lastEvent = value;
+                OnEventRecv(); 
+            }
+        }
+        protected string LastTextInput { get; set; }
 
         public VirtualTerminal(int bufferSize) {
             Buffer = new BufferedStreamWriter(bufferSize);
@@ -55,16 +66,32 @@ namespace Linux.PseudoTerminal
         }
 
         public string Read() {
-            return "from vt";
+            return LastTextInput;
+        }
+
+        public void SubscribeRead(System.Action<string> onEol) {
+            OnEOL = onEol;
         }
 
         protected abstract void MoveYAxis(int position);
         protected abstract void MoveXAxis(int position);
         protected abstract void DrawLine(string message);
 
+        protected abstract bool HasReturnEvent();
+
         public abstract void MoveCursorToEnd();
 
         protected virtual void OnFirstDraw() { }
+
+        protected virtual void OnEventRecv() { 
+            if (HasReturnEvent() && OnEOL != null) {
+                System.Action<string> localAction = OnEOL;
+
+                OnEOL = null;
+
+                localAction(LastTextInput);
+            }
+        }
 
         protected void DrawTerm() {
             FlushBuffer();
