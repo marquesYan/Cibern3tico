@@ -54,16 +54,15 @@ namespace CommandTerminal
         TextEditor editor_state;
         bool input_fix;
         bool move_cursor;
-        bool initial_open; // Used to focus on TextField when console opens
+        protected bool initial_open; // Used to focus on TextField when console opens
+        protected bool draw_shell = true; // Used to draw shell and focus command text
         Rect window;
         float current_open_t;
         float open_target;
         float real_window_size;
         string command_text;
         string cached_command_text;
-        bool loading_boot_msg = false;
-        bool focus_command_text = false;
-        Vector2 scroll_position;
+        protected Vector2 scroll_position;
         GUIStyle window_style;
         GUIStyle label_style;
         GUIStyle input_style;
@@ -145,7 +144,7 @@ namespace CommandTerminal
             Application.logMessageReceived -= HandleUnityLog;
         }
 
-        void Start() {
+        protected void Start() {
             if (ConsoleFont == null) {
                 ConsoleFont = Font.CreateDynamicFontFromOSFont("Courier New", 16);
                 Debug.LogWarning("Command Console Warning: Please assign a font.");
@@ -173,32 +172,7 @@ namespace CommandTerminal
             SetState(TerminalState.OpenFull);
         }
 
-        IEnumerator LoadBootMessage() {
-            string path = Path.Combine(Application.dataPath, "Resources", "boot.txt");
-            string[] lines = File.ReadAllLines(path);
-
-            float seconds;
-            
-            for(int i = 0; i < lines.Length; i++) {
-                string line = lines[i];
-                Log(line);
-
-                if (i < 5) {
-                    seconds = 1f;
-                } else {
-                    seconds = 0.002f;
-                }
-
-                scroll_position.y = int.MaxValue;
-
-                // scroll_position.y = int.MaxValue;
-                yield return new WaitForSeconds(seconds);
-            }
-
-            window = null;
-        }
-
-        void OnGUI() {
+        protected void OnGUI() {
             // if (Event.current.Equals(Event.KeyboardEvent(ToggleHotkey))) {
             //     SetState(TerminalState.OpenSmall);
             //     initial_open = true;
@@ -217,11 +191,6 @@ namespace CommandTerminal
 
             HandleOpenness();
             window = GUILayout.Window(88, window, DrawConsole, "", window_style);
-
-            if (initial_open && ! loading_boot_msg) {
-                loading_boot_msg = true;
-                StartCoroutine(LoadBootMessage());
-            }
         }
 
         void SetupWindow() {
@@ -299,23 +268,23 @@ namespace CommandTerminal
 
             GUILayout.BeginHorizontal();
 
-            if (! loading_boot_msg) {
-                GUI.SetNextControlName("command_text_field");
-                command_text = GUILayout.TextField(command_text, input_style);
-            
+            if (draw_shell) {
                 if (InputCaret != "") {
                     GUILayout.Label(InputCaret, input_style, GUILayout.Width(ConsoleFont.fontSize));
+                }
+
+                GUI.SetNextControlName("command_text_field");
+                command_text = GUILayout.TextField(command_text, input_style);
+
+                if (initial_open) {
+                    GUI.FocusControl("command_text_field");
+                    initial_open = false;
                 }
             }
 
             if (input_fix && command_text.Length > 0) {
                 command_text = cached_command_text; // Otherwise the TextField picks up the ToggleHotkey character event
                 input_fix = false;                  // Prevents checking string Length every draw call
-            }
-
-            if (focus_command_text) {
-                GUI.FocusControl("command_text_field");
-                focus_command_text = false;
             }
 
             if (ShowGUIButtons && GUILayout.Button("| run", input_style, GUILayout.Width(Screen.width / 10))) {
