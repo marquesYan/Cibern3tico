@@ -3,18 +3,6 @@ using System.Collections.Generic;
 
 namespace Linux.FileSystem
 {
-    public enum Perms {
-        W = 0b_0000_0100,
-        R = 0b_0000_0010,
-        X = 0b_0000_0001,
-
-        NONE = 0b_0000_0000,
-
-        ALL = Perms.W | Perms.R | Perms.X,
-        RX = Perms.R | Perms.X,
-        RW = Perms.R | Perms.W,
-    }
-
     public abstract class AbstractFile {
         protected AbstractFile(string absolute_path, Perms[] permissions) {
             Path = absolute_path;

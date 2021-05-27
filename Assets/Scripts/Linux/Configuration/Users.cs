@@ -31,47 +31,27 @@ namespace Linux.Configuration
         }
     }
 
-    public class UserDatabase {
-        List<User> Users { get; set; }
+    public class UserDatabase : FileDatabase<User> {
 
-        FileTree Fs { get; set; }
+        public UserDatabase(FileTree fs) : base(fs) { }
 
-        public UserDatabase(FileTree fs) { 
-            Fs = fs;
-            Users = new List<User>();
-
-            LoadFromFs();
-        }
-
-        public void Add(User user) {
+        public override void Add(User user) {
             if (LookupUid(user.Uid).Equals(null)) {
                 throw new System.ArgumentException("uid already exists");
             }
-
-            Users.Add(user);
 
             DataSource()?.Append(new string[] { user.ToString() });
         }
 
         public User LookupUid(int uid) {
-            return Users.Find(u => u.Uid == uid);
+            return LoadFromFs().Find(u => u.Uid == uid);
         }
 
-        void LoadFromFs() {
-            string[] lines = ReadLines();
-
-            foreach (string line in lines) {
-                string[] tokens = line.Split(':');
-
-                if (tokens.Length != 7) {
-                    continue;
-                }
-
-                Add(UserFromTokens(tokens));
+        protected override User ItemFromTokens(string[] tokens) {
+            if (tokens.Length != 7) {
+                return null;
             }
-        }
 
-        User UserFromTokens(string[] tokens) {
             string login = tokens[0];
 
             if (login.Length == 0) {
@@ -96,12 +76,8 @@ namespace Linux.Configuration
             return new User(login, uid, gid, description, homeDir, shell);
         }
 
-        AbstractFile DataSource() {
+        public override AbstractFile DataSource() {
             return Fs.Lookup("/etc/passwd");
-        }
-
-        string[] ReadLines() {
-            return DataSource()?.Read().Split('\n');
         }
     }
 }
