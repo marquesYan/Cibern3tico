@@ -1,9 +1,12 @@
+using System.Threading;
 using System.IO;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Linux.FileSystem;
 using Linux.Utilities;
 using Linux.Devices;
+using Linux.Devices.Input;
 using Linux;
 
 namespace Linux
@@ -35,6 +38,7 @@ namespace Linux
                 () => {
                     Debug.Log("terminal is ready");
                     StartCoroutine(Initialize());
+                    Init();
                 }
             );
 
@@ -52,8 +56,35 @@ namespace Linux
             MakeLinuxDev();
         }
 
+        void Init() {
+            Thread initThread = new Thread(new ThreadStart(Init2));
+            initThread.Start();
+
+            // Thread init3Thread = new Thread(new ThreadStart(Init3));
+            // init3Thread.Start();
+        }
+
+        void Init2() {
+            AbstractFile kbEvent = Fs.Lookup("/dev/input/event0");
+
+            while (true) {
+                Debug.Log("recv input from init2: " + kbEvent.Read());
+            }
+        }
+
+        // void Init3() {
+        //     EventFile kbEvent = Fs.Lookup("/dev/input/event0");
+
+
+
+        //     while (true) {
+        //         Debug.log("recv input from init3: " + kbEvent.Read());
+        //     }
+        // }
+
         IEnumerator Initialize() {
             Debug.Log("Initilizing Subsystem");
+            yield return new WaitForSeconds(1);
             yield return StartCoroutine(LoadLinuxSystem());
             yield return StartCoroutine(LoadLoginSystem());
         }
@@ -159,10 +190,31 @@ namespace Linux
         void MakeLinuxDev() {
             LinuxDirectory devDirectory = (LinuxDirectory) Fs.Lookup("/dev");
 
+            // Create Input Devices directory
+            LinuxDirectory inputDevDirectory = new LinuxDirectory(
+                "/dev/input",
+                0, 0,
+                Perm.FromInt(7, 5, 5)
+            );
+
+            Fs.AddFrom(devDirectory, inputDevDirectory);
+
+            EventFile kbEventFile = new EventFile(
+                "/dev/input/event0",
+                0, 0, 
+                Perm.FromInt(6, 6, 0)
+            );
+
+            Fs.AddFrom(inputDevDirectory, kbEventFile);
+
+            Debug.Log("created kb input: " + Fs.Lookup("/dev/input/event0").Name);
+
+            // Create TTY
             int devPerm = Perm.FromInt(5, 2, 0);
 
             AbstractFile[] devices = new AbstractFile[] {
                 new TtyDevice(Terminal, "/dev/tty", 0, 0, Perm.FromInt(6, 6, 6)),
+                new ConsoleDevice(FakeBootFile(), "/dev/console", 0, 0, Perm.FromInt(6, 0, 0)),
                 new ConsoleDevice(FakeBootFile(), "/dev/console", 0, 0, Perm.FromInt(6, 0, 0)),
             };
 

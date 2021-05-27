@@ -183,7 +183,7 @@ namespace Linux
             }
 
             GUI.SetNextControlName("command_text_field");
-            LastTextInput = GUILayout.TextField(LastTextInput, InputStyle);
+            // LastTextInput = GUILayout.TextField(LastTextInput, InputStyle);
 
             // if (input_fix && command_text.Length > 0) {
             //     command_text = cached_command_text; // Otherwise the TextField picks up the ToggleHotkey character event
