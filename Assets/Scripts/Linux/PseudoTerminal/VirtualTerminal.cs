@@ -11,9 +11,10 @@ namespace Linux.PseudoTerminal
 
     public abstract class VirtualTerminal
     {
+        event System.Action OnFirstDraw;
         protected BufferedStreamWriter Buffer;
 
-        protected event System.Action<string> OnEOL;
+        protected event System.Action<string> OnEndOfLine;
 
         bool _moveCursorToEnd = false;
         int _moveYAxis = -1;
@@ -70,7 +71,11 @@ namespace Linux.PseudoTerminal
         }
 
         public void SubscribeRead(System.Action<string> onEol) {
-            OnEOL = onEol;
+            OnEndOfLine = onEol;
+        }
+
+        public void SubscribeFirstDraw(System.Action onFirstDraw) {
+            OnFirstDraw += onFirstDraw;
         }
 
         protected abstract void MoveYAxis(int position);
@@ -81,13 +86,11 @@ namespace Linux.PseudoTerminal
 
         public abstract void MoveCursorToEnd();
 
-        protected virtual void OnFirstDraw() { }
-
         protected virtual void OnEventRecv() { 
-            if (HasReturnEvent() && OnEOL != null) {
-                System.Action<string> localAction = OnEOL;
+            if (HasReturnEvent() && OnEndOfLine != null) {
+                System.Action<string> localAction = OnEndOfLine;
 
-                OnEOL = null;
+                OnEndOfLine = null;
 
                 localAction(LastTextInput);
             }

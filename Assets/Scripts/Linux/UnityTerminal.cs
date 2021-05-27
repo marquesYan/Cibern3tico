@@ -80,9 +80,8 @@ namespace Linux
             _textEditor.MoveCursorToPosition(new Vector2(999, 999));
         }
 
-        protected override void OnFirstDraw()
+        void FocusTextField()
         {
-            base.OnFirstDraw();
             GUI.FocusControl("command_text_field");
         }
 
@@ -113,6 +112,8 @@ namespace Linux
             SetupWindow();
             SetupInput();
             SetupLabels();
+
+            SubscribeFirstDraw(FocusTextField);
 
             RealWindowSize = Screen.height * MaxHeight;
             _openTarget = RealWindowSize;
