@@ -10,6 +10,11 @@ namespace Linux.Utilities {
             return -1;
         }
 
+        public override int Append(string[] data) {
+            throw new System.InvalidOperationException("Attempt to write in special file");
+            return -1;
+        }
+
         public override string Read() {
             return "Binary data.";
         }

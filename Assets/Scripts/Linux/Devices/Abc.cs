@@ -11,6 +11,11 @@ namespace Linux.Devices {
             return -1;
         }
 
+        public override int Append(string[] data) {
+            throw new System.InvalidOperationException("Attempt to append in special file");
+            return -1;
+        }
+
         public override int Execute(string[] arguments) {
             throw new System.InvalidOperationException("Attempt to execute in special file");
             return -1;

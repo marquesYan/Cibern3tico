@@ -42,6 +42,7 @@ namespace Linux.FileSystem
 
         abstract public int Write(string[] data);
         abstract public string Read();
+        abstract public int Append(string[] data);
         abstract public int Execute(string[] arguments);
     }
 
@@ -55,6 +56,11 @@ namespace Linux.FileSystem
         }
 
         public override int Write(string[] data) {
+            ThrowIsDir();
+            return -1;
+        }
+
+        public override int Append(string[] data) {
             ThrowIsDir();
             return -1;
         }
