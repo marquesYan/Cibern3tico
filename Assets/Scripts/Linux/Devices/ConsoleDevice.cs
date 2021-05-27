@@ -4,9 +4,15 @@ using Linux;
 
 namespace Linux.Devices {
     public class ConsoleDevice : AbstractDevice {
-        public string BootFile;
+        string BootFile { get; set; }
 
-        public ConsoleDevice(string bootFile, string path, Perms[] permissions) : base(path, permissions) {
+        public ConsoleDevice(
+            string bootFile, 
+            string absolutePath, 
+            int uid,
+            int gid, 
+            int permission
+        ) : base(absolutePath, uid, gid, permission) {
             BootFile = bootFile;
         }
 

@@ -4,7 +4,12 @@ using Linux;
 
 namespace Linux.Devices {
     public abstract class AbstractDevice : AbstractFile {
-        public AbstractDevice(string path, Perms[] permissions) : base(path, permissions) { }
+        public AbstractDevice(
+            string absolutePath, 
+            int uid,
+            int gid,
+            int permission
+        ) : base(absolutePath, uid, gid, permission) { }
 
         public override int Write(string[] data) {
             throw new System.InvalidOperationException("Attempt to write in special file");

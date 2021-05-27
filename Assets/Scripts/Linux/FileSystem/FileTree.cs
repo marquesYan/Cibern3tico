@@ -5,21 +5,22 @@ using System.Collections;
 namespace Linux.FileSystem
 {
     public class FileTree {
-        LinuxDirectory root = new LinuxDirectory("/", 
-                                      new Perms[3] { Perms.ALL, Perms.RX, Perms.RX });
+        LinuxDirectory Root { get; set; }
 
-        char separator = '/';
+        char _separator = '/';
 
-        public FileTree() {
-            root.Parent = root;
+        public FileTree(LinuxDirectory root) {
+            Root = root;
+
+            Root.Parent = Root;
         }
 
         public void Add(AbstractFile file) {
-            AddFrom(root, file);
+            AddFrom(Root, file);
         }
 
         public void Remove(AbstractFile file) {
-            RemoveFrom(root, file);
+            RemoveFrom(Root, file);
         }
 
         public void AddFrom(LinuxDirectory parent, AbstractFile file) {
@@ -33,17 +34,17 @@ namespace Linux.FileSystem
         }
 
         public AbstractFile Lookup(string file) {
-            if (! file.StartsWith($"{separator}")) {
+            if (! file.StartsWith($"{_separator}")) {
                 throw new System.ArgumentException("File must be an absolute path");
             }
 
-            if (file == root.Name) {
-                return root;
+            if (file == Root.Name) {
+                return Root;
             }
 
-            string[] paths = file.Split(separator);
+            string[] paths = file.Split(_separator);
 
-            AbstractFile needle = root;
+            AbstractFile needle = Root;
 
             foreach (string path in paths) {
                 if (path == "") {

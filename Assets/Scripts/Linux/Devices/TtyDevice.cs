@@ -4,9 +4,15 @@ using Linux;
 
 namespace Linux.Devices {
     public class TtyDevice : AbstractDevice {
-        VirtualTerminal Terminal;
+        VirtualTerminal Terminal { get; set; }
 
-        public TtyDevice(VirtualTerminal vt, string path, Perms[] permissions) : base(path, permissions) {
+        public TtyDevice(
+            VirtualTerminal vt, 
+            string absolutePath, 
+            int uid,
+            int gid,
+            int permission
+        ) : base(absolutePath, uid, gid, permission) {
             Terminal = vt;
         }
 
@@ -23,6 +29,5 @@ namespace Linux.Devices {
         public override string Read() {
             return Terminal.Read();
         }
-        
     }
 }

@@ -4,10 +4,17 @@ using System.Collections.Generic;
 namespace Linux.FileSystem
 {
     public abstract class AbstractFile {
-        protected AbstractFile(string absolute_path, Perms[] permissions) {
-            Path = absolute_path;
-            Name = System.IO.Path.GetFileName(absolute_path);
-            Permissions = permissions;
+        public AbstractFile(
+            string absolutePath, 
+            int uid, 
+            int gid,
+            int permission
+        ) {
+            Path = absolutePath;
+            Name = System.IO.Path.GetFileName(absolutePath);
+            Uid = uid;
+            Gid = gid;
+            Perm = permission;
         }
 
         public bool IsDirectory() {
@@ -22,7 +29,9 @@ namespace Linux.FileSystem
 
         public string Path { get; set; }
 
-        public Perms[] Permissions { get; set; }
+        public int Perm { get; set; }
+        public int Uid { get; set; }
+        public int Gid { get; set; }
 
         public List<AbstractFile> Childs { get; set; }
 
@@ -39,7 +48,12 @@ namespace Linux.FileSystem
             public FileIsADirectoryException(string message) : base(message) { }
         }
 
-        public LinuxDirectory(string path, Perms[] permissions) : base(path, permissions) {
+        public LinuxDirectory(
+            string absolutePath, 
+            int uid,
+            int gid, 
+            int permission
+        ) : base(absolutePath, uid, gid, permission) {
             Childs = new List<AbstractFile>();
         }
 
