@@ -1,7 +1,9 @@
 using System.Text;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UIElements;
 using Linux.PseudoTerminal;
+using Linux.Devices.Input;
 
 namespace Linux
 {
@@ -30,7 +32,10 @@ namespace Linux
         public float InputContrast = 1f;
         public float RealWindowSize { get; protected set; }
 
-        public UnityTerminal(int bufferSize) : base(bufferSize) {
+        public UnityTerminal(
+            int bufferSize, 
+            EventFile keyboardEvent
+        ) : base(bufferSize, keyboardEvent) {
             Initialize();
         }
 
@@ -47,9 +52,8 @@ namespace Linux
             GUILayout.Label(message, LabelStyle);
         }
 
-        protected override void OnEventRecv()
+        protected void OnEventRecv()
         {   
-            base.OnEventRecv();
             // if (Event.current.Equals(Event.KeyboardEvent("return"))) {
             //     EnterCommand();
             // } else if (Event.current.Equals(Event.KeyboardEvent("up"))) {
@@ -85,16 +89,11 @@ namespace Linux
             GUI.FocusControl("command_text_field");
         }
 
-        public void Input(string label, System.Action<string> onRead) {
+        public string Input(string label) {
             InputBuffer = label;
-            InputBufferSize = InputStyle.CalcSize(new GUIContent(label));
+            // InputBufferSize = InputStyle.CalcSize(new GUIContent(label));
 
-            System.Action<string> InputReadWrapper = textInput => {
-                onRead(LastTextInput);
-                LastTextInput = "";
-            };
-
-            SubscribeRead(InputReadWrapper);
+            return ReadLine();
         }
 
         public void ClearInput() {
@@ -106,8 +105,6 @@ namespace Linux
                 ConsoleFont = Font.CreateDynamicFontFromOSFont("Courier New", 16);
                 Debug.LogWarning("Command Console Warning: Please assign a font.");
             }
-
-            LastTextInput = "";
 
             SetupWindow();
             SetupInput();
@@ -174,16 +171,19 @@ namespace Linux
             DrawTerm();
             GUILayout.EndScrollView();
 
+            MoveCursorToEnd();
+
             LastEvent = Event.current;
 
             GUILayout.BeginHorizontal();
 
             if (InputBuffer != null) {
-                GUILayout.Label(InputBuffer, InputStyle, GUILayout.Width(InputBufferSize.x));
+                // GUILayout.Label(InputBuffer, InputStyle, GUILayout.Width(InputBufferSize.x));
+                GUILayout.Label(InputBuffer, InputStyle, GUILayout.Width(50f));
             }
 
             GUI.SetNextControlName("command_text_field");
-            // LastTextInput = GUILayout.TextField(LastTextInput, InputStyle);
+            GUILayout.Label(LastTextInput + '|', InputStyle, GUILayout.Width(500f));
 
             // if (input_fix && command_text.Length > 0) {
             //     command_text = cached_command_text; // Otherwise the TextField picks up the ToggleHotkey character event

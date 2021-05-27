@@ -1,7 +1,8 @@
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Collections;
+using System.Collections.Concurrent;
+using Linux.Devices.Input;
 
 namespace Linux.PseudoTerminal
 {
@@ -16,6 +17,8 @@ namespace Linux.PseudoTerminal
 
         protected event System.Action<string> OnEndOfLine;
 
+        protected EventFile KeyboardEvent;
+
         bool _moveCursorToEnd = false;
         int _moveYAxis = -1;
         int _moveXAxis = -1;
@@ -23,6 +26,7 @@ namespace Linux.PseudoTerminal
         object _lastEvent;
 
         public bool IsFirstDraw { get; protected set; }
+        public bool IsClosed { get; protected set; }
 
         public object LastEvent { 
             get { return _lastEvent; }
@@ -33,9 +37,20 @@ namespace Linux.PseudoTerminal
         }
         protected string LastTextInput { get; set; }
 
-        public VirtualTerminal(int bufferSize) {
+        public VirtualTerminal(int bufferSize, EventFile keyboardEvent) {
             Buffer = new BufferedStreamWriter(bufferSize);
+            KeyboardEvent = keyboardEvent;
             IsFirstDraw = true;
+
+            LastTextInput = "";
+
+            IsClosed = false;
+
+            new EventController(this, keyboardEvent.Duplicate());
+        }
+
+        public void Close() {
+            IsClosed = true;
         }
 
         public void RequestYAxis(int position) {
@@ -66,8 +81,21 @@ namespace Linux.PseudoTerminal
             return Buffer.Write(message);
         }
 
-        public string Read() {
-            return LastTextInput;
+        public string ReadLine() {
+            var buffer = new StringBuilder();
+
+            string lastChar = "";
+
+            while (lastChar != "\n") {
+                lastChar = KeyboardEvent.Read();
+                buffer.Append(lastChar);
+            }
+
+            return buffer.ToString();
+        }
+
+        public void WriteKey(string key) {
+            LastTextInput += key;
         }
 
         public void SubscribeRead(System.Action<string> onEol) {
@@ -86,7 +114,7 @@ namespace Linux.PseudoTerminal
 
         public abstract void MoveCursorToEnd();
 
-        protected virtual void OnEventRecv() { 
+        protected virtual void OnEventRecv() {
             if (HasReturnEvent() && OnEndOfLine != null) {
                 System.Action<string> localAction = OnEndOfLine;
 

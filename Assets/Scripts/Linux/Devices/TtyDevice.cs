@@ -27,7 +27,7 @@ namespace Linux.Devices {
         }
 
         public override string Read() {
-            return Terminal.Read();
+            return Terminal.ReadLine();
         }
     }
 }

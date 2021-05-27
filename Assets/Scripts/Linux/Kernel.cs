@@ -32,16 +32,6 @@ namespace Linux
         }
 
         public void Bootstrap() {
-            Terminal = new UnityTerminal(_bufferSize);
-
-            Terminal.SubscribeFirstDraw(
-                () => {
-                    Debug.Log("terminal is ready");
-                    StartCoroutine(Initialize());
-                    Init();
-                }
-            );
-
             Fs = new FileTree(
                 new LinuxDirectory(
                     "/",
@@ -54,22 +44,29 @@ namespace Linux
             MakeLinuxDefaultDirectories();
             MakeLinuxUtilities();
             MakeLinuxDev();
+
+            Terminal.SubscribeFirstDraw(
+                () => {
+                    Debug.Log("terminal is ready");
+                    // StartCoroutine(Initialize());
+                    Init();
+                }
+            );
         }
 
         void Init() {
-            Thread initThread = new Thread(new ThreadStart(Init2));
+            Thread initThread = new Thread(new ThreadStart(HandleTerm));
             initThread.Start();
 
             // Thread init3Thread = new Thread(new ThreadStart(Init3));
             // init3Thread.Start();
         }
 
-        void Init2() {
-            AbstractFile kbEvent = Fs.Lookup("/dev/input/event0");
-
-            while (true) {
-                Debug.Log("recv input from init2: " + kbEvent.Read());
-            }
+        void HandleTerm() {
+            string login = Terminal.Input("Login:");
+            Debug.Log("Login: " + login);
+            string password = Terminal.Input("Password:");
+            Debug.Log("Password: " + password);
         }
 
         // void Init3() {
@@ -125,16 +122,10 @@ namespace Linux
             Terminal.Write("Kernel " + Version + " on an x86_64 (tty)");
             Terminal.Write("");
             
-            Terminal.Input("hacker1.localdomain login:", OnLogin);
-        }
-
-        void OnLogin(string login) {
+            string login = Terminal.Input("hacker1.localdomain login:");
             Debug.Log("Login: " + login);
 
-            Terminal.Input("Password:", OnPassword);
-        }
-
-        void OnPassword(string password) {
+            string password = Terminal.Input("Password:");
             Debug.Log("Password: " + password);
         }
 
@@ -204,6 +195,9 @@ namespace Linux
                 0, 0, 
                 Perm.FromInt(6, 6, 0)
             );
+
+            // Allocate terminal
+            Terminal = new UnityTerminal(_bufferSize, kbEventFile);
 
             Fs.AddFrom(inputDevDirectory, kbEventFile);
 

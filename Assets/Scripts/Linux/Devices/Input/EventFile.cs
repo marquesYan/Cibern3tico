@@ -9,7 +9,20 @@ namespace Linux.Devices.Input {
         ConcurrentQueue<string> _internalQueue;
 
         public EventFile(
-            string absolutePath, 
+            string absolutePath,
+            int uid,
+            int gid,
+            int permission,
+            DriverEvent<string> driver
+        ) : base(absolutePath, uid, gid, permission) {
+            Driver = driver;
+
+            _internalQueue = new ConcurrentQueue<string>();
+            Driver.Subscribe(_internalQueue);
+        }
+
+        public EventFile(
+            string absolutePath,
             int uid,
             int gid,
             int permission
@@ -43,6 +56,16 @@ namespace Linux.Devices.Input {
             }
 
             return data;
+        }
+
+        public EventFile Duplicate() {
+            return new EventFile(
+                Path,
+                Uid,
+                Gid,
+                Perm,
+                Driver
+            );
         }
 
         public override int Execute(string[] arguments) {
