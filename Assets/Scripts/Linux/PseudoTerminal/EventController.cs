@@ -1,5 +1,6 @@
 using System.Threading;
 using Linux.Devices.Input;
+using UnityEngine;
 
 namespace Linux.PseudoTerminal
 {
@@ -13,7 +14,7 @@ namespace Linux.PseudoTerminal
 
             Thread ctlThread = new Thread(new ThreadStart(Start));
             ctlThread.Start();
-        }   
+        }
 
         void Start() {
             while (!Terminal.IsClosed) {

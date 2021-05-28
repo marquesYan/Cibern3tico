@@ -11,12 +11,13 @@ namespace Linux
     {
         Rect _window;
         TextEditor _textEditor;
-        protected string InputBuffer;
-        protected Vector2 InputBufferSize;
 
         float _currentOpenTerm;
         float _openTarget;
         Vector2 _scrollPosition;
+        Event _lastEvent;
+        protected string InputBuffer;
+        protected Vector2 InputBufferSize;
         public float MaxHeight = 1f;
         public int ToggleSpeed = 360;
         public Font ConsoleFont;
@@ -71,17 +72,17 @@ namespace Linux
             // }
         }
 
-        protected override bool HasReturnEvent()
-        {
-            return ((Event)LastEvent).Equals(Event.KeyboardEvent("return"));
-        }
-
         public override void MoveCursorToEnd() {
             if (_textEditor == null) {
                 _textEditor = (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
             }
 
             _textEditor.MoveCursorToPosition(new Vector2(999, 999));
+        }
+
+        protected override void HandleDraw() {
+            HandleOpenness();
+            _window = GUILayout.Window(88, _window, DrawConsole, "", WindowStyle);
         }
 
         void FocusTextField()
@@ -114,11 +115,6 @@ namespace Linux
 
             RealWindowSize = Screen.height * MaxHeight;
             _openTarget = RealWindowSize;
-        }
-
-        public void OnGUI() {
-            HandleOpenness();
-            _window = GUILayout.Window(88, _window, DrawConsole, "", WindowStyle);
         }
 
         void SetupWindow() {
@@ -173,7 +169,7 @@ namespace Linux
 
             MoveCursorToEnd();
 
-            LastEvent = Event.current;
+            _lastEvent = Event.current;
 
             GUILayout.BeginHorizontal();
 
@@ -183,7 +179,7 @@ namespace Linux
             }
 
             GUI.SetNextControlName("command_text_field");
-            GUILayout.Label(LastTextInput + '|', InputStyle, GUILayout.Width(500f));
+            GUILayout.Label(CursorManager.Draw(), InputStyle, GUILayout.Width(500f));
 
             // if (input_fix && command_text.Length > 0) {
             //     command_text = cached_command_text; // Otherwise the TextField picks up the ToggleHotkey character event

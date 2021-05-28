@@ -1,48 +1,58 @@
-using System.IO;
 using System.Text;
-using System.Collections;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Linux.Devices.Input;
+using UnityEngine;
 
 namespace Linux.PseudoTerminal
 {
-    public static class InputChar {
-        public const string ScrollAllDown = "^S";
+    public static class CharacterControl {
+        public const string C_DBACKSPACE = "^BKS";
+        public const string C_DDELETE = "^DEL";
+        public const string C_DTAB = "^TAB";
+        public const string C_DESCAPE = "^ESC";
+        public const string C_DLEFT_SHIFT = "^LSH";
+        public const string C_DRIGHT_SHIFT = "^RSH";
+        public const string C_DCTRL = "^CTR";
+        public const string C_DUP_ARROW = "^UPA";
+        public const string C_DDOWN_ARROW = "^DOA";
+        public const string C_DLEFT_ARROW = "^LEA";
+        public const string C_DRIGHT_ARROW = "^RIA";
+
+        public const string C_UBACKSPACE = "BKS^";
+        public const string C_UDELETE = "DEL^";
+        public const string C_UTAB = "TAB^";
+        public const string C_UESCAPE = "ESC^";
+        public const string C_ULEFT_SHIFT = "LSH^";
+        public const string C_URIGHT_SHIFT = "RSH^";
+        public const string C_UCTRL = "CTR^";
+        public const string C_UUP_ARROW = "UPA^";
+        public const string C_UDOWN_ARROW = "DOA^";
+        public const string C_ULEFT_ARROW = "LEA^";
+        public const string C_URIGHT_ARROW = "RIA^";
     }
 
     public abstract class VirtualTerminal
     {
         event System.Action OnFirstDraw;
-        protected BufferedStreamWriter Buffer;
-
-        protected event System.Action<string> OnEndOfLine;
-
-        protected EventFile KeyboardEvent;
-
         bool _moveCursorToEnd = false;
         int _moveYAxis = -1;
         int _moveXAxis = -1;
+        int _typedKeysCount;
 
-        object _lastEvent;
+        protected BufferedStreamWriter Buffer;
 
-        public bool IsFirstDraw { get; protected set; }
+        protected EventFile KeyboardEvent;
+        protected bool IsFirstDraw = true;
+
+        protected CursorDisplay CursorManager;
+
         public bool IsClosed { get; protected set; }
-
-        public object LastEvent { 
-            get { return _lastEvent; }
-            protected set {
-                _lastEvent = value;
-                OnEventRecv(); 
-            }
-        }
-        protected string LastTextInput { get; set; }
 
         public VirtualTerminal(int bufferSize, EventFile keyboardEvent) {
             Buffer = new BufferedStreamWriter(bufferSize);
             KeyboardEvent = keyboardEvent;
-            IsFirstDraw = true;
 
-            LastTextInput = "";
+            CursorManager = new CursorDisplay("|", 100);
 
             IsClosed = false;
 
@@ -95,34 +105,25 @@ namespace Linux.PseudoTerminal
         }
 
         public void WriteKey(string key) {
-            LastTextInput += key;
-        }
-
-        public void SubscribeRead(System.Action<string> onEol) {
-            OnEndOfLine = onEol;
+            HandleInputKey(key);
         }
 
         public void SubscribeFirstDraw(System.Action onFirstDraw) {
             OnFirstDraw += onFirstDraw;
         }
 
+        public void DrawGUI() {
+            if (! IsClosed) {
+                HandleDraw();
+            }
+        }
+
         protected abstract void MoveYAxis(int position);
         protected abstract void MoveXAxis(int position);
         protected abstract void DrawLine(string message);
-
-        protected abstract bool HasReturnEvent();
+        protected abstract void HandleDraw();
 
         public abstract void MoveCursorToEnd();
-
-        protected virtual void OnEventRecv() {
-            if (HasReturnEvent() && OnEndOfLine != null) {
-                System.Action<string> localAction = OnEndOfLine;
-
-                OnEndOfLine = null;
-
-                localAction(LastTextInput);
-            }
-        }
 
         protected void DrawTerm() {
             FlushBuffer();
@@ -151,15 +152,50 @@ namespace Linux.PseudoTerminal
         protected void FlushBuffer() {
             foreach (string message in Buffer.Messages) {
                 switch (message) {
-                    case InputChar.ScrollAllDown: {
-                        RequestYAxis(0);
-                        break;
-                    }
-
                     default: {
                         DrawLine(message);
                         break;
                     }
+                }
+            }
+        }
+
+        protected void HandleInputKey(string key) {
+            switch(key) {
+                case CharacterControl.C_DBACKSPACE: {
+                    if (CursorManager.CursorPosition > 0) {
+                        CursorManager.RemoveAtCursorPosition(-1);
+                        CursorManager.Move(-1);
+                    }
+                    break;
+                }
+
+                case CharacterControl.C_DDELETE: {
+                    if (CursorManager.IsAtEnd()) {
+                        // Delete token from back of the string
+                        CursorManager.RemoveAtCursorPosition(1);
+                    } else {
+                        // Delete token at cursor position
+                        CursorManager.RemoveLastFromCollection();
+                        CursorManager.Move(-1);
+                    }
+                    break;
+                }
+
+                case CharacterControl.C_DLEFT_ARROW: {
+                    CursorManager.Move(-1);
+                    break;
+                }
+
+                case CharacterControl.C_DRIGHT_ARROW: {
+                    CursorManager.Move(1);
+                    break;
+                }
+
+                default: {
+                    CursorManager.AddToCollection(key);
+                    CursorManager.Move(1);
+                    break;
                 }
             }
         }

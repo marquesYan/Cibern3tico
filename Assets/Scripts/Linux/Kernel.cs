@@ -7,6 +7,7 @@ using Linux.FileSystem;
 using Linux.Utilities;
 using Linux.Devices;
 using Linux.Devices.Input;
+using Linux.Sys.Input.Drivers;
 using Linux;
 
 namespace Linux
@@ -15,6 +16,8 @@ namespace Linux
         public FileTree Fs { get; protected set; }
         public UnityTerminal Terminal { get; protected set; }
     
+        public AbstractInputDriver InputDriver { get; protected set; }
+
         public readonly string Version = "5.4.98-1.fc25.x86_64";
 
         MonoBehaviour _gameObject;
@@ -44,6 +47,9 @@ namespace Linux
             MakeLinuxDefaultDirectories();
             MakeLinuxUtilities();
             MakeLinuxDev();
+            
+            // Will handle unity inputs
+            InputDriver = new UnityInputDriver(this);
 
             Terminal.SubscribeFirstDraw(
                 () => {
@@ -57,9 +63,6 @@ namespace Linux
         void Init() {
             Thread initThread = new Thread(new ThreadStart(HandleTerm));
             initThread.Start();
-
-            // Thread init3Thread = new Thread(new ThreadStart(Init3));
-            // init3Thread.Start();
         }
 
         void HandleTerm() {
@@ -68,16 +71,6 @@ namespace Linux
             string password = Terminal.Input("Password:");
             Debug.Log("Password: " + password);
         }
-
-        // void Init3() {
-        //     EventFile kbEvent = Fs.Lookup("/dev/input/event0");
-
-
-
-        //     while (true) {
-        //         Debug.log("recv input from init3: " + kbEvent.Read());
-        //     }
-        // }
 
         IEnumerator Initialize() {
             Debug.Log("Initilizing Subsystem");
@@ -208,7 +201,6 @@ namespace Linux
 
             AbstractFile[] devices = new AbstractFile[] {
                 new TtyDevice(Terminal, "/dev/tty", 0, 0, Perm.FromInt(6, 6, 6)),
-                new ConsoleDevice(FakeBootFile(), "/dev/console", 0, 0, Perm.FromInt(6, 0, 0)),
                 new ConsoleDevice(FakeBootFile(), "/dev/console", 0, 0, Perm.FromInt(6, 0, 0)),
             };
 
