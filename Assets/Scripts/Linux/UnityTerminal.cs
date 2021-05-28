@@ -23,6 +23,7 @@ namespace Linux
         public Font ConsoleFont;
         public GUIStyle LabelStyle;
         public GUIStyle InputStyle;
+        public GUIStyle CursorStyle;
         public GUIStyle WindowStyle;
         public Color BackgroundColor = Color.black;
         public Color ForegroundColor    = Color.white;
@@ -51,25 +52,6 @@ namespace Linux
         protected override void DrawLine(string message) {
             // LabelStyle.normal.textColor = GetLogColor(log.type);
             GUILayout.Label(message, LabelStyle);
-        }
-
-        protected void OnEventRecv()
-        {   
-            // if (Event.current.Equals(Event.KeyboardEvent("return"))) {
-            //     EnterCommand();
-            // } else if (Event.current.Equals(Event.KeyboardEvent("up"))) {
-            //     command_text = History.Previous();
-            //     move_cursor = true;
-            // } else if (Event.current.Equals(Event.KeyboardEvent("down"))) {
-            //     command_text = History.Next();
-            // } else if (Event.current.Equals(Event.KeyboardEvent(ToggleHotkey))) {
-            //     ToggleState(TerminalState.OpenSmall);
-            // } else if (Event.current.Equals(Event.KeyboardEvent(ToggleFullHotkey))) {
-            //     ToggleState(TerminalState.OpenFull);
-            // } else if (Event.current.Equals(Event.KeyboardEvent("tab"))) {
-            //     CompleteCommand();
-            //     move_cursor = true; // Wait till next draw call
-            // }
         }
 
         public override void MoveCursorToEnd() {
@@ -157,6 +139,16 @@ namespace Linux
             inputBackgroundTexture.SetPixel(0, 0, darkBackground);
             inputBackgroundTexture.Apply();
             InputStyle.normal.background = inputBackgroundTexture;
+
+            // Cursor
+            CursorStyle = new GUIStyle();
+            CursorStyle.padding = new RectOffset(0, 0, 4, 0);
+            CursorStyle.font = ConsoleFont;
+            CursorStyle.fixedHeight = ConsoleFont.fontSize * 1.6f;
+            CursorStyle.normal.textColor = InputColor;
+            CursorStyle.wordWrap = true;
+
+            CursorStyle.normal.background = inputBackgroundTexture;
         }
 
         void DrawConsole(int windowID) {
@@ -174,21 +166,12 @@ namespace Linux
             GUILayout.BeginHorizontal();
 
             if (InputBuffer != null) {
-                // GUILayout.Label(InputBuffer, InputStyle, GUILayout.Width(InputBufferSize.x));
                 GUILayout.Label(InputBuffer, InputStyle, GUILayout.Width(50f));
             }
 
-            GUI.SetNextControlName("command_text_field");
-            GUILayout.Label(CursorManager.Draw(), InputStyle, GUILayout.Width(500f));
-
-            // if (input_fix && command_text.Length > 0) {
-            //     command_text = cached_command_text; // Otherwise the TextField picks up the ToggleHotkey character event
-            //     input_fix = false;                  // Prevents checking string Length every draw call
-            // }
-
-            // if (ShowGUIButtons && GUILayout.Button("| run", InputStyle, GUILayout.Width(Screen.width / 10))) {
-            //     EnterCommand();
-            // }
+            // characters "appears" to be 8 pixel width
+            InputStyle.DrawCursor(new Rect(54 + (CursorManager.CursorPosition * 8), Screen.height - InputStyle.fixedHeight, 4, 4), new GUIContent("|"), 0, 0);
+            GUILayout.Label(CursorManager.DrawText(), InputStyle, GUILayout.Width(0f));
 
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
@@ -209,42 +192,5 @@ namespace Linux
 
             _window = new Rect(0, _currentOpenTerm - RealWindowSize, Screen.width, RealWindowSize);
         }
-
-        // protected virtual void EnterCommand() {
-        //     Log(TerminalLogType.Input, "{0}", command_text);
-        //     Shell.RunCommand(command_text);
-        //     History.Push(command_text);
-
-        //     if (IssuedError) {
-        //         Log(TerminalLogType.Error, "Error: {0}", Shell.IssuedErrorMessage);
-        //     }
-
-        //     command_text = "";
-        //     ScrollAllDown();
-        // }
-
-        // void CompleteCommand() {
-        //     string head_text = command_text;
-        //     string[] completion_buffer = Autocomplete.Complete(ref head_text);
-        //     int completion_length = completion_buffer.Length;
-
-        //     if (completion_length == 1) {
-        //         command_text = head_text + completion_buffer[0];
-        //     } else if (completion_length > 1) {
-        //         // Print possible completions
-        //         Log(string.Join("    ", completion_buffer));
-        //         ScrollAllDown();
-        //     }
-        // }
-
-        // Color GetLogColor(TerminalLogType type) {
-        //     switch (type) {
-        //         case TerminalLogType.Message: return ForegroundColor;
-        //         case TerminalLogType.Warning: return WarningColor;
-        //         case TerminalLogType.Input: return InputColor;
-        //         case TerminalLogType.ShellMessage: return ShellColor;
-        //         default: return ErrorColor;
-        //     }
-        // }
     }
 }

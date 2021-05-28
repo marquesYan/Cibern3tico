@@ -6,42 +6,37 @@ namespace Linux.PseudoTerminal
 {
     public class CursorDisplay {
         string _textCache;
-        protected bool IsFreshCollectionShadow;
-        protected bool IsVisible = true;
-        protected int FlashCount = 0;
 
-        protected List<string> CollectionShadow;
         protected List<string> ObservedCollection;
 
         public int CollectionSize { get; protected set; }
         public int CursorPosition { get; protected set; }
-        public int MaxFlashCount;
-        public string Cursor;
 
-        public CursorDisplay(string cursor, int maxFlashCount) {
-            Cursor = cursor;
-            MaxFlashCount = maxFlashCount;
-
+        public CursorDisplay() {
             ObservedCollection = new List<string>();
-            CollectionSize = CursorPosition = 0;
 
-            CopyCollection();
+            CollectionSize = CursorPosition = 0;
         }
 
         public void AddToCollection(string text) {
             ObservedCollection.Add(text);
-            CollectionShadow.Add(text);
             CollectionSize++;
+
+            UpdateTextCache();
+            
+            Move(1);
         }
 
         public void RemoveFromCollection(int index) {
             ObservedCollection.RemoveAt(index);
-            CollectionShadow.RemoveAt(index);
             CollectionSize--;
+
+            UpdateTextCache();
         }
 
         public void RemoveAtCursorPosition(int step) {
             RemoveFromCollection(CursorPosition + step);
+            Move(step);
         }
 
         public bool IsAtEnd() {
@@ -57,9 +52,6 @@ namespace Linux.PseudoTerminal
         }
 
         public void Move(int step) {
-            // Always make a copy when cursor changed 
-            CopyCollection();
-
             if (CollectionSize == 0) {
                 CursorPosition = 0;
                 return;
@@ -74,40 +66,16 @@ namespace Linux.PseudoTerminal
             }
         }
 
-        public string Draw() {
-            bool changedVisibility = false;
-
-            if (FlashCount > MaxFlashCount) {
-                IsVisible = !IsVisible;
-                FlashCount = 0;
-                _textCache = null;
-
-                changedVisibility = true;
-            } else {
-                FlashCount++;
-            }
-
-            if (IsVisible) {
-                if (changedVisibility || IsFreshCollectionShadow) {
-                    IsFreshCollectionShadow = false;
-
-                    CollectionShadow.Insert(CursorPosition, Cursor);
-                    _textCache = null;
-                }
-            } else if (changedVisibility) {
-                CollectionShadow.RemoveAt(CursorPosition);
-            }
-
+        public string DrawText() {
             if (_textCache == null) {
-                _textCache = string.Join("", CollectionShadow);
+                UpdateTextCache();
             }
 
-            return _textCache;
+            return _textCache; 
         }
 
-        void CopyCollection() {
-            CollectionShadow = new List<string>(ObservedCollection);
-            IsFreshCollectionShadow = true;
+        void UpdateTextCache() {
+            _textCache = string.Join("", ObservedCollection);
         }
     }
 }

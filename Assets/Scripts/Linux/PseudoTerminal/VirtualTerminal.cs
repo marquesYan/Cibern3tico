@@ -52,7 +52,7 @@ namespace Linux.PseudoTerminal
             Buffer = new BufferedStreamWriter(bufferSize);
             KeyboardEvent = keyboardEvent;
 
-            CursorManager = new CursorDisplay("|", 64);
+            CursorManager = new CursorDisplay();
 
             IsClosed = false;
 
@@ -165,7 +165,6 @@ namespace Linux.PseudoTerminal
                 case CharacterControl.C_DBACKSPACE: {
                     if (CursorManager.CursorPosition > 0) {
                         CursorManager.RemoveAtCursorPosition(-1);
-                        CursorManager.Move(-1);
                     }
                     break;
                 }
@@ -190,7 +189,6 @@ namespace Linux.PseudoTerminal
 
                 default: {
                     CursorManager.AddToCollection(key);
-                    CursorManager.Move(1);
                     break;
                 }
             }
