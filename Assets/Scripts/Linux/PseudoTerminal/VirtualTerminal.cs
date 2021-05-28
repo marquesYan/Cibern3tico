@@ -52,7 +52,7 @@ namespace Linux.PseudoTerminal
             Buffer = new BufferedStreamWriter(bufferSize);
             KeyboardEvent = keyboardEvent;
 
-            CursorManager = new CursorDisplay("|", 100);
+            CursorManager = new CursorDisplay("|", 64);
 
             IsClosed = false;
 
@@ -171,13 +171,9 @@ namespace Linux.PseudoTerminal
                 }
 
                 case CharacterControl.C_DDELETE: {
-                    if (CursorManager.IsAtEnd()) {
-                        // Delete token from back of the string
-                        CursorManager.RemoveAtCursorPosition(1);
-                    } else {
+                    if (!CursorManager.IsAtEnd()) {
                         // Delete token at cursor position
-                        CursorManager.RemoveLastFromCollection();
-                        CursorManager.Move(-1);
+                        CursorManager.RemoveAtCursorPosition(0);
                     }
                     break;
                 }

@@ -48,6 +48,10 @@ namespace Linux.PseudoTerminal
             return CursorPosition > CollectionSize - 1;
         }
 
+        public bool IsAtBegin() {
+            return CursorPosition == 0;
+        }
+
         public void RemoveLastFromCollection() {
             RemoveFromCollection(CollectionSize - 1);
         }
@@ -65,24 +69,33 @@ namespace Linux.PseudoTerminal
 
             if (CursorPosition < 0) {
                 CursorPosition = 0;
-            } else if (CursorPosition > CollectionSize) {
+            } else if (IsAtEnd()) {
                 CursorPosition = CollectionSize;
             }
         }
 
         public string Draw() {
-            if (IsVisible && IsFreshCollectionShadow) {
-                IsFreshCollectionShadow = false;
-                CollectionShadow.Insert(CursorPosition, "|");
-
-                _textCache = null;
-            }
+            bool changedVisibility = false;
 
             if (FlashCount > MaxFlashCount) {
                 IsVisible = !IsVisible;
                 FlashCount = 0;
+                _textCache = null;
+
+                changedVisibility = true;
             } else {
                 FlashCount++;
+            }
+
+            if (IsVisible) {
+                if (changedVisibility || IsFreshCollectionShadow) {
+                    IsFreshCollectionShadow = false;
+
+                    CollectionShadow.Insert(CursorPosition, Cursor);
+                    _textCache = null;
+                }
+            } else if (changedVisibility) {
+                CollectionShadow.RemoveAt(CursorPosition);
             }
 
             if (_textCache == null) {
