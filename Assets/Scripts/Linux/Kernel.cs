@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using Linux.FileSystem;
 using Linux.Utilities;
+using Linux.Utilities.Sbin;
 using Linux.Devices;
 using Linux.Devices.Input;
 using Linux.Sys.Input.Drivers;
+using Linux.Configuration;
 using Linux;
 
 namespace Linux
@@ -17,6 +19,10 @@ namespace Linux
         public UnityTerminal Terminal { get; protected set; }
     
         public AbstractInputDriver InputDriver { get; protected set; }
+
+        public ProcessesTable ProcTable { get; protected set; }
+        public UsersDatabase UsersDb { get; protected set; }
+        public GroupsDatabase GroupsDb { get; protected set; }
 
         public readonly string Version = "5.4.98-1.fc25.x86_64";
 
@@ -47,6 +53,12 @@ namespace Linux
             MakeLinuxDefaultDirectories();
             MakeLinuxUtilities();
             MakeLinuxDev();
+
+            ProcTable = new ProcessesTable(Fs);
+            UsersDb = new UsersDatabase(Fs);
+            GroupsDb = new GroupsDatabase(Fs);
+
+            MakeSystemUsers();
             
             // Will handle unity inputs
             InputDriver = new UnityInputDriver(this);
@@ -54,15 +66,50 @@ namespace Linux
             Terminal.SubscribeFirstDraw(
                 () => {
                     Debug.Log("terminal is ready");
-                    // StartCoroutine(Initialize());
                     Init();
                 }
             );
         }
 
+        public void StartProcess(
+            int ppid,
+            User user,
+            string[] cmdLine
+        ) {
+            if (cmdLine.Length == 0) {
+                throw new System.ArgumentException("No command line");
+            }
+
+            AbstractFile executable = Fs.Lookup(cmdLine[0]);
+
+            if (executable == null) {
+                throw new System.ArgumentException("Command not found: " + cmdLine[0]);
+            }
+
+            Thread mainTask = new Thread(new ThreadStart(() => {
+                executable.Execute(cmdLine);
+            }));
+
+            Process process = ProcTable.Create(
+                ppid,
+                user.Uid,
+                user.Gid,
+                cmdLine,
+                new string[1],
+                Fs.Root.Path,
+                user.HomeDir,
+                mainTask
+            );
+
+            process.MainTask.Start();
+        }
+
         void Init() {
-            Thread initThread = new Thread(new ThreadStart(HandleTerm));
-            initThread.Start();
+            StartProcess(
+                0,
+                UsersDb.LookupUid(0),
+                new string[] { "/usr/sbin/init" }
+            );
         }
 
         void HandleTerm() {
@@ -122,6 +169,24 @@ namespace Linux
             Debug.Log("Password: " + password);
         }
 
+        void MakeSystemUsers() {
+            UsersDb.Add(new User(
+                "root",
+                0, 0,
+                "",
+                "/root",
+                "/usr/bin/bash"
+            ));
+
+            UsersDb.Add(new User(
+                "bin",
+                1, 1,
+                "",
+                "/usr/bin",
+                "/usr/sbin/nologin"
+            ));
+        }
+
         void MakeLinuxDefaultDirectories() {
             string[] dir755 = new string[]{
                 "dev",
@@ -158,16 +223,35 @@ namespace Linux
 
             int binPerm = Perm.FromInt(7, 5, 5);
 
-            Fs.AddFrom(usrDirectory, new LinuxDirectory("/usr/bin", 0, 0, binPerm));
+            LinuxDirectory binDirectory = new LinuxDirectory(
+                "/usr/bin", 
+                0, 0, 
+                binPerm
+            );
 
-            LinuxDirectory binDirectory = (LinuxDirectory) Fs.Lookup("/usr/bin");
+            LinuxDirectory sbinDirectory = new LinuxDirectory(
+                "/usr/sbin", 
+                0, 0,
+                binPerm
+            );
 
-            AbstractFile[] utils = new AbstractFile[] { 
+            Fs.AddFrom(usrDirectory, binDirectory);
+            Fs.AddFrom(usrDirectory, sbinDirectory);
+
+            AbstractFile[] binaries = new AbstractFile[] { 
                 new LsUtility("/usr/bin/ls", 0, 0, binPerm),
             };
 
-            foreach (AbstractFile utility in utils) {
+            foreach (AbstractFile utility in binaries) {
                 Fs.AddFrom(binDirectory, utility);
+            }
+
+            AbstractFile[] sytemBinaries = new AbstractFile[] { 
+                new InitUtility("/usr/sbin/init", 0, 0, binPerm),
+            };
+
+            foreach (AbstractFile utility in sytemBinaries) {
+                Fs.AddFrom(sbinDirectory, utility);
             }
         }
 

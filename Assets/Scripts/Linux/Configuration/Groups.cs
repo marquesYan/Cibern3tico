@@ -22,8 +22,8 @@ namespace Linux.Configuration
         }
     }
 
-    public class GroupDatabase : FileDatabase<Group> {
-        public GroupDatabase(FileTree fs) : base(fs) { }
+    public class GroupsDatabase : FileDatabase<Group> {
+        public GroupsDatabase(FileTree fs) : base(fs) { }
 
         public override void Add(Group group) {
             if (LookupGid(group.Gid) == null) {
@@ -34,7 +34,13 @@ namespace Linux.Configuration
         }
 
         public override AbstractFile DataSource() {
-            return Fs.Lookup("/etc/group");
+            AbstractFile file = Fs.Lookup("/etc/group");
+
+            // if (file == null) {
+            //     file = 
+            // }
+
+            return file;
         }
 
         public Group LookupGid(int gid) {

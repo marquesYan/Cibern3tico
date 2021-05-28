@@ -5,7 +5,7 @@ using System.Collections;
 namespace Linux.FileSystem
 {
     public class FileTree {
-        LinuxDirectory Root { get; set; }
+        public LinuxDirectory Root { get; protected set; }
 
         char _separator = '/';
 
@@ -59,6 +59,10 @@ namespace Linux.FileSystem
             }
 
             return needle;
+        }
+
+        public string Combine(params string[] paths) {
+            return string.Join($"{_separator}", paths);
         }
     }
 }

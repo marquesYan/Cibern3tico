@@ -31,9 +31,9 @@ namespace Linux.Configuration
         }
     }
 
-    public class UserDatabase : FileDatabase<User> {
+    public class UsersDatabase : FileDatabase<User> {
 
-        public UserDatabase(FileTree fs) : base(fs) { }
+        public UsersDatabase(FileTree fs) : base(fs) { }
 
         public override void Add(User user) {
             if (LookupUid(user.Uid).Equals(null)) {
