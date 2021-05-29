@@ -129,6 +129,10 @@ namespace Linux.IO
             Mode = mode;
         }
 
+        public void Close() {
+            //
+        }
+
         public int WriteLine(string line) {
             return StreamBackend.WriteLine(line);
         }

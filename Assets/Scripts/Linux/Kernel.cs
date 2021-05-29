@@ -2,15 +2,16 @@ using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Linux.FileSystem;
-using Linux.Utilities;
-using Linux.Utilities.Sbin;
+using Linux;
+using Linux.Configuration;
 using Linux.Devices;
 using Linux.Devices.Input;
-using Linux.Sys.Input.Drivers;
-using Linux.Configuration;
 using Linux.IO;
-using Linux;
+using Linux.FileSystem;
+using Linux.Sys;
+using Linux.Sys.Input.Drivers;
+using Linux.Utilities.Sbin;
+using Linux.Utilities;
 
 namespace Linux
 {    
@@ -18,29 +19,16 @@ namespace Linux
         public VirtualFileTree Fs { get; protected set; }
         public UnityTerminal Terminal { get; protected set; }
     
-        public AbstractInputDriver InputDriver { get; protected set; }
-
         public ProcessesTable ProcTable { get; protected set; }
         public UsersDatabase UsersDb { get; protected set; }
         public GroupsDatabase GroupsDb { get; protected set; }
-
-        public CommandInterpreter CmdInterpreter { get; protected set; }
+        public PeripheralsTable PciTable { get; protected set; }
 
         public readonly string Version = "5.4.98-1.fc25.x86_64";
-
-        MonoBehaviour _gameObject;
 
         int _bufferSize = 512;
 
         float _bootDelay = 0.0001f;
-
-        // public Kernel(MonoBehaviour gameObject) {
-        //     _gameObject = gameObject;
-        // }
-
-        // public Coroutine StartCoroutine(IEnumerator coro) {
-        //     return _gameObject.StartCoroutine(coro);
-        // }
 
         public void Bootstrap() {
             Fs = new VirtualFileTree(
@@ -55,15 +43,18 @@ namespace Linux
             MakeLinuxDefaultDirectories();
             MakeLinuxUtilities();
             MakeLinuxDev();
+            MakeLinuxSys();
             MakeLinuxConfigurations();
 
             ProcTable = new ProcessesTable(Fs);
             UsersDb = new UsersDatabase(Fs);
             GroupsDb = new GroupsDatabase(Fs);
-            CmdInterpreter = new CommandInterpreter(this);
+            PciTable = new PeripheralsTable(Fs);
 
+            FindPeripheralComponents();
             MakeSystemUsers();
-            Init();
+            Debug.Log("done");
+            // Init();
             
             // Will handle unity inputs
             // InputDriver = new UnityInputDriver(this);
@@ -91,7 +82,10 @@ namespace Linux
                 throw new System.ArgumentException("Command not found: " + cmdLine[0]);
             }
 
-            Thread mainTask = new Thread(new ThreadStart(CmdInterpreter.Handle));
+
+            Thread mainTask = new Thread(
+                new ThreadStart(new CommandInterpreter(this).Handle)
+            );
 
             Process process = ProcTable.Create(
                 ppid,
@@ -327,6 +321,46 @@ namespace Linux
                     )
                 );
             }
+        }
+
+        void MakeLinuxSys() {
+            Directory sysDirectory = (Directory) Fs.Lookup("/sys");
+
+            int sysPerm = Perm.FromInt(7, 5, 5);
+
+            var files = new string[] {
+                "/sys/class",
+                "/sys/devices",
+            };
+
+            foreach(string path in files) {
+                Fs.AddFrom(
+                    sysDirectory, 
+                    new Directory(
+                        path,
+                        0, 0,
+                        sysPerm
+                    )
+                );
+            }
+        }
+
+        void FindPeripheralComponents() {
+            PciTable.Add(new Pci(
+                "xHCI Host Controller",
+                "SAD",
+                "0000:00:04.0",
+                189,
+                122
+            ));
+
+            PciTable.Add(new Pci(
+                "xHCI Host Controller",
+                "SAD",
+                "0000:00:06.0",
+                189,
+                122
+            ));
         }
 
         string FakeBootFile() {
