@@ -8,7 +8,7 @@ namespace Linux.Configuration
     public class Group {
         public Group(string name,
                     int gid,
-                    string[] users) {
+                    params string[] users) {
             Name = name;
             Gid = gid;
             Users = users;
@@ -27,7 +27,7 @@ namespace Linux.Configuration
         public GroupsDatabase(VirtualFileTree fs) : base(fs) { }
 
         public override void Add(Group group) {
-            if (LookupGid(group.Gid) == null) {
+            if (LookupGid(group.Gid) != null) {
                 throw new System.ArgumentException("gid already exists");
             }
 

@@ -35,9 +35,8 @@ namespace Linux
         public float RealWindowSize { get; protected set; }
 
         public UnityTerminal(
-            int bufferSize, 
-            EventFile keyboardEvent
-        ) : base(bufferSize, keyboardEvent) {
+            int bufferSize
+        ) : base(bufferSize) {
             Initialize();
         }
 
@@ -141,14 +140,14 @@ namespace Linux
             InputStyle.normal.background = inputBackgroundTexture;
 
             // Cursor
-            CursorStyle = new GUIStyle();
-            CursorStyle.padding = new RectOffset(0, 0, 4, 0);
-            CursorStyle.font = ConsoleFont;
-            CursorStyle.fixedHeight = ConsoleFont.fontSize * 1.6f;
-            CursorStyle.normal.textColor = InputColor;
-            CursorStyle.wordWrap = true;
+            // CursorStyle = new GUIStyle();
+            // CursorStyle.padding = new RectOffset(0, 0, 4, 0);
+            // CursorStyle.font = ConsoleFont;
+            // CursorStyle.fixedHeight = ConsoleFont.fontSize * 1.6f;
+            // CursorStyle.normal.textColor = InputColor;
+            // CursorStyle.wordWrap = true;
 
-            CursorStyle.normal.background = inputBackgroundTexture;
+            // CursorStyle.normal.background = inputBackgroundTexture;
         }
 
         void DrawConsole(int windowID) {
@@ -159,7 +158,7 @@ namespace Linux
             DrawTerm();
             GUILayout.EndScrollView();
 
-            MoveCursorToEnd();
+            // MoveCursorToEnd();
 
             _lastEvent = Event.current;
 
@@ -170,8 +169,8 @@ namespace Linux
             }
 
             // characters "appears" to be 8 pixel width
-            InputStyle.DrawCursor(new Rect(54 + (CursorManager.CursorPosition * 8), Screen.height - InputStyle.fixedHeight, 4, 4), new GUIContent("|"), 0, 0);
-            GUILayout.Label(CursorManager.DrawText(), InputStyle, GUILayout.Width(0f));
+            // InputStyle.DrawCursor(new Rect(54 + (CursorManager.CursorPosition * 8), Screen.height - InputStyle.fixedHeight, 4, 4), new GUIContent("|"), 0, 0);
+            GUILayout.Label(CursorManager.DrawText(), InputStyle);
 
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();

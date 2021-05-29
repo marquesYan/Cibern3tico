@@ -14,6 +14,10 @@ namespace Linux.Configuration
 
         public abstract void Add(T item);
 
+        public int Count() {
+            return LoadFromFs().Count;
+        }
+
         public abstract File DataSource();
 
         protected abstract T ItemFromTokens(string[] tokens);

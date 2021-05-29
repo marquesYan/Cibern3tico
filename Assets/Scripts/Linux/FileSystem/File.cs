@@ -73,6 +73,14 @@ namespace Linux.FileSystem
             Touch();
         }
 
+        public int ChildsCount() {
+            return Childs.Count;
+        }
+
+        public File[] GetChilds() {
+            return Childs.ToArray();
+        }
+
         public File Find(Predicate<File> action) {
             return Childs.Find(action);
         }

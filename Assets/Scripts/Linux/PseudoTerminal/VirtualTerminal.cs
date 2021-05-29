@@ -48,19 +48,21 @@ namespace Linux.PseudoTerminal
 
         public bool IsClosed { get; protected set; }
 
-        public VirtualTerminal(int bufferSize, EventFile keyboardEvent) {
+        public VirtualTerminal(int bufferSize) {
             Buffer = new BufferedStreamWriter(bufferSize);
-            KeyboardEvent = keyboardEvent;
 
             CursorManager = new CursorDisplay();
 
             IsClosed = false;
-
-            new EventController(this, keyboardEvent.Duplicate());
         }
 
         public void Close() {
             IsClosed = true;
+        }
+
+        public void AttachKeyboard(EventFile keyboardEvent) {
+            KeyboardEvent = keyboardEvent;
+            new EventController(this, keyboardEvent.Duplicate());
         }
 
         public void RequestYAxis(int position) {
@@ -88,10 +90,15 @@ namespace Linux.PseudoTerminal
         }
 
         public int Write(string message) {
+            RequestHighYAxis();
             return Buffer.Write(message);
         }
 
         public string ReadLine() {
+            if (KeyboardEvent == null) {
+                return null;
+            }
+
             var buffer = new StringBuilder();
 
             string lastChar = "";
@@ -150,7 +157,7 @@ namespace Linux.PseudoTerminal
         }
 
         protected void FlushBuffer() {
-            foreach (string message in Buffer.Messages) {
+            foreach (string message in Buffer.ToArray()) {
                 switch (message) {
                     default: {
                         DrawLine(message);

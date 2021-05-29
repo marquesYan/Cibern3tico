@@ -15,7 +15,7 @@ namespace Linux
         }
 
         void OnGUI() {
-            // Kernel.Terminal.DrawGUI();
+            Kernel.Terminal.DrawGUI();
         }
     }
 }
