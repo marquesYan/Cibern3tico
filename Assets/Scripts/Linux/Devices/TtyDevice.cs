@@ -3,20 +3,10 @@ using Linux.PseudoTerminal;
 using Linux;
 
 namespace Linux.Devices {
-    public class TtyDevice : AbstractDevice {
+    public class TtyDevice {
         VirtualTerminal Terminal { get; set; }
 
-        public TtyDevice(
-            VirtualTerminal vt, 
-            string absolutePath, 
-            int uid,
-            int gid,
-            int permission
-        ) : base(absolutePath, uid, gid, permission) {
-            Terminal = vt;
-        }
-
-        public override int Write(string[] data) {
+        public int Write(string[] data) {
             int written = 0;
 
             foreach (string stream in data) {
@@ -26,7 +16,7 @@ namespace Linux.Devices {
             return written;
         }
 
-        public override string Read() {
+        public string Read() {
             return Terminal.ReadLine();
         }
     }

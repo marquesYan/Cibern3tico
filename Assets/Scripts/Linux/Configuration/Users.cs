@@ -33,18 +33,22 @@ namespace Linux.Configuration
 
     public class UsersDatabase : FileDatabase<User> {
 
-        public UsersDatabase(FileTree fs) : base(fs) { }
+        public UsersDatabase(VirtualFileTree fs) : base(fs) { }
 
         public override void Add(User user) {
-            if (LookupUid(user.Uid).Equals(null)) {
+            if (LookupUid(user.Uid) != null) {
                 throw new System.ArgumentException("uid already exists");
             }
 
-            DataSource()?.Append(new string[] { user.ToString() });
+            AppendLine(user.ToString());
         }
 
         public User LookupUid(int uid) {
             return LoadFromFs().Find(u => u.Uid == uid);
+        }
+
+        public override File DataSource() {
+            return Fs.Lookup("/etc/passwd");
         }
 
         protected override User ItemFromTokens(string[] tokens) {
@@ -74,10 +78,6 @@ namespace Linux.Configuration
             string shell = tokens[6];
 
             return new User(login, uid, gid, description, homeDir, shell);
-        }
-
-        public override AbstractFile DataSource() {
-            return Fs.Lookup("/etc/passwd");
         }
     }
 }

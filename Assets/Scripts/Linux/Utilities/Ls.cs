@@ -2,29 +2,22 @@ using System.Collections.Generic;
 using Linux.FileSystem;
 
 namespace Linux.Utilities {
-    public class LsUtility : AbstractUtility {
-        public LsUtility(
-            string absolutePath, 
-            int uid,
-            int gid, 
-            int permission
-        ) : base(absolutePath, uid, gid, permission) { }
-        
-        public override int Execute(string[] args) {
-            bool all = false;
-            bool detailed = false;
+    public class LsUtility {
+        public int Execute() {
+            // bool all = false;
+            // bool detailed = false;
 
-            foreach(string argument in args) {
-                if (argument.Contains("l")) {
-                    detailed = true;
-                }
+            // foreach(string argument in args) {
+            //     if (argument.Contains("l")) {
+            //         detailed = true;
+            //     }
 
-                if (argument.Contains("a")) {
-                    all = true;
-                }
-            }
+            //     if (argument.Contains("a")) {
+            //         all = true;
+            //     }
+            // }
 
-            // AbstractFile current_file;
+            // File current_file;
             // current_file = current_dir;
 
             // if (args.Length > 0) {
@@ -36,7 +29,7 @@ namespace Linux.Utilities {
             //     }
             // }
 
-            // List<AbstractFile> files_to_display = new List<AbstractFile>();
+            // List<File> files_to_display = new List<File>();
 
             // if (all) {
             //     files_to_display.Add(current_file.Parent);
@@ -44,7 +37,7 @@ namespace Linux.Utilities {
             // }
             // Debug.Log(current_file.Name);
             // if (current_file.IsDirectory()) {
-            //     foreach (AbstractFile file in current_file.Childs) {
+            //     foreach (File file in current_file.Childs) {
             //         Debug.Log("adding file");
             //         files_to_display.Add(file);
             //     }
@@ -55,7 +48,7 @@ namespace Linux.Utilities {
 
             // StringBuilder sb = new StringBuilder();
 
-            // foreach(AbstractFile file in files_to_display) {
+            // foreach(File file in files_to_display) {
             //     if (!all && file.IsHidden()) {
             //         continue;
             //     }

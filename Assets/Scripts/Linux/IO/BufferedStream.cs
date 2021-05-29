@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Linux.PseudoTerminal
+namespace Linux.IO
 {
     public class BufferedStreamWriter {
         public List<string> Messages { get; protected set; }

@@ -6,16 +6,16 @@ namespace Linux
         public Linux.Kernel Kernel;
 
         void Start() {
-            Kernel = new Linux.Kernel(this);
+            Kernel = new Linux.Kernel();
             Kernel.Bootstrap();
         }
 
         void Update() {
-            Kernel.InputDriver.Handle(null);
+            // Kernel.InputDriver.Handle(null);
         }
 
         void OnGUI() {
-            Kernel.Terminal.DrawGUI();
+            // Kernel.Terminal.DrawGUI();
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Linux.FileSystem;
+using Linux.IO;
 using Linux;
 
 namespace Linux.Configuration
@@ -23,24 +24,18 @@ namespace Linux.Configuration
     }
 
     public class GroupsDatabase : FileDatabase<Group> {
-        public GroupsDatabase(FileTree fs) : base(fs) { }
+        public GroupsDatabase(VirtualFileTree fs) : base(fs) { }
 
         public override void Add(Group group) {
             if (LookupGid(group.Gid) == null) {
                 throw new System.ArgumentException("gid already exists");
             }
 
-            DataSource()?.Append(new string[] { group.ToString() });
+            AppendLine(group.ToString());
         }
 
-        public override AbstractFile DataSource() {
-            AbstractFile file = Fs.Lookup("/etc/group");
-
-            // if (file == null) {
-            //     file = 
-            // }
-
-            return file;
+        public override File DataSource() {
+            return Fs.Lookup("/etc/group");
         }
 
         public Group LookupGid(int gid) {

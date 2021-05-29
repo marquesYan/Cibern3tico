@@ -1,7 +1,7 @@
-using System.IO;
 using System.Threading;
 using System.Collections.Generic;
 using Linux.FileSystem;
+using Linux.IO;
 
 namespace Linux.Configuration
 {
@@ -16,6 +16,7 @@ namespace Linux.Configuration
         public Thread MainTask { get; protected set; }
         public List<Thread> BackgroundTasks { get; protected set; }
         public List<string> ChildPids { get; protected set; }
+        public List<int> Fds { get; protected set; }
         public string Cwd { get; protected set; }
         public string Root { get; protected set; }
 
@@ -47,6 +48,7 @@ namespace Linux.Configuration
 
             BackgroundTasks = new List<Thread>();
             ChildPids = new List<string>();
+            Fds = new List<int>();
         }
 
         public Process CreateThread(Thread childTask) {
@@ -69,13 +71,13 @@ namespace Linux.Configuration
     }
 
     public class ProcessesTable {
-        object procLock = new object();
+        readonly object procLock = new object();
 
-        protected FileTree Fs;
+        protected VirtualFileTree Fs;
 
         protected List<Process> Processes;
 
-        public ProcessesTable(FileTree fs) {
+        public ProcessesTable(VirtualFileTree fs) {
             Fs = fs;
             Processes = new List<Process>();
         }
@@ -134,10 +136,14 @@ namespace Linux.Configuration
             return Processes.Find(p => p.Pid == pid);
         }
 
+        public Process LookupThread(Thread thread) {
+            return Processes.Find(p => p.MainTask == thread);
+        }
+
         // protected List<Process> LoadFromFs() {
         //     List<Process> processes = new List<Process>();
 
-        //     foreach (AbstractFile file in DataSource()?.Childs) {
+        //     foreach (File file in DataSource()?.Childs) {
         //         Process process = FileToProcess(file);
         //         if (process != null) {
         //             processes.Add(process);
@@ -150,8 +156,8 @@ namespace Linux.Configuration
         void ProcessToFile(Process process, string directory) {
             string path = Fs.Combine(directory, $"{process.Pid}");
 
-            LinuxDirectory procDirectory = new LinuxDirectory(
-                path,                
+            var procDirectory = new Directory(
+                path,
                 process.Uid,
                 process.Gid,
                 Perm.FromInt(5, 5, 5)
@@ -159,32 +165,37 @@ namespace Linux.Configuration
 
             Fs.AddFrom(DataSource(), procDirectory);
 
-            // AbstractFile cmdLineFile = new AbstractFile(
-            //     Fs.Combine(path, "cmdline"),
-            //     process.Uid,
-            //     process.Gid,
-            //     Perm.FromInt(4, 4, 4)
-            // );
+            File cmdLineFile = new File(
+                Fs.Combine(path, "cmdline"),
+                process.Uid,
+                process.Gid,
+                Perm.FromInt(4, 4, 4)
+            );
 
-            // AbstractFile environFile = new AbstractFile(
+            // Fs.Open(cmdLineFile, AccessMode)
 
-            // );
+            File environFile = new File(
+                Fs.Combine(path, "environ"),
+                process.Uid,
+                process.Gid,
+                Perm.FromInt(4, 0, 0)
+            );
         }
 
-        // Process FileToProcess(AbstractFile file) {
+        // Process FileToProcess(File file) {
         //     int pid;
 
         //     if (file.IsDirectory() && int.TryParse(file.Name, out pid)) {
-        //         LinuxDirectory procDirectory = (LinuxDirectory) file;
+        //         Directory procDirectory = (Directory) file;
                 
-        //         AbstractFile cmdLineFile = procDirectory.Childs.Find(c => c.Name == "cmdline");
+        //         File cmdLineFile = procDirectory.Childs.Find(c => c.Name == "cmdline");
         //         string[] cmdLine = cmdLineFile?.Read().Split('\0');
                 
-        //         AbstractFile environFile = procDirectory.Childs.Find(c => c.Name == "environ");
+        //         File environFile = procDirectory.Childs.Find(c => c.Name == "environ");
         //         string[] environ = environFile?.Read().Split('\0');
 
-        //         AbstractFile cwdFile = procDirectory.Childs.Find(c => c.Name == "cwd");
-        //         AbstractFile rootFile = procDirectory.Childs.Find(c => c.Name == "root");
+        //         File cwdFile = procDirectory.Childs.Find(c => c.Name == "cwd");
+        //         File rootFile = procDirectory.Childs.Find(c => c.Name == "root");
 
         //         int[] ids = ParseIdsFromProcessFile(procDirectory);                
 
@@ -203,34 +214,34 @@ namespace Linux.Configuration
         //     return null;
         // }
 
-        int[] ParseIdsFromProcessFile(LinuxDirectory procDirectory) {
-            AbstractFile statusFile = procDirectory.Childs.Find(c => c.Name == "status");
-            string[] lines = statusFile?.Read().Split('\n');
+        // int[] ParseIdsFromProcessFile(Directory procDirectory) {
+        //     File statusFile = Fs.Lookup(procDirectory, "status");
+        //     string[] lines = statusFile?.Read().Split('\n');
 
-            int[] ids = new int[3];
+        //     int[] ids = new int[3];
 
-            int position = -1;
+        //     int position = -1;
 
-            foreach(string line in lines) {
-                if (line.StartsWith("PPid")) {
-                    position = 0;
-                } else if (line.StartsWith("Uid")) {
-                    position = 1;
-                } else if (line.StartsWith("Gid")) {
-                    position = 2;
-                }
+        //     foreach(string line in lines) {
+        //         if (line.StartsWith("PPid")) {
+        //             position = 0;
+        //         } else if (line.StartsWith("Uid")) {
+        //             position = 1;
+        //         } else if (line.StartsWith("Gid")) {
+        //             position = 2;
+        //         }
 
-                if (position != -1) {
-                    position = -1;
-                    ids[position] = System.Convert.ToInt32(line.Split('\t')[1]);
-                }
-            }
+        //         if (position != -1) {
+        //             position = -1;
+        //             ids[position] = System.Convert.ToInt32(line.Split('\t')[1]);
+        //         }
+        //     }
 
-            return ids;
-        }
+        //     return ids;
+        // }
 
-        public LinuxDirectory DataSource() {
-            return (LinuxDirectory) Fs.Lookup("/proc");
+        public Directory DataSource() {
+            return (Directory)Fs.Lookup("/proc");
         }
     }
 }

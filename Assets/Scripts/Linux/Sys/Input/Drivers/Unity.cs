@@ -8,7 +8,7 @@ namespace Linux.Sys.Input.Drivers
 {
     public class UnityInputDriver : AbstractInputDriver
     {
-        AbstractFile _keyboardEvent;
+        File _keyboardEvent;
 
         public UnityInputDriver(Linux.Kernel kernel) : base(kernel) {
             _keyboardEvent = Kernel.Fs.Lookup("/dev/input/event0");
@@ -36,7 +36,7 @@ namespace Linux.Sys.Input.Drivers
         }
 
         void WriteKeyboard(string key) {
-            _keyboardEvent.Write(new string[] { key });
+            // _keyboardEvent.Write(new string[] { key });
         }
 
         void HandleStringKey(string key) {
