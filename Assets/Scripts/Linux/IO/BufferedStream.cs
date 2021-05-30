@@ -2,35 +2,26 @@ using System.Collections.Generic;
 
 namespace Linux.IO
 {
-    public class BufferedStreamWriter {
-        protected List<string> Buffer;
+    public class BufferedStream : AbstractTextIO {
+        protected string Buffer = "";
 
-        public int Size { get; protected set; }
+        public BufferedStream(int mode) : base(mode) { }
 
-        public BufferedStreamWriter(int maxSize) {
-            Buffer = new List<string>();
-            Size = maxSize;
+        protected override int InternalWrite(string data) {
+            Buffer = data;
+            return data.Length;
         }
 
-        public int Write(string message) {
-            int written = message.Length;
-
-            Buffer.Add(message);
-
-            if (Buffer.Count > Size) {
-                written += Buffer[0].Length;
-                Buffer.RemoveAt(0);
-            }
-
-            return written;
+        protected override int InternalAppend(string data) {
+            return InternalWrite(Buffer + data);
         }
 
-        public string[] ToArray() {
-            return Buffer.ToArray();
+        protected override string InternalRead() {
+            return Buffer;
         }
 
-        public void Clear() {
-            Buffer.Clear();
+        protected override void InternalClose() {
+            Buffer = null;
         }
     }
 }

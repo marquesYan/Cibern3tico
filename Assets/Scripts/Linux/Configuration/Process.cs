@@ -153,34 +153,34 @@ namespace Linux.Configuration
         //     return processes;
         // }
 
-        void ProcessToFile(Process process, string directory) {
-            string path = Fs.Combine(directory, $"{process.Pid}");
+        // void ProcessToFile(Process process, string directory) {
+        //     string path = Fs.Combine(directory, $"{process.Pid}");
 
-            var procDirectory = new Directory(
-                path,
-                process.Uid,
-                process.Gid,
-                Perm.FromInt(5, 5, 5)
-            );
+        //     var procDirectory = new File(
+        //         path,
+        //         process.Uid,
+        //         process.Gid,
+        //         Perm.FromInt(5, 5, 5)
+        //     );
 
-            Fs.AddFrom(DataSource(), procDirectory);
+        //     Fs.AddFrom(DataSource(), procDirectory);
 
-            File cmdLineFile = new File(
-                Fs.Combine(path, "cmdline"),
-                process.Uid,
-                process.Gid,
-                Perm.FromInt(4, 4, 4)
-            );
+        //     File cmdLineFile = new File(
+        //         Fs.Combine(path, "cmdline"),
+        //         process.Uid,
+        //         process.Gid,
+        //         Perm.FromInt(4, 4, 4)
+        //     );
 
-            // Fs.Open(cmdLineFile, AccessMode)
+        //     // Fs.Open(cmdLineFile, AccessMode)
 
-            File environFile = new File(
-                Fs.Combine(path, "environ"),
-                process.Uid,
-                process.Gid,
-                Perm.FromInt(4, 0, 0)
-            );
-        }
+        //     File environFile = new File(
+        //         Fs.Combine(path, "environ"),
+        //         process.Uid,
+        //         process.Gid,
+        //         Perm.FromInt(4, 0, 0)
+        //     );
+        // }
 
         // Process FileToProcess(File file) {
         //     int pid;
@@ -240,8 +240,8 @@ namespace Linux.Configuration
         //     return ids;
         // }
 
-        public Directory DataSource() {
-            return (Directory)Fs.Lookup("/proc");
+        public File DataSource() {
+            return Fs.Lookup("/proc");
         }
     }
 }

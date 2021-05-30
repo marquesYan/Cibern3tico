@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Linux.IO;
 
 namespace Linux.FileSystem
 {
@@ -11,7 +12,8 @@ namespace Linux.FileSystem
         F_CHR,
         F_PIP,
         F_SYL,
-        S_SCK
+        F_SCK,
+        F_MNT
     }
 
     public class File {
@@ -26,6 +28,9 @@ namespace Linux.FileSystem
         public int Gid { get; set; }
 
         public File Parent { get; set; }
+        public File SourceFile { get; protected set; }
+
+        protected Dictionary<string, File> Childs;
 
         public File(
             string absolutePath, 
@@ -35,12 +40,26 @@ namespace Linux.FileSystem
             FileType type
         ) {
             Path = absolutePath;
-            Name = System.IO.Path.GetFileName(absolutePath);
+            Name = PathUtils.BaseName(absolutePath);
             Uid = uid;
             Gid = gid;
             Permission = permission;
             Type = type;
             CreatedAt = UpdatedAt = DateTime.Now;
+
+            switch (Type) {
+                case FileType.F_MNT:
+                case FileType.F_DIR: {
+                    Childs = new Dictionary<string, File>();
+                    break;
+                }
+
+                case FileType.F_SYL: {
+                    throw new ArgumentException(
+                        "Can not create symbolic link from this constructor"  
+                    );
+                }
+            }
         }
         public File(
             string absolutePath,
@@ -49,6 +68,26 @@ namespace Linux.FileSystem
             int permission
         ) : this(absolutePath, uid, gid, permission, FileType.F_REG) { }
 
+        public File(
+            File sourceFile,
+            string absolutePath
+        ) : this(sourceFile, absolutePath, Perm.FromInt(7, 7, 7)) { }
+
+        public File(
+            File sourceFile,
+            string absolutePath,
+            int permission
+        ) : this(
+                absolutePath,
+                sourceFile.Uid,
+                sourceFile.Gid,
+                permission,
+                FileType.F_SYL
+            )
+        {
+            SourceFile = sourceFile;
+        }
+
         public bool IsHidden() {
             return Name.StartsWith(".");
         }
@@ -56,20 +95,9 @@ namespace Linux.FileSystem
         public void Touch() {
             UpdatedAt = DateTime.Now;
         }
-    }
 
-    public class Directory : File {
-        List<File> Childs = new List<File>();
-
-        public Directory(
-            string absolutePath,
-            int uid,
-            int gid,
-            int permission
-        ) : base(absolutePath, uid, gid, permission, FileType.F_DIR) { }
-
-        public void Add(File file) {
-            Childs.Add(file);
+        public void AddChild(File file) {
+            Childs.Add(file.Name, file);
             Touch();
         }
 
@@ -77,50 +105,25 @@ namespace Linux.FileSystem
             return Childs.Count;
         }
 
-        public File[] GetChilds() {
-            return Childs.ToArray();
+        public File[] ListChilds() {
+            File[] childs = new File[Childs.Count];
+            Childs.Values.CopyTo(childs, 0);
+            return childs;
         }
 
-        public File Find(Predicate<File> action) {
-            return Childs.Find(action);
+        public File FindChild(string fileName) {
+            File result;
+
+            if (Childs.TryGetValue(fileName, out result)) {
+                return result;
+            }
+
+            return null;
         }
 
-        public void Remove(File file) {
-            Childs.Remove(file);
+        public void RemoveChild(string fileName) {
+            Childs.Remove(fileName);
             Touch();
-        }
-    }
-
-    public class SymbolicLink : File {
-        public File SourceFile { get; protected set; }
-
-        public SymbolicLink(
-            File sourceFile,
-            string absolutePath
-        ) : this(sourceFile, absolutePath, Perm.FromInt(7, 7, 7)) { }
-
-        public SymbolicLink(
-            File sourceFile,
-            string absolutePath,
-            int permission
-        ) : base(
-                absolutePath,
-                sourceFile.Uid,
-                sourceFile.Gid,
-                permission,
-                FileType.F_SYL
-            ) {
-            SourceFile = sourceFile;
-        }
-
-        public SymbolicLink(
-            string absolutePath, 
-            int uid,
-            int gid,
-            int permission,
-            FileType type
-        ) : base(null, 0, 0, 0, FileType.F_REG) {
-            throw new ArgumentException("Symbolic links requires a source file");
         }
     }
 }

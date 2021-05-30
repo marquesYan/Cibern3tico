@@ -10,50 +10,46 @@ namespace Linux.Configuration
         public PeripheralsTable(VirtualFileTree fs) {
             Fs = fs;
 
-            Fs.AddFrom(
-                (Directory)Fs.Lookup("/sys/devices"),
-                new Directory(
-                    "/sys/devices/pci0000:00",
-                    0, 0,
-                    Perm.FromInt(7, 5, 5)
-                )
+            Fs.CreateDir(
+                "/sys/devices/pci0000:00",
+                0, 0,
+                Perm.FromInt(7, 5, 5)
             );
         }
 
         public void Add(Pci pci) {
-            Directory devices = DataSource();
+            File devicesDir = DataSource();
 
-            var slotDirectory = new Directory(
-                Fs.Combine(devices.Path, pci.Slot),
+            var slotDirectory = new File(
+                PathUtils.Combine(devicesDir.Path, pci.Slot),
                 0, 0,
-                Perm.FromInt(7, 5, 5)
+                Perm.FromInt(7, 5, 5),
+                FileType.F_DIR
             );
 
-            Fs.AddFrom(devices, slotDirectory);
+            Fs.AddFrom(devicesDir, slotDirectory);
 
             WriteSpec(slotDirectory, "vendor", pci.Vendor);
             WriteSpec(slotDirectory, "product", pci.Product);
             WriteSpec(slotDirectory, "dev", $"{pci.Major}:{pci.Minor}");
         }
 
-        public Directory DataSource() {
-            return (Directory)Fs.Lookup("/sys/devices/pci0000:00");
+        public File DataSource() {
+            return Fs.Lookup("/sys/devices/pci0000:00");
         }
 
         protected void WriteSpec(
-            Directory directory, 
+            File directory,
             string fileName, 
             string content
         ) {
-            var file = new File(
-                Fs.Combine(directory.Path, fileName),
+            File file = Fs.Create(
+                PathUtils.Combine(directory.Path, fileName),
                 0, 0,
                 Perm.FromInt(4, 4, 4)
             );
 
-            Fs.AddFrom(directory, file);
-
-            TextStreamWrapper stream = Fs.Open(file, AccessMode.O_WRONLY);
+            ITextIO stream = Fs.Open(file, AccessMode.O_WRONLY);
 
             try {
                 stream.WriteLine(content);

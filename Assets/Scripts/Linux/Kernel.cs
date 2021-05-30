@@ -2,6 +2,7 @@ using System.Threading;
 using UnityEngine;
 using Linux.Boot;
 using Linux.Configuration;
+using Linux.Sys.IO;
 using Linux.FileSystem;
 using Linux.PseudoTerminal;
 using Linux.Utilities;
@@ -9,23 +10,67 @@ using Linux.Utilities;
 namespace Linux
 {    
     public class Kernel {
+
         public UnityTerminal Terminal { get; protected set; }
         public string Version { get; protected set; }
+        public VirtualMachine Machine { get; protected set; }
     
         public VirtualFileTree Fs;
         public ProcessesTable ProcTable;
         public UsersDatabase UsersDb;
         public GroupsDatabase GroupsDb;
         public PeripheralsTable PciTable;
+        public UdevTable UdTable;
 
         int _bufferSize = 512;
 
         float _bootDelay = 0.0001f;
 
-        public void Bootstrap() {
-            Terminal = new UnityTerminal(_bufferSize);
+        public Kernel(VirtualMachine machine) {
+            Machine = machine;
+        }
 
-            Terminal.SubscribeFirstDraw(TriggerStartup);
+        public void Bootstrap() {
+            Fs = new VirtualFileTree(
+                new File(
+                    "/",
+                    0,0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_DIR
+                )
+            );
+
+            Fs.Add(
+                new File(
+                    "/dev",
+                    0,0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_DIR
+                )
+            );
+
+            // Failing by now
+            //
+            // Fs.CreateDir(
+            //     "/dev",
+            //     0,0,
+            //     Perm.FromInt(7, 5, 5)            
+            // );
+
+            UdTable = new UdevTable(Fs);
+            // Terminal = new UnityTerminal(_bufferSize);
+
+            // Terminal.SubscribeFirstDraw(TriggerStartup);
+        }
+
+        public void Interrupt(string id, IRQCode code) {
+            UEvent uEvent = UdTable.LookupByDeviceId(id);
+
+            if (uEvent != null) {
+                uEvent.Driver.Handle(code);
+            } else {
+                Debug.Log("any available driver");
+            }
         }
 
         void TriggerStartup() {
@@ -76,7 +121,7 @@ namespace Linux
         void Init() {
             var utility = new TestUtility();
 
-            Fs.AddFrom((Directory)Fs.Lookup("/usr/sbin"), utility);
+            Fs.AddFrom(Fs.Lookup("/usr/sbin"), utility);
 
             User root = UsersDb.LookupUid(0);
 

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Linux.FileSystem;
 using Linux.IO;
-using Linux;
 
 namespace Linux.Configuration
 {    
@@ -41,13 +40,13 @@ namespace Linux.Configuration
         }
 
         protected string[] ReadLines() {
-            TextStreamWrapper stream = Fs.Open(DataSource(), AccessMode.O_WRONLY);
+            ITextIO stream = Fs.Open(DataSource(), AccessMode.O_WRONLY);
             return stream.ReadLines();
         }
 
         protected int AppendLine(string line) {
-            TextStreamWrapper stream = Fs.Open(DataSource(), AccessMode.O_APONLY);
-            return stream.AppendLine(line);
+            ITextIO stream = Fs.Open(DataSource(), AccessMode.O_APONLY);
+            return stream.WriteLine(line);
         }
     }
 }

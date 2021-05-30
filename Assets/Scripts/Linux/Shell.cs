@@ -6,7 +6,7 @@ namespace Linux
     public class Shell {
         VirtualFileTree Fs { get; set; }
 
-        public Directory Cwd { get; private set; }
+        public File Cwd { get; private set; }
 
         public Dictionary<string, string> Env { get; set; }
 
@@ -15,7 +15,7 @@ namespace Linux
 
         public Shell(VirtualFileTree fs) {
             Fs = fs;
-            Cwd = (Directory) Fs.Lookup("/");
+            Cwd = Fs.Root;
 
             Stdout = Fs.Lookup("/dev/tty");
             Stderr = Fs.Lookup("/dev/tty");

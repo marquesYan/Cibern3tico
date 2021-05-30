@@ -86,7 +86,7 @@ namespace Linux.Boot
 
         void MakeFileSystem() {
             Kernel.Fs = new VirtualFileTree(
-                new Directory(
+                new File(
                     "/",
                     0,
                     0,
@@ -148,35 +148,38 @@ namespace Linux.Boot
             int perm555 = Perm.FromInt(5, 5, 5);
             
             foreach (string path in dir755) {
-                Kernel.Fs.Add(new Directory(path, 0, 0, perm755));
+                Kernel.Fs.CreateDir(
+                    path,
+                    0, 0,
+                    perm755
+                );
             }
 
             foreach (string path in dir555) {
-                Kernel.Fs.Add(new Directory(path, 0, 0, perm555));
+                Kernel.Fs.CreateDir(
+                    path, 0, 0, perm555
+                );
             }
 
-            Kernel.Fs.Add(new Directory("/root", 0, 0, Perm.FromInt(5, 5, 0)));
+            Kernel.Fs.CreateDir(
+                "/root", 0, 0, Perm.FromInt(5, 5, 0)
+            );
         }
 
         void MakeLinuxUtilities() {
-            Directory usrDirectory = (Directory) Kernel.Fs.Lookup("/usr");
-
             int binPerm = Perm.FromInt(7, 5, 5);
 
-            Directory binDirectory = new Directory(
-                "/usr/bin", 
+            Kernel.Fs.CreateDir(
+                "/usr/bin",
                 0, 0, 
                 binPerm
             );
 
-            Directory sbinDirectory = new Directory(
+            Kernel.Fs.CreateDir(
                 "/usr/sbin",
                 0, 0,
                 binPerm
             );
-
-            Kernel.Fs.AddFrom(usrDirectory, binDirectory);
-            Kernel.Fs.AddFrom(usrDirectory, sbinDirectory);
 
             // File[] binaries = new File[] { 
             //     new LsUtility("/usr/bin/ls", 0, 0, binPerm),
@@ -196,16 +199,12 @@ namespace Linux.Boot
         }
 
         void MakeLinuxDev() {
-            Directory devDirectory = (Directory) Kernel.Fs.Lookup("/dev");
-
             // Create Input Devices directory
-            Directory inputDevDirectory = new Directory(
+            Kernel.Fs.CreateDir(
                 "/dev/input",
                 0, 0,
                 Perm.FromInt(7, 5, 5)
             );
-
-            Kernel.Fs.AddFrom(devDirectory, inputDevDirectory);
 
             // EventFile kbEventFile = new EventFile(
             //     "/dev/input/event0",
@@ -234,8 +233,6 @@ namespace Linux.Boot
         }
 
         void MakeLinuxConfigurations() {
-            Directory configDirectory = (Directory) Kernel.Fs.Lookup("/etc");
-
             int configPerm = Perm.FromInt(7, 5, 5);
 
             var files = new string[] {
@@ -245,20 +242,15 @@ namespace Linux.Boot
             };
 
             foreach(string path in files) {
-                Kernel.Fs.AddFrom(
-                    configDirectory, 
-                    new File(
-                        path,
-                        0, 0,
-                        configPerm
-                    )
+                Kernel.Fs.Create(
+                    path,
+                    0, 0,
+                    configPerm
                 );
             }
         }
 
         void MakeLinuxSys() {
-            Directory sysDirectory = (Directory)Kernel.Fs.Lookup("/sys");
-
             int sysPerm = Perm.FromInt(7, 5, 5);
 
             var files = new string[] {
@@ -267,13 +259,10 @@ namespace Linux.Boot
             };
 
             foreach(string path in files) {
-                Kernel.Fs.AddFrom(
-                    sysDirectory, 
-                    new Directory(
-                        path,
-                        0, 0,
-                        sysPerm
-                    )
+                Kernel.Fs.CreateDir(
+                    path,
+                    0, 0,
+                    sysPerm
                 );
             }
         }
@@ -284,7 +273,8 @@ namespace Linux.Boot
                 "SAD",
                 "0000:00:04.0",
                 189,
-                122
+                122,
+                PciClass.INPUT
             );
 
             Kernel.PciTable.Add(usb1);
@@ -295,7 +285,8 @@ namespace Linux.Boot
                 "SAD",
                 "0000:00:06.0",
                 189,
-                122
+                122,
+                PciClass.INPUT
             );
 
             Kernel.PciTable.Add(usb2);

@@ -1,7 +1,6 @@
 using System.Text;
 using System.Collections.Generic;
 using Linux.IO;
-using Linux.Devices.Input;
 
 namespace Linux.PseudoTerminal
 {
@@ -39,17 +38,18 @@ namespace Linux.PseudoTerminal
         int _moveXAxis = -1;
         int _typedKeysCount;
 
-        protected BufferedStreamWriter Buffer;
+        protected AbstractTextIO Buffer;
 
-        protected EventFile KeyboardEvent;
         protected bool IsFirstDraw = true;
+
+        protected string KeyboardEvent;
 
         protected CursorDisplay CursorManager;
 
         public bool IsClosed { get; protected set; }
 
         public VirtualTerminal(int bufferSize) {
-            Buffer = new BufferedStreamWriter(bufferSize);
+            Buffer = new LimitedStream(bufferSize);
 
             CursorManager = new CursorDisplay();
 
@@ -57,13 +57,14 @@ namespace Linux.PseudoTerminal
         }
 
         public void Close() {
+            Buffer.Close();
             IsClosed = true;
         }
 
-        public void AttachKeyboard(EventFile keyboardEvent) {
-            KeyboardEvent = keyboardEvent;
-            new EventController(this, keyboardEvent.Duplicate());
-        }
+        // public void AttachKeyboard(EventFile keyboardEvent) {
+        //     KeyboardEvent = keyboardEvent;
+        //     new EventController(this, keyboardEvent.Duplicate());
+        // }
 
         public void RequestYAxis(int position) {
             _moveYAxis = position;
@@ -79,10 +80,6 @@ namespace Linux.PseudoTerminal
 
         public void RequestHighYAxis() {
             RequestYAxis(int.MaxValue);
-        }
-
-        public void ClearBuffer() {
-            Buffer.Clear();
         }
 
         public void RequestCursorToEnd() {
@@ -104,7 +101,7 @@ namespace Linux.PseudoTerminal
             string lastChar = "";
 
             while (lastChar != "\n") {
-                lastChar = KeyboardEvent.Read();
+                // lastChar = KeyboardEvent.Read();
                 buffer.Append(lastChar);
             }
 
@@ -157,7 +154,7 @@ namespace Linux.PseudoTerminal
         }
 
         protected void FlushBuffer() {
-            foreach (string message in Buffer.ToArray()) {
+            foreach (string message in Buffer.ReadLines()) {
                 switch (message) {
                     default: {
                         DrawLine(message);
