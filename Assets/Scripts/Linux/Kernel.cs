@@ -41,22 +41,22 @@ namespace Linux
                 )
             );
 
-            Fs.Add(
-                new File(
-                    "/dev",
-                    0,0,
-                    Perm.FromInt(7, 5, 5),
-                    FileType.F_DIR
-                )
-            );
+            // Fs.Add(
+            //     new File(
+            //         "/dev",
+            //         0,0,
+            //         Perm.FromInt(7, 5, 5),
+            //         FileType.F_DIR
+            //     )
+            // );
 
             // Failing by now
             //
-            // Fs.CreateDir(
-            //     "/dev",
-            //     0,0,
-            //     Perm.FromInt(7, 5, 5)            
-            // );
+            Fs.CreateDir(
+                "/dev",
+                0,0,
+                Perm.FromInt(7, 5, 5)            
+            );
 
             UdTable = new UdevTable(Fs);
             // Terminal = new UnityTerminal(_bufferSize);

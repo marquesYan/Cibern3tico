@@ -62,12 +62,20 @@ namespace Linux.FileSystem
                 return "";
             }
 
+            bool isAbsolute = IsAbsPath(path);
+
             List<string> parts = new List<string>(Split(path));
 
             // Remove file name
             parts.RemoveAt(parts.Count - 1);
 
-            return Combine(parts.ToArray());
+            string pathName = Combine(parts.ToArray());
+
+            if (isAbsolute) {
+                return ToAbsPath(pathName);
+            }
+
+            return pathName;
         }
     }
 }
