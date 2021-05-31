@@ -110,7 +110,7 @@ namespace Linux.Configuration
                     pid = 1;
                 } else {
                     do {
-                        pid = Processes[Processes.Count - 1].Pid;
+                        pid = Processes[Processes.Count - 1].Pid + 1;
                     } while (LookupPid(pid) != null);
                 }
             }

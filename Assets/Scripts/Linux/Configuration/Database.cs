@@ -40,7 +40,7 @@ namespace Linux.Configuration
         }
 
         protected string[] ReadLines() {
-            ITextIO stream = Fs.Open(DataSource(), AccessMode.O_WRONLY);
+            ITextIO stream = Fs.Open(DataSource(), AccessMode.O_RDONLY);
             return stream.ReadLines();
         }
 

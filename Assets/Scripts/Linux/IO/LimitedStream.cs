@@ -25,12 +25,12 @@ namespace Linux.IO
         protected override int InternalAppend(string data) {
             int written = data.Length;
 
+            Buffer.Add(data);
+
             if (Buffer.Count > Size) {
                 written += Buffer[0].Length;
                 Buffer.RemoveAt(0);
             }
-
-            Buffer.Add(data);
 
             return written;
         }
