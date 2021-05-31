@@ -1,3 +1,4 @@
+using System.Text;
 using UnityEngine;
 using Linux.Devices.Input;
 using Linux.IO;
@@ -15,11 +16,10 @@ namespace Linux.Sys.Input.Drivers
         }
 
         protected override int InternalWrite(string data) {
-            BackendTerminal.WriteKey(data);
-            return 1;
+            return BackendTerminal.SendToSreen(data);
         }
         protected override int InternalAppend(string data) {
-            return BackendTerminal.SendToSreen(data);
+            return 0;
         }
         protected override string InternalRead() {
             throw new System.ArgumentException(

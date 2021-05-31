@@ -25,8 +25,8 @@ namespace Linux
         public GroupsDatabase GroupsDb;
         public PeripheralsTable PciTable;
         public UdevTable EventTable;
-
-        int _bufferSize = 512;
+        public UEvent MasterKbdEvent;
+        public UEvent MasterConsoleEvent;
 
         float _bootDelay = 0.0001f;
 
@@ -44,6 +44,18 @@ namespace Linux
 
             EventTable = new UdevTable(Fs);
             FindBiosDrivers();
+
+            FindControllingTty();
+
+            TriggerStartup();
+        }
+
+        public void Interrupt(Pci pci, IRQCode code) {
+            UEvent uEvent = EventTable.LookupByPci(pci);
+
+            if (uEvent != null) {
+                uEvent.Driver.Handle(code);
+            }
         }
 
         void FindPeripheralComponents() {
@@ -69,21 +81,32 @@ namespace Linux
             }
         }
 
-        public void Interrupt(Pci pci, IRQCode code) {
-            UEvent uEvent = EventTable.LookupByPci(pci);
+        void FindControllingTty() {
+            UEvent kbdEvent = EventTable.LookupByType(DevType.KEYBOARD);
+            if (kbdEvent != null) {
+                MasterKbdEvent = kbdEvent;
+            }
 
-            if (uEvent != null) {
-                uEvent.Driver.Handle(code);
-            } else {
-                Debug.Log("any available driver");
+            UEvent consoleEvent = EventTable.LookupByType(DevType.CONSOLE);
+            if (consoleEvent != null) {
+                MasterConsoleEvent = consoleEvent;
+            }
+
+            if (MasterConsoleEvent != null && MasterKbdEvent != null) {
+                //   
             }
         }
 
         void TriggerStartup() {
             var startup = new Thread(new ThreadStart(() => {
-                new StartupStage(this);
-
-                Init(); 
+                // new StartupStage(this);
+                while (true) {
+                    string key = MasterKbdEvent.DevPointer.Read();
+                    // Debug.Log("recv key: " + key);
+                    string wKey = $"{CharacterControl.C_WRITE_KEY}{key}";
+                    MasterConsoleEvent.DevPointer.Write(key);
+                }
+                // Init(); 
             }));
 
             startup.Start();

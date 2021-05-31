@@ -84,6 +84,16 @@ namespace Linux.Configuration
             return null;
         }
 
+        public UEvent LookupByType(DevType type) {
+            foreach(UEvent uEvent in Events.Values) {
+                if (uEvent.Device.Type == type) {
+                    return uEvent;
+                }
+            }
+
+            return null;
+        }
+
         public File DataSource() {
             return Fs.Lookup("/dev/input");
         }
