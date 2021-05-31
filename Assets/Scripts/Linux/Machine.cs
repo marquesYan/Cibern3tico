@@ -5,10 +5,9 @@ using Linux.Sys;
 namespace Linux
 {    
     public class VirtualMachine {
-        protected Random Rnd;
-
-        protected Dictionary<Pci, GenericDevice> Chassis;
         protected int usbCount = 0;
+
+        public Dictionary<Pci, GenericDevice> Chassis { get; protected set; }
 
         public string ChipsetEmulation { get; protected set; }
         public int CpuCores { get; protected set; }
@@ -17,10 +16,9 @@ namespace Linux
             ChipsetEmulation = chipsetEmulation;
             CpuCores = cpuCores;
             Chassis = new Dictionary<Pci, GenericDevice>();
-            Rnd = new Random();
         }
 
-        public string AttachUSB(
+        public Pci AttachUSB(
             string product,
             byte vendorId,
             DevType type
@@ -30,7 +28,6 @@ namespace Linux
             var usb = new GenericDevice(
                 product,
                 vendorId,
-                Rnd.Next(32).ToString(),
                 type
             );
 
@@ -45,7 +42,7 @@ namespace Linux
 
             Chassis.Add(usbPci, usb);
 
-            return usb.Id;
+            return usbPci;
         }
     }
 }

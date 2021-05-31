@@ -2,6 +2,7 @@ using System.Threading;
 using UnityEngine;
 using Linux.Boot;
 using Linux.Configuration;
+using Linux.Sys;
 using Linux.Sys.IO;
 using Linux.FileSystem;
 using Linux.PseudoTerminal;
@@ -63,8 +64,8 @@ namespace Linux
             // Terminal.SubscribeFirstDraw(TriggerStartup);
         }
 
-        public void Interrupt(string id, IRQCode code) {
-            UEvent uEvent = UdTable.LookupByDeviceId(id);
+        public void Interrupt(Pci pci, IRQCode code) {
+            UEvent uEvent = UdTable.LookupByPci(pci);
 
             if (uEvent != null) {
                 uEvent.Driver.Handle(code);

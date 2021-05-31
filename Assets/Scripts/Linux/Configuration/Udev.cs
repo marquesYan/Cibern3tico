@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Linux.FileSystem;
 using Linux.Sys;
 using Linux.Sys.Input;
-using Linux.Sys.IO;
+using Linux.IO;
 
 namespace Linux.Configuration
 {
@@ -12,29 +12,29 @@ namespace Linux.Configuration
         public readonly GenericDevice Device;
         public readonly IUdevDriver Driver;
 
-        public readonly CharacterDevice CharDev;
+        public readonly ITextIO DevPointer;
 
         public UEvent(
             int id,
             GenericDevice device,
             IUdevDriver driver,
-            CharacterDevice charDev
+            ITextIO devPointer
         ) {
             Id = id;
             Device = device;
             Driver = driver;
-            CharDev = charDev;
+            DevPointer = devPointer;
         }
     }
 
     public class UdevTable {
-        protected Dictionary<string, UEvent> Events;
+        protected Dictionary<Pci, UEvent> Events;
 
         protected VirtualFileTree Fs;
 
         public UdevTable(VirtualFileTree fs) {
             Fs = fs;
-            Events = new Dictionary<string, UEvent>();
+            Events = new Dictionary<Pci, UEvent>();
 
             Fs.CreateDir(
                 "/dev/input",
@@ -43,13 +43,11 @@ namespace Linux.Configuration
             );
         }
 
-        public void Add(GenericDevice device, IUdevDriver driver) {
-            if (Events.ContainsKey(device.Id)) {
-                throw new System.ArgumentException(
-                    "Device already exists"
-                );
-            }
-
+        public void Add(
+            Pci pci,
+            GenericDevice device,
+            IUdevDriver driver
+        ) {
             var uEvent = new UEvent(
                 Events.Count,
                 device,
@@ -57,7 +55,7 @@ namespace Linux.Configuration
                 driver.CreateDevice()
             );
             
-            Events.Add(device.Id, uEvent);
+            Events.Add(pci, uEvent);
         }
 
         public UEvent LookupId(int id) {
@@ -70,9 +68,9 @@ namespace Linux.Configuration
             return null;
         }
 
-        public UEvent LookupByDeviceId(string id) {
+        public UEvent LookupByPci(Pci pci) {
             UEvent uEvent;
-            if (Events.TryGetValue(id, out uEvent)) {
+            if (Events.TryGetValue(pci, out uEvent)) {
                 return uEvent;
             }
             

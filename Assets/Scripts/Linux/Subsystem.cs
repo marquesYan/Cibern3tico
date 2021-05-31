@@ -7,12 +7,12 @@ namespace Linux
     public class Subsystem : MonoBehaviour {
         public Linux.Kernel Kernel;
 
-        public string ConsoleDeviceId;
+        public Pci ConsolePci;
 
         void Start() {
             var machine = new VirtualMachine("I4440FX", 4);
 
-            ConsoleDeviceId = machine.AttachUSB(
+            ConsolePci = machine.AttachUSB(
                 "Unity Game Console",
                 255,
                 DevType.CONSOLE
@@ -23,7 +23,7 @@ namespace Linux
         }
 
         void Update() {
-            Kernel.Interrupt(ConsoleDeviceId, IRQCode.READ);
+            Kernel.Interrupt(ConsolePci, IRQCode.READ);
         }
 
         void OnGUI() {
