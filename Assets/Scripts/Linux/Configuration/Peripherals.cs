@@ -11,6 +11,12 @@ namespace Linux.Configuration
             Fs = fs;
 
             Fs.CreateDir(
+                "/sys/devices",
+                0, 0,
+                Perm.FromInt(7, 5, 5)
+            );
+
+            Fs.CreateDir(
                 "/sys/devices/pci0000:00",
                 0, 0,
                 Perm.FromInt(7, 5, 5)
@@ -31,11 +37,56 @@ namespace Linux.Configuration
 
             WriteSpec(slotDirectory, "vendor", pci.Vendor);
             WriteSpec(slotDirectory, "product", pci.Product);
+            WriteSpec(slotDirectory, "class", pci.Class);
             WriteSpec(slotDirectory, "dev", $"{pci.Major}:{pci.Minor}");
+        }
+
+        public Pci[] ToArray() {
+            File devicesDir = DataSource();
+
+            Pci[] devices = new Pci[devicesDir.ChildsCount()];
+
+            int i = 0;
+            foreach(File child in devicesDir.ListChilds()) {
+                if (child.Type == FileType.F_DIR) {
+                    Pci pci = DirectoryToPci(child);
+
+                    if (pci != null) {
+                        devices[i] = pci;
+                    }
+                }
+
+                i++;
+            }
+
+            return devices;
         }
 
         public File DataSource() {
             return Fs.Lookup("/sys/devices/pci0000:00");
+        }
+
+        protected Pci DirectoryToPci(File file) {
+            string[] numbers = ReadSpec(file.FindChild("dev")).Split(':');
+
+            int major;
+            if (!int.TryParse(numbers[0], out major)) {
+                return null;
+            }
+
+            int minor;
+            if (!int.TryParse(numbers[1], out minor)) {
+                return null;
+            }
+
+            return new Pci(
+                ReadSpec(file.FindChild("vendor")),
+                ReadSpec(file.FindChild("product")),
+                file.Name,
+                major,
+                minor,
+                ReadSpec(file.FindChild("class"))
+            );
         }
 
         protected void WriteSpec(
@@ -53,6 +104,16 @@ namespace Linux.Configuration
 
             try {
                 stream.WriteLine(content);
+            } finally {
+                stream.Close();
+            }
+        }
+
+        protected string ReadSpec(File file) {
+            ITextIO stream = Fs.Open(file, AccessMode.O_RDONLY);
+
+            try {
+                return stream.ReadLine();
             } finally {
                 stream.Close();
             }

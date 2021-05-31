@@ -4,15 +4,15 @@ using Linux.Sys.Input;
 
 namespace Linux.Sys.Drivers
 {
-    public class UsbControllerDriver : PciDriver
+    public class UsbControllerDriver : IPciDriver
     {
         protected List<IUdevDriver> DeviceDrivers;
 
-        public UsbControllerDriver(Linux.Kernel kernel) : base(kernel) {
+        public UsbControllerDriver() {
             DeviceDrivers = new List<IUdevDriver>();
         }
 
-        public override bool IsSupported(Pci pci) {
+        public bool IsSupported(Pci pci) {
             return pci.Major == 189 && 
                     pci.Class == PciClass.INPUT;
         }
@@ -25,15 +25,7 @@ namespace Linux.Sys.Drivers
             DeviceDrivers.Remove(driver);
         }
 
-        public override void Attach(Pci pci, GenericDevice input) {
-            IUdevDriver driver = FindDriver(input);
-
-            if (driver != null) {
-                Kernel.UdTable.Add(pci, input, driver);
-            }
-        }
-
-        protected IUdevDriver FindDriver(GenericDevice input) {
+        public IDeviceDriver FindDevDriver(GenericDevice input) {
             return DeviceDrivers.Find(driver => driver.IsSupported(input));
         }
     }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 
 namespace Linux.IO
 {
@@ -45,6 +46,27 @@ namespace Linux.IO
 
         public virtual string[] ReadLines() {
             return Read().Split(LINE_FEED);
+        }
+
+        public virtual string ReadLine() {
+            var content = new StringBuilder();
+
+            bool missingLineFeed = true;
+
+            string lineFeed = $"{LINE_FEED}";
+
+            while (missingLineFeed) {
+                foreach(string input in Read().Split()) {
+                    if (input == lineFeed) {
+                        missingLineFeed = false;
+                        break;
+                    } else {
+                        content.Append(input);
+                    }
+                }
+            }
+
+            return content.ToString();
         }
 
         public void ThrowIncorretMode(string mode) {

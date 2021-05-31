@@ -29,47 +29,28 @@ namespace Linux.Boot
         }
 
         protected void Start() {
-            MakeFileSystem();
-            Print("virtual filesystem: created");
+            // MakeFileSystem();
+            // Print("virtual filesystem: created");
 
-            MakeLinuxDefaultDirectories();
-            int directoriesCount = Kernel.Fs.Root.ChildsCount();
-            Print($"filesystem structure has {directoriesCount} directories");
+            // MakeLinuxDefaultDirectories();
+            // int directoriesCount = Kernel.Fs.Root.ChildsCount();
+            // Print($"filesystem structure has {directoriesCount} directories");
 
             MakeLinuxUtilities();
             Print("file utilities: created");
 
-            MakeLinuxDev();
-            Print("devices: created");
+            // MakeLinuxDev();
+            // Print("devices: created");
 
             MakeLinuxSys();
             Print("sys: created");
 
-            MakeLinuxConfigurations();
-            Print("configurations: created");
+            // MakeLinuxConfigurations();
+            // Print("configurations: created");
 
-            Kernel.PciTable = new PeripheralsTable(Kernel.Fs);
-            Print("pci table: created");
-
-            FindPeripheralComponents();
-            Print("found peripherals");
 
             Kernel.ProcTable = new ProcessesTable(Kernel.Fs);
             Print("process table: created");
-
-            Kernel.UsersDb = new UsersDatabase(Kernel.Fs);
-            Print("users database: created");
-
-            Kernel.GroupsDb = new GroupsDatabase(Kernel.Fs);
-            Print("groups database: created");
-
-            MakeSystemUsers();
-            int usersCount = Kernel.UsersDb.Count();
-            Print($"created system users: {usersCount}");
-
-            MakeSystemGroups();
-            int groupsCount = Kernel.GroupsDb.Count();
-            Print($"created system groups: {groupsCount}");
 
             // Init();
             
@@ -82,88 +63,6 @@ namespace Linux.Boot
             //         Init();
             //     }
             // );
-        }
-
-        void MakeFileSystem() {
-            Kernel.Fs = new VirtualFileTree(
-                new File(
-                    "/",
-                    0,
-                    0,
-                    Perm.FromInt(7, 5, 5)
-                )
-            );
-        }
-
-        void MakeSystemUsers() {
-            Kernel.UsersDb.Add(new User(
-                "root",
-                0, 0,
-                "",
-                "/root",
-                "/usr/bin/bash"
-            ));
-
-            Kernel.UsersDb.Add(new User(
-                "bin",
-                1, 1,
-                "",
-                "/usr/bin",
-                "/usr/sbin/nologin"
-            ));
-        }
-
-        void MakeSystemGroups() {
-            Kernel.GroupsDb.Add(new Group(
-                "root",
-                0,
-                "root"
-            ));
-
-            Kernel.GroupsDb.Add(new Group(
-                "bin",
-                1,
-                "bin"
-            ));
-        }
-
-        void MakeLinuxDefaultDirectories() {
-            string[] dir755 = new string[]{
-                "/dev",
-                "/home",
-                "/mnt",
-                "/usr",
-                "/etc",
-                "/media",
-                "/opt",
-                "/var",
-            };
-
-            string[] dir555 = new string[] { 
-                "/proc",
-                "/sys",
-            };
-
-            int perm755 = Perm.FromInt(7, 5, 5);
-            int perm555 = Perm.FromInt(5, 5, 5);
-            
-            foreach (string path in dir755) {
-                Kernel.Fs.CreateDir(
-                    path,
-                    0, 0,
-                    perm755
-                );
-            }
-
-            foreach (string path in dir555) {
-                Kernel.Fs.CreateDir(
-                    path, 0, 0, perm555
-                );
-            }
-
-            Kernel.Fs.CreateDir(
-                "/root", 0, 0, Perm.FromInt(5, 5, 0)
-            );
         }
 
         void MakeLinuxUtilities() {
@@ -198,58 +97,6 @@ namespace Linux.Boot
             // }
         }
 
-        void MakeLinuxDev() {
-            // Create Input Devices directory
-            Kernel.Fs.CreateDir(
-                "/dev/input",
-                0, 0,
-                Perm.FromInt(7, 5, 5)
-            );
-
-            // EventFile kbEventFile = new EventFile(
-            //     "/dev/input/event0",
-            //     0, 0, 
-            //     Perm.FromInt(6, 6, 0)
-            // );
-
-            // // Allocate terminal
-            // Terminal = new UnityTerminal(_bufferSize, kbEventFile);
-
-            // Fs.AddFrom(inputDevDirectory, kbEventFile);
-
-            // Debug.Log("created kb input: " + Fs.Lookup("/dev/input/event0").Name);
-
-            // // Create TTY
-            // int devPerm = Perm.FromInt(5, 2, 0);
-
-            // File[] devices = new File[] {
-            //     new TtyDevice(Terminal, "/dev/tty", 0, 0, Perm.FromInt(6, 6, 6)),
-            //     new ConsoleDevice(FakeBootFile(), "/dev/console", 0, 0, Perm.FromInt(6, 0, 0)),
-            // };
-
-            // foreach (File dev in devices) {
-            //     Fs.AddFrom(devDirectory, dev);
-            // }
-        }
-
-        void MakeLinuxConfigurations() {
-            int configPerm = Perm.FromInt(7, 5, 5);
-
-            var files = new string[] {
-                "/etc/group",
-                "/etc/passwd",
-                "/etc/hosts"
-            };
-
-            foreach(string path in files) {
-                Kernel.Fs.Create(
-                    path,
-                    0, 0,
-                    configPerm
-                );
-            }
-        }
-
         void MakeLinuxSys() {
             int sysPerm = Perm.FromInt(7, 5, 5);
 
@@ -267,31 +114,31 @@ namespace Linux.Boot
             }
         }
 
-        void FindPeripheralComponents() {
-            var usb1 = new Pci(
-                "xHCI Host Controller",
-                "SAD",
-                "0000:00:04.0",
-                189,
-                122,
-                PciClass.INPUT
-            );
+        // void FindPeripheralComponents() {
+        //     var usb1 = new Pci(
+        //         "xHCI Host Controller",
+        //         "SAD",
+        //         "0000:00:04.0",
+        //         189,
+        //         122,
+        //         PciClass.INPUT
+        //     );
 
-            Kernel.PciTable.Add(usb1);
-            Print($"found {usb1.Product} at: {usb1.Slot}");
+        //     Kernel.PciTable.Add(usb1);
+        //     Print($"found {usb1.Product} at: {usb1.Slot}");
 
-            var usb2 = new Pci(
-                "xHCI Host Controller",
-                "SAD",
-                "0000:00:06.0",
-                189,
-                122,
-                PciClass.INPUT
-            );
+        //     var usb2 = new Pci(
+        //         "xHCI Host Controller",
+        //         "SAD",
+        //         "0000:00:06.0",
+        //         189,
+        //         122,
+        //         PciClass.INPUT
+        //     );
 
-            Kernel.PciTable.Add(usb2);
-            Print($"found {usb2.Product} at: {usb2.Slot}");
-        }
+        //     Kernel.PciTable.Add(usb2);
+        //     Print($"found {usb2.Product} at: {usb2.Slot}");
+        // }
 
          // IEnumerator Initialize() {
         //     Debug.Log("Initilizing Subsystem");

@@ -1,19 +1,22 @@
 using System.Threading;
+using System.Collections.Generic;
 using UnityEngine;
 using Linux.Boot;
 using Linux.Configuration;
 using Linux.Sys;
+using Linux.Sys.Drivers;
+using Linux.Sys.Input;
 using Linux.Sys.IO;
 using Linux.FileSystem;
 using Linux.PseudoTerminal;
 using Linux.Utilities;
 
 namespace Linux
-{    
+{
     public class Kernel {
+        public const string Version = "0.0.1.x86_64"; 
 
         public UnityTerminal Terminal { get; protected set; }
-        public string Version { get; protected set; }
         public VirtualMachine Machine { get; protected set; }
     
         public VirtualFileTree Fs;
@@ -21,7 +24,7 @@ namespace Linux
         public UsersDatabase UsersDb;
         public GroupsDatabase GroupsDb;
         public PeripheralsTable PciTable;
-        public UdevTable UdTable;
+        public UdevTable EventTable;
 
         int _bufferSize = 512;
 
@@ -29,43 +32,48 @@ namespace Linux
 
         public Kernel(VirtualMachine machine) {
             Machine = machine;
+            new DecompressStage(this);
         }
 
         public void Bootstrap() {
-            Fs = new VirtualFileTree(
-                new File(
-                    "/",
-                    0,0,
-                    Perm.FromInt(7, 5, 5),
-                    FileType.F_DIR
-                )
-            );
+            PciTable = new PeripheralsTable(Fs);
+            // Print("pci table: created");
 
-            // Fs.Add(
-            //     new File(
-            //         "/dev",
-            //         0,0,
-            //         Perm.FromInt(7, 5, 5),
-            //         FileType.F_DIR
-            //     )
-            // );
+            FindPeripheralComponents();
+            // Print("found peripherals");
 
-            // Failing by now
-            //
-            Fs.CreateDir(
-                "/dev",
-                0,0,
-                Perm.FromInt(7, 5, 5)            
-            );
-
-            UdTable = new UdevTable(Fs);
+            EventTable = new UdevTable(Fs);
+            FindBiosDrivers();
             // Terminal = new UnityTerminal(_bufferSize);
 
             // Terminal.SubscribeFirstDraw(TriggerStartup);
         }
 
+        void FindPeripheralComponents() {
+            foreach(Pci pci in Machine.Chassis.Keys) {
+                PciTable.Add(pci);
+            }
+        }
+
+        void FindBiosDrivers() {
+            foreach(KeyValuePair<Pci, GenericDevice> kvp in Machine.Chassis) {
+                Pci pci = kvp.Key;
+                GenericDevice device = kvp.Value;
+
+                foreach(IPciDriver driver in Machine.BiosDrivers) {
+                    if (driver.IsSupported(pci)) {
+                        IDeviceDriver devDriver = driver.FindDevDriver(device);
+                        
+                        if (devDriver != null && devDriver is IUdevDriver) {
+                            EventTable.Add(pci, device, (IUdevDriver)devDriver);
+                        }
+                    }
+                }
+            }
+        }
+
         public void Interrupt(Pci pci, IRQCode code) {
-            UEvent uEvent = UdTable.LookupByPci(pci);
+            UEvent uEvent = EventTable.LookupByPci(pci);
 
             if (uEvent != null) {
                 uEvent.Driver.Handle(code);

@@ -2,16 +2,10 @@ using Linux.Sys;
 
 namespace Linux.Sys.Drivers
 {
-    public abstract class PciDriver
+    public interface IPciDriver
     {
-        protected Linux.Kernel Kernel;
+        bool IsSupported(Pci pci);
 
-        public PciDriver(Linux.Kernel kernel) {
-            Kernel = kernel;
-        }
-
-        public abstract bool IsSupported(Pci pci);
-
-        public abstract void Attach(Pci pci, GenericDevice input);
+        IDeviceDriver FindDevDriver(GenericDevice input);
     }
 }

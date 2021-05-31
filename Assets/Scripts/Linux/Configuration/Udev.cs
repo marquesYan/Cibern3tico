@@ -56,6 +56,13 @@ namespace Linux.Configuration
             );
             
             Events.Add(pci, uEvent);
+
+            Fs.Create(
+                $"/dev/input/event{uEvent.Id}",
+                0, 0,
+                Perm.FromInt(6, 6, 0),
+                FileType.F_CHR
+            );
         }
 
         public UEvent LookupId(int id) {

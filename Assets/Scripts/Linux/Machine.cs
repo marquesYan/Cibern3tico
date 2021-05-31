@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Linux.Sys;
+using Linux.Sys.Drivers;
 
 namespace Linux
 {    
@@ -11,11 +12,13 @@ namespace Linux
 
         public string ChipsetEmulation { get; protected set; }
         public int CpuCores { get; protected set; }
+        public List<IPciDriver> BiosDrivers { get; protected set; }
 
         public VirtualMachine(string chipsetEmulation, int cpuCores) {
             ChipsetEmulation = chipsetEmulation;
             CpuCores = cpuCores;
             Chassis = new Dictionary<Pci, GenericDevice>();
+            BiosDrivers = new List<IPciDriver>();
         }
 
         public Pci AttachUSB(

@@ -8,6 +8,7 @@ namespace Linux.IO
         int WriteLines(string[] lines);
 
         string[] ReadLines();
+        string ReadLine();
 
         int Write(string data);
 

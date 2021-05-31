@@ -31,6 +31,10 @@ namespace Linux.FileSystem {
             return StreamBackend.ReadLines();
         }
 
+        public string ReadLine() {
+            return StreamBackend.ReadLine();
+        }
+
         public int Write(string data) {
             if (!AccessMode.CanWrite(Mode)) {
                 StreamBackend.ThrowIncorretMode("write");

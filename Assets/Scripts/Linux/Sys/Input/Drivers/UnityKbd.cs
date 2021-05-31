@@ -46,6 +46,7 @@ namespace Linux.Sys.Input.Drivers
         }
 
         void WriteKeyboard(string key) {
+            Debug.Log("writing key: " + key);
             BackendDevice.Write(key);
         }
 
