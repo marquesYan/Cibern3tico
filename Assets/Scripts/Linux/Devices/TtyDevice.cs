@@ -10,14 +10,15 @@ namespace Linux.Devices {
             int written = 0;
 
             foreach (string stream in data) {
-                written += Terminal.Write(stream);
+                // written += Terminal.Write(stream);
             }
             
             return written;
         }
 
         public string Read() {
-            return Terminal.ReadLine();
+            return "";
+            // return Terminal.ReadLine();
         }
     }
 }

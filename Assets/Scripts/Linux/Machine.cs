@@ -24,7 +24,8 @@ namespace Linux
         public Pci AttachUSB(
             string product,
             byte vendorId,
-            DevType type
+            DevType type,
+            string slot
         ) {
             usbCount++;
 
@@ -37,7 +38,7 @@ namespace Linux
             var usbPci = new Pci(
                 "xHCI Host Controller",
                 "SAD",
-                "0000:00:04.0",
+                slot,
                 189,
                 usbCount * 16,
                 PciClass.INPUT

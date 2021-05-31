@@ -44,9 +44,6 @@ namespace Linux
 
             EventTable = new UdevTable(Fs);
             FindBiosDrivers();
-            // Terminal = new UnityTerminal(_bufferSize);
-
-            // Terminal.SubscribeFirstDraw(TriggerStartup);
         }
 
         void FindPeripheralComponents() {
@@ -141,12 +138,12 @@ namespace Linux
             );
         }
 
-        void HandleTerm() {
-            string login = Terminal.Input("Login:");
-            Debug.Log("Login: " + login);
-            string password = Terminal.Input("Password:");
-            Debug.Log("Password: " + password);
-        }
+        // void HandleTerm() {
+        //     string login = Terminal.Input("Login:");
+        //     Debug.Log("Login: " + login);
+        //     string password = Terminal.Input("Password:");
+        //     Debug.Log("Password: " + password);
+        // }
 
         string FakeBootFile() {
             return System.IO.Path.Combine(Application.dataPath, "Resources", "boot.txt"); 

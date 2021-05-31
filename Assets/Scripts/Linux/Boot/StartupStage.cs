@@ -24,7 +24,7 @@ namespace Linux.Boot
         }
 
         protected void Print(string message) {
-            Terminal.Write($"[{DateTime.Now}] {message}");
+            // Terminal.Write($"[{DateTime.Now}] {message}");
             Thread.Sleep(500);
         }
 

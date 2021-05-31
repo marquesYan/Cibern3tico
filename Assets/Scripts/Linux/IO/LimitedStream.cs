@@ -3,14 +3,15 @@ using System.Collections.Generic;
 namespace Linux.IO
 {
     public class LimitedStream : AbstractTextIO {
-        public int Size { get; protected set; }
+        protected List<string> Buffer;
 
-        public List<string> Buffer { get; protected set; }
+        public int Size { get; protected set; }
 
         public LimitedStream(
             int maxSize
         ) : base(AccessMode.O_RDWR) {
             Size = maxSize;
+            Buffer = new List<string>();
         }
 
         public override string[] ReadLines() {

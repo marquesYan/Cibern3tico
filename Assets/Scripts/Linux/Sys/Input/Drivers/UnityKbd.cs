@@ -16,7 +16,8 @@ namespace Linux.Sys.Input.Drivers
         }
 
         public bool IsSupported(GenericDevice device) {
-            return device.VendorId == 255;
+            return device.VendorId == 255 &&
+                    device.Type == DevType.KEYBOARD;
         }
 
         public void Handle(IRQCode code) {

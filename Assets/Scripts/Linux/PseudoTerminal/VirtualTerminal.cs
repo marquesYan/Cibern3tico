@@ -61,11 +61,6 @@ namespace Linux.PseudoTerminal
             IsClosed = true;
         }
 
-        // public void AttachKeyboard(EventFile keyboardEvent) {
-        //     KeyboardEvent = keyboardEvent;
-        //     new EventController(this, keyboardEvent.Duplicate());
-        // }
-
         public void RequestYAxis(int position) {
             _moveYAxis = position;
         }
@@ -86,26 +81,9 @@ namespace Linux.PseudoTerminal
             _moveCursorToEnd = true;
         }
 
-        public int Write(string message) {
+        public int SendToSreen(string message) {
             RequestHighYAxis();
             return Buffer.Write(message);
-        }
-
-        public string ReadLine() {
-            if (KeyboardEvent == null) {
-                return null;
-            }
-
-            var buffer = new StringBuilder();
-
-            string lastChar = "";
-
-            while (lastChar != "\n") {
-                // lastChar = KeyboardEvent.Read();
-                buffer.Append(lastChar);
-            }
-
-            return buffer.ToString();
         }
 
         public void WriteKey(string key) {

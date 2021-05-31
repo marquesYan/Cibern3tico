@@ -1,7 +1,6 @@
 using System.Text;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Linux.PseudoTerminal;
 using Linux.Devices.Input;
 
@@ -69,13 +68,6 @@ namespace Linux
         void FocusTextField()
         {
             GUI.FocusControl("command_text_field");
-        }
-
-        public string Input(string label) {
-            InputBuffer = label;
-            // InputBufferSize = InputStyle.CalcSize(new GUIContent(label));
-
-            return ReadLine();
         }
 
         public void ClearInput() {
