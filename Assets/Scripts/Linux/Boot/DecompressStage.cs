@@ -18,8 +18,6 @@ namespace Linux.Boot
             MakeLinuxDefaultDirectories();
 
             MakeLinuxConfigurations();
-            
-            MakeLinuxDev();
 
             Kernel.UsersDb = new UsersDatabase(Kernel.Fs);
             // Print("users database: created");
@@ -116,40 +114,6 @@ namespace Linux.Boot
             Kernel.Fs.CreateDir(
                 "/root", 0, 0, Perm.FromInt(5, 5, 0)
             );
-        }
-
-        void MakeLinuxDev() {
-            // Create Input Devices directory
-            Kernel.Fs.CreateDir(
-                "/dev",
-                0, 0,
-                Perm.FromInt(7, 5, 5)
-            );
-
-            // EventFile kbEventFile = new EventFile(
-            //     "/dev/input/event0",
-            //     0, 0, 
-            //     Perm.FromInt(6, 6, 0)
-            // );
-
-            // // Allocate terminal
-            // Terminal = new UnityTerminal(_bufferSize, kbEventFile);
-
-            // Fs.AddFrom(inputDevDirectory, kbEventFile);
-
-            // Debug.Log("created kb input: " + Fs.Lookup("/dev/input/event0").Name);
-
-            // // Create TTY
-            // int devPerm = Perm.FromInt(5, 2, 0);
-
-            // File[] devices = new File[] {
-            //     new TtyDevice(Terminal, "/dev/tty", 0, 0, Perm.FromInt(6, 6, 6)),
-            //     new ConsoleDevice(FakeBootFile(), "/dev/console", 0, 0, Perm.FromInt(6, 0, 0)),
-            // };
-
-            // foreach (File dev in devices) {
-            //     Fs.AddFrom(devDirectory, dev);
-            // }
         }
 
         void MakeLinuxConfigurations() {

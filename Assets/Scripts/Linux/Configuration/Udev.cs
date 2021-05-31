@@ -12,18 +12,14 @@ namespace Linux.Configuration
         public readonly GenericDevice Device;
         public readonly IUdevDriver Driver;
 
-        public readonly ITextIO DevPointer;
-
         public UEvent(
             int id,
             GenericDevice device,
-            IUdevDriver driver,
-            ITextIO devPointer
+            IUdevDriver driver
         ) {
             Id = id;
             Device = device;
             Driver = driver;
-            DevPointer = devPointer;
         }
     }
 
@@ -51,8 +47,7 @@ namespace Linux.Configuration
             var uEvent = new UEvent(
                 Events.Count,
                 device,
-                driver,
-                driver.CreateDevice()
+                driver
             );
             
             Events.Add(pci, uEvent);
@@ -61,7 +56,8 @@ namespace Linux.Configuration
                 $"/dev/input/event{uEvent.Id}",
                 0, 0,
                 Perm.FromInt(6, 6, 0),
-                FileType.F_CHR
+                FileType.F_CHR,
+                driver.CreateDevice()
             );
         }
 
@@ -92,10 +88,6 @@ namespace Linux.Configuration
             }
 
             return null;
-        }
-
-        public File DataSource() {
-            return Fs.Lookup("/dev/input");
         }
     }
 }

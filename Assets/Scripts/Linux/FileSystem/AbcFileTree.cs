@@ -33,7 +33,7 @@ namespace Linux.FileSystem
         }
 
         protected abstract ITextIO OpenFileHandler(File file, int mode);
-        protected abstract void OnAddedFile(File file);
+        protected abstract void OnAddedFile(File file, ITextIO stream);
         protected abstract void OnRemoveFile(File file);
 
         public void Mount(
@@ -52,7 +52,7 @@ namespace Linux.FileSystem
                 );
             }
 
-            InternalAdd(Root, mountPoint);
+            InternalAdd(Root, mountPoint, null);
 
             Mounts.Add(
                 new FsMountPoint(mountPoint, fs)
@@ -81,14 +81,22 @@ namespace Linux.FileSystem
         }
 
         public void Add(File file) {
-            AddFrom(Root, file);
+            AddFrom(Root, file, null);
+        }
+
+        public void Add(File file, ITextIO stream) {
+            AddFrom(Root, file, stream);
         }
 
         public void Remove(File file) {
             RemoveFrom(Root, file);
         }
 
-        public void AddFrom(File parent, File file) {
+        public void AddFrom(
+            File parent, 
+            File file,
+            ITextIO stream
+        ) {
             if (Lookup(parent, file.Path) != null) {
                 throw new FileExistsException(file.Path);
             }
@@ -101,10 +109,17 @@ namespace Linux.FileSystem
             );
 
             if (fsMountPoint == null) {
-                InternalAdd(parent, file);                
+                InternalAdd(parent, file, stream);                
             } else {
                 fsMountPoint.Fs.Add(file);
             }
+        }
+
+        public void AddFrom(
+            File parent,
+            File file
+        ) {
+            AddFrom(parent, file, null);
         }
 
         public void RemoveFrom(File parent, File file) {
@@ -135,7 +150,8 @@ namespace Linux.FileSystem
             int uid,
             int gid,
             int permission,
-            FileType type
+            FileType type,
+            ITextIO stream
         ) {
             if (Lookup(file) != null) {
                 throw new FileExistsException(file);
@@ -169,9 +185,19 @@ namespace Linux.FileSystem
                 type
             );
 
-            AddFrom(baseDirectory, destFile);
+            AddFrom(baseDirectory, destFile, stream);
 
             return destFile;
+        }
+
+        public File Create(
+            string file,
+            int uid,
+            int gid,
+            int permission,
+            FileType type
+        ) {
+            return Create(file, uid, gid, permission, type, null);
         }
 
         public File Create(
@@ -272,10 +298,10 @@ namespace Linux.FileSystem
             return needle;
         }
 
-        protected void InternalAdd(File parent, File child) {
+        protected void InternalAdd(File parent, File child, ITextIO stream) {
             child.Parent = parent;
             parent.AddChild(child);
-            OnAddedFile(child);
+            OnAddedFile(child, stream);
         }
 
         public File Lookup(string file) {

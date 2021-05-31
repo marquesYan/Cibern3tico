@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Linux.Boot;
 using Linux.Configuration;
+using Linux.IO;
 using Linux.Sys;
 using Linux.Sys.Drivers;
 using Linux.Sys.Input;
@@ -42,6 +43,8 @@ namespace Linux
             FindPeripheralComponents();
             // Print("found peripherals");
 
+            MountDevFs();
+
             EventTable = new UdevTable(Fs);
             FindBiosDrivers();
 
@@ -56,6 +59,27 @@ namespace Linux
             if (uEvent != null) {
                 uEvent.Driver.Handle(code);
             }
+        }
+
+        void MountDevFs() {
+            // Create Input Devices directory
+            Fs.CreateDir(
+                "/dev",
+                0, 0,
+                Perm.FromInt(7, 5, 5)
+            );
+
+            // // Create TTY
+            // int devPerm = Perm.FromInt(5, 2, 0);
+
+            // File[] devices = new File[] {
+            //     new TtyDevice(Terminal, "/dev/tty", 0, 0, Perm.FromInt(6, 6, 6)),
+            //     new ConsoleDevice(FakeBootFile(), "/dev/console", 0, 0, Perm.FromInt(6, 0, 0)),
+            // };
+
+            // foreach (File dev in devices) {
+            //     Fs.AddFrom(devDirectory, dev);
+            // }
         }
 
         void FindPeripheralComponents() {
@@ -100,11 +124,16 @@ namespace Linux
         void TriggerStartup() {
             var startup = new Thread(new ThreadStart(() => {
                 // new StartupStage(this);
+                ITextIO kbd = Fs.Open(
+                    Fs.Lookup($"/dev/input/event{MasterKbdEvent.Id}"),
+                    AccessMode.O_RDONLY
+                );
+
                 while (true) {
-                    string key = MasterKbdEvent.DevPointer.Read();
-                    // Debug.Log("recv key: " + key);
-                    string wKey = $"{CharacterControl.C_WRITE_KEY}{key}";
-                    MasterConsoleEvent.DevPointer.Write(key);
+                    string key = kbd.Read();
+                    Debug.Log("recv key: " + key);
+                    // string wKey = $"{CharacterControl.C_WRITE_KEY}{key}";
+                    // MasterConsoleEvent.DevPointer.Write(key);
                 }
                 // Init(); 
             }));
