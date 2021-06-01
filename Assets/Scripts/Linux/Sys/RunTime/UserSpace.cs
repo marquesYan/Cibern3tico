@@ -10,6 +10,16 @@ namespace Linux.Sys.RunTime
             KernelSpace = kernelSpace;
         }
 
+        public KernelSpace AccessKernelSpace() {
+            if (KernelSpace.IsRootUser()) {
+                return KernelSpace;
+            }
+
+            throw new System.AccessViolationException(
+                "Permission denied"  
+            );
+        }
+
         public int GetPid() {
             return KernelSpace.GetCurrentProc().Pid;
         }
@@ -32,6 +42,10 @@ namespace Linux.Sys.RunTime
             }
 
             tty.Write(message + end);
+        }
+
+        public int CreateProcess(string[] cmdLine) {
+            return KernelSpace.CreateProcess(cmdLine).Pid;
         }
 
         public void Print(string message) {

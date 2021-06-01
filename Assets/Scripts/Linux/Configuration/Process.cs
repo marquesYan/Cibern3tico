@@ -89,7 +89,7 @@ namespace Linux.Configuration
                 }
 
                 Processes.Add(process);
-                // ProcessToFile(process);
+                ProcessToFile(process);
             }
         }
 
@@ -132,6 +132,32 @@ namespace Linux.Configuration
             return process;
         }
 
+        public void AttachFileDescriptor(
+            Process process,
+            string filePath,
+            int fd
+        ) {
+            File file = Fs.LookupOrFail(filePath);
+
+            if (!Processes.Contains(process)) {
+                throw new System.ArgumentException(
+                    "Process not exists"
+                );
+            }
+
+            Fs.CreateSymbolicLink(
+                file,
+                PathUtils.Combine(
+                    ProcessDirectory(process), 
+                    "fd",
+                    fd.ToString()
+                ),
+                Perm.FromInt(7, 0, 0)
+            );
+
+            process.Fds.Add(fd);
+        }
+
         public Process LookupPid(int pid) {
             return Processes.Find(p => p.Pid == pid);
         }
@@ -153,34 +179,44 @@ namespace Linux.Configuration
         //     return processes;
         // }
 
-        // void ProcessToFile(Process process, string directory) {
-        //     string path = Fs.Combine(directory, $"{process.Pid}");
+        public string ProcessDirectory(Process process) {
+            return PathUtils.Combine("/proc", $"{process.Pid}");
+        }
 
-        //     var procDirectory = new File(
-        //         path,
-        //         process.Uid,
-        //         process.Gid,
-        //         Perm.FromInt(5, 5, 5)
-        //     );
+        void ProcessToFile(Process process) {
+            string path = ProcessDirectory(process);
 
-        //     Fs.AddFrom(DataSource(), procDirectory);
+            File procDirectory = Fs.CreateDir(
+                path,
+                process.Uid,
+                process.Gid,
+                Perm.FromInt(5, 5, 5)
+            );
 
-        //     File cmdLineFile = new File(
-        //         Fs.Combine(path, "cmdline"),
-        //         process.Uid,
-        //         process.Gid,
-        //         Perm.FromInt(4, 4, 4)
-        //     );
+            File fdDirectory = Fs.CreateDir(
+                PathUtils.Combine(path, "fd"),
+                process.Uid,
+                process.Gid,
+                Perm.FromInt(5, 0, 0)
+            );
 
-        //     // Fs.Open(cmdLineFile, AccessMode)
+            File cmdLineFile = Fs.Create(
+                PathUtils.Combine(path, "cmdline"),
+                process.Uid,
+                process.Gid,
+                Perm.FromInt(4, 4, 4)
+            );
 
-        //     File environFile = new File(
-        //         Fs.Combine(path, "environ"),
-        //         process.Uid,
-        //         process.Gid,
-        //         Perm.FromInt(4, 0, 0)
-        //     );
-        // }
+            File environFile = Fs.Create(
+                PathUtils.Combine(path, "environ"),
+                process.Uid,
+                process.Gid,
+                Perm.FromInt(4, 0, 0)
+            );
+
+            WriteSpec(cmdLineFile, process.CmdLine);
+            WriteSpec(environFile, process.Environ);
+        }
 
         // Process FileToProcess(File file) {
         //     int pid;
@@ -239,6 +275,12 @@ namespace Linux.Configuration
 
         //     return ids;
         // }
+
+        protected void WriteSpec(File file, string[] contents) {
+            using (ITextIO stream = Fs.Open(file.Path, AccessMode.O_WRONLY)) {
+                stream.Write(string.Join("\0", contents));
+            }
+        }
 
         public File DataSource() {
             return Fs.Lookup("/proc");

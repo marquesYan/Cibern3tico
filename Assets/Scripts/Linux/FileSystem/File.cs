@@ -53,12 +53,6 @@ namespace Linux.FileSystem
                     Childs = new Dictionary<string, File>();
                     break;
                 }
-
-                case FileType.F_SYL: {
-                    throw new ArgumentException(
-                        "Can not create symbolic link from this constructor"  
-                    );
-                }
             }
         }
         public File(

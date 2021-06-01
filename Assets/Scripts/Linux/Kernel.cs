@@ -28,11 +28,9 @@ namespace Linux
         public GroupsDatabase GroupsDb;
         public PeripheralsTable PciTable;
         public UdevTable EventTable;
-        public UEvent MasterKbdEvent;
-        public UEvent MasterConsoleEvent;
         public CommandHandler CmdHandler;
         
-        public ITextIO ControllingTty; 
+        public PseudoTerminalTable PtyTable;
 
         float _bootDelay = 0.0001f;
 
@@ -53,6 +51,7 @@ namespace Linux
             EventTable = new UdevTable(Fs);
             FindBiosDrivers();
 
+            PtyTable = new PseudoTerminalTable(Fs);
             FindControllingTty();
 
             TriggerStartup();
@@ -100,20 +99,16 @@ namespace Linux
 
         void FindControllingTty() {
             UEvent kbdEvent = EventTable.LookupByType(DevType.KEYBOARD);
-            if (kbdEvent != null) {
-                MasterKbdEvent = kbdEvent;
-            }
 
             UEvent consoleEvent = EventTable.LookupByType(DevType.CONSOLE);
-            if (consoleEvent != null) {
-                MasterConsoleEvent = consoleEvent;
-            }
 
-            if (MasterConsoleEvent != null && MasterKbdEvent != null) {
-                ControllingTty = new Pty(
-                    Fs.Open(MasterKbdEvent.FilePath, AccessMode.O_RDONLY),
-                    Fs.Open(MasterConsoleEvent.FilePath, AccessMode.O_WRONLY)
+            if (kbdEvent != null && consoleEvent != null) {
+                var controllingPty = new PrimaryPty(
+                    Fs.Open(kbdEvent.FilePath, AccessMode.O_RDONLY),
+                    Fs.Open(consoleEvent.FilePath, AccessMode.O_WRONLY)
                 );
+
+                PtyTable.SetControllingPty(controllingPty);
             }
         }
 
@@ -130,16 +125,6 @@ namespace Linux
             User user,
             string[] cmdLine
         ) {
-            if (cmdLine.Length == 0) {
-                throw new System.ArgumentException("No command line");
-            }
-
-            File executable = Fs.Lookup(cmdLine[0]);
-
-            if (executable == null) {
-                throw new System.ArgumentException("Command not found: " + cmdLine[0]);
-            }
-
             Thread mainTask = new Thread(
                 new ThreadStart(CmdHandler.Handle)
             );
@@ -154,6 +139,13 @@ namespace Linux
                 user.HomeDir,
                 mainTask
             );
+
+            File ptsFile = PtyTable.Add(user);
+
+            ProcTable.AttachFileDescriptor(process, ptsFile.Path, 0);
+            ProcTable.AttachFileDescriptor(process, ptsFile.Path, 1);
+            ProcTable.AttachFileDescriptor(process, ptsFile.Path, 2);
+            ProcTable.AttachFileDescriptor(process, ptsFile.Path, 255);
 
             process.MainTask.Start();
 

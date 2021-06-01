@@ -7,10 +7,14 @@ using Linux.IO;
 namespace Linux.Sys.RunTime
 {    
     public class KernelSpace {
-        protected Linux.Kernel Kernel;
+        public Linux.Kernel Kernel;
 
         public KernelSpace(Linux.Kernel kernel) {
             Kernel = kernel;
+        }
+
+        public bool IsRootUser() {
+            return GetCurrentUser().Uid == 0;
         }
 
         public Process GetCurrentProc() {
@@ -27,8 +31,50 @@ namespace Linux.Sys.RunTime
             return Kernel.UsersDb.LookupUid(proc.Uid);
         }
 
+        public File LookupByFD(int fd) {
+            Process proc = GetCurrentProc();
+
+            string path = Kernel.ProcTable.ProcessDirectory(proc);
+
+            return LookupFile(
+                PathUtils.Combine(path, "fd", fd.ToString())
+            );
+        }
+
+        public Process CreateProcess(string[] cmdLine) {
+            if (cmdLine.Length == 0) {
+                throw new System.ArgumentException("No command line");
+            }
+
+            File executable = LookupFile(cmdLine[0]);
+
+            if (executable == null) {
+                throw new System.ArgumentException(
+                    "Command not found: " + cmdLine[0]
+                );
+            }
+
+            User user = GetCurrentUser();
+
+            Process proc = GetCurrentProc();
+
+            return Kernel.StartProcess(
+                proc.Pid,
+                user,
+                cmdLine
+            );
+        }
+
         public ITextIO GetControllingTty() {
-            return Kernel.ControllingTty;
+            File file = LookupByFD(255);
+
+            if (file == null) {
+                throw new System.InvalidOperationException(
+                    "Could not find a controlling terminal"
+                );
+            }
+
+            return Open(file.Path, AccessMode.O_RDWR);
         }
 
         public List<Group> LookupUserGroups(User user) {

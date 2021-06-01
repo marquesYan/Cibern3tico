@@ -60,18 +60,17 @@ namespace Linux.FileSystem
         }
 
         public ITextIO Open(string filePath, int mode) {
-            File file = Lookup(filePath);
-            if (file == null) {
-                throw new System.IO.FileNotFoundException(
-                    "No such file or directory: " + filePath
-                );
-            }
+            File file = LookupOrFail(filePath);
 
             if ((file.Type == FileType.F_DIR) || 
                 (file.Type == FileType.F_MNT)) {
                 throw new System.ArgumentException(
-                    "File is a directory"  
+                    "File is a directory"
                 );
+            }
+
+            if (file.Type == FileType.F_SYL) {
+                return OpenFileHandler(file.SourceFile, mode);
             }
 
             return OpenFileHandler(file, mode);
@@ -120,11 +119,7 @@ namespace Linux.FileSystem
         }
 
         public void RemoveFrom(File parent, File file) {
-            if (Lookup(parent, file.Path) == null) {
-                throw new System.IO.FileNotFoundException(
-                    "No such file or directory: " + file.Path
-                );
-            }
+            LookupOrFail(parent, file.Path);
 
             string absPath;
             FsMountPoint fsMountPoint = TryMountFs(
@@ -150,29 +145,7 @@ namespace Linux.FileSystem
             FileType type,
             ITextIO stream
         ) {
-            if (Lookup(file) != null) {
-                throw new FileExistsException(file);
-            }
-
-            string fileName = PathUtils.BaseName(file);
-            
-            if (fileName == "") {
-                throw new System.ArgumentException(
-                    "File is not valid: " + file
-                );
-            }
-
-            string pathName = PathUtils.PathName(file);
-
-            File baseDirectory = Lookup(pathName);
-
-            if (baseDirectory == null) {
-                throw new System.IO.FileNotFoundException(
-                    "No such file or directory: " + pathName
-                );
-            }
-
-            EnsureIsDirectory(baseDirectory);
+            File baseDirectory = ParseBaseDirectory(file);
 
             var destFile = new File(
                 file,
@@ -185,6 +158,33 @@ namespace Linux.FileSystem
             AddFrom(baseDirectory, destFile, stream);
 
             return destFile;
+        }
+
+        public File CreateSymbolicLink(
+            File sourceFile,
+            string symLinkPath,
+            int permission,
+            ITextIO stream
+        ) {
+            File baseDirectory = ParseBaseDirectory(symLinkPath);
+
+            var destFile = new File(
+                sourceFile,
+                symLinkPath,
+                permission
+            );
+
+            AddFrom(baseDirectory, destFile, stream);
+
+            return destFile;
+        }
+
+        public File CreateSymbolicLink(
+            File sourceFile,
+            string symLinkPath,
+            int permission
+        ) {
+            return CreateSymbolicLink(sourceFile, symLinkPath, permission, null);
         }
 
         public File Create(
@@ -213,6 +213,28 @@ namespace Linux.FileSystem
             int permission
         ) {
             return Create(file, uid, gid, permission, FileType.F_DIR);
+        }
+
+        protected File ParseBaseDirectory(string file) {
+            if (Lookup(file) != null) {
+                throw new FileExistsException(file);
+            }
+
+            string fileName = PathUtils.BaseName(file);
+            
+            if (fileName == "") {
+                throw new System.ArgumentException(
+                    "File is not valid: " + file
+                );
+            }
+
+            string pathName = PathUtils.PathName(file);
+
+            File baseDirectory = LookupOrFail(pathName);
+
+            EnsureIsDirectory(baseDirectory);
+
+            return baseDirectory;
         }
 
         protected FsMountPoint TryMountFs(
@@ -299,6 +321,30 @@ namespace Linux.FileSystem
             child.Parent = parent;
             parent.AddChild(child);
             OnAddedFile(child, stream);
+        }
+
+        public File LookupOrFail(string path) {
+            File file = Lookup(path);
+
+            if (file == null) {
+                throw new System.IO.FileNotFoundException(
+                    "No such file or directory: " + path
+                );
+            }
+
+            return file;
+        }
+
+        protected File LookupOrFail(File parent, string path) {
+            File file = Lookup(parent, path);
+
+            if (file == null) {
+                throw new System.IO.FileNotFoundException(
+                    "No such file or directory: " + path
+                );
+            }
+
+            return file;
         }
 
         public File Lookup(string file) {

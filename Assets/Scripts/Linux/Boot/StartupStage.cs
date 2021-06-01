@@ -76,6 +76,16 @@ namespace Linux.Boot
                     FileType.F_REG
                 )
             );
+
+            Kernel.Fs.AddFrom(
+                systemBinDir,
+                new Getty(
+                    "/usr/sbin/ttyctl",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
         }
 
         void MakeLinuxSys() {
