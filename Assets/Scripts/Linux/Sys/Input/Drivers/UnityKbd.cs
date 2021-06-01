@@ -61,6 +61,11 @@ namespace Linux.Sys.Input.Drivers
                     key = CharacterControl.C_DDELETE;
                     break;
                 }
+
+                case 0x0d: {
+                    key = "\n";
+                    break;
+                }
             }
 
             WriteKeyboard(key);

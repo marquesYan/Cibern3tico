@@ -16,8 +16,8 @@ namespace Linux.Sys.IO
         }
 
         protected override int InternalAppend(string data) {
-            foreach(string input in data.Split()) {
-                Buffer.Enqueue(input);
+            foreach(char input in data) {
+                Buffer.Enqueue(input.ToString());
             }
 
             return data.Length;
