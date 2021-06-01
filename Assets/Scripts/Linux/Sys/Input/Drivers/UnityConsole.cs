@@ -11,20 +11,26 @@ namespace Linux.Sys.Input.Drivers
 
         public TerminalDevice(
             UnityTerminal backendTerminal
-        ) : base(AccessMode.O_RDWR) {
+        ) : base(AccessMode.O_WRONLY) {
             BackendTerminal = backendTerminal;
         }
 
-        protected override int InternalWrite(string data) {
+        protected override void InternalTruncate() {
+            if (BackendTerminal != null) {
+                BackendTerminal.ClearBuffer(); 
+            }
+        }
+
+        protected override bool CanMovePointer(int newPosition) {
+            return false;
+        }
+
+        protected override int InternalAppend(string data) {
             return BackendTerminal.SendToSreen(data);
         }
-        protected override int InternalAppend(string data) {
-            return 0;
-        }
-        protected override string InternalRead() {
-            throw new System.ArgumentException(
-                "Can not read from a raw terminal"
-            );
+
+        protected override string InternalRead(int length) {
+            return "";
         }
 
         protected override void InternalClose() {

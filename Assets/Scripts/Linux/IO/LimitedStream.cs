@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Linux.IO
 {
     public class LimitedStream : AbstractTextIO {
-        protected List<string> Buffer;
+        protected List<string> Buffer = new List<string>();
 
         public int Size { get; protected set; }
 
@@ -11,16 +11,18 @@ namespace Linux.IO
             int maxSize
         ) : base(AccessMode.O_RDWR) {
             Size = maxSize;
-            Buffer = new List<string>();
         }
 
         public override string[] ReadLines() {
             return Buffer.ToArray();
         }
 
-        protected override int InternalWrite(string data)
-        {
-            return InternalAppend(data);
+        protected override void InternalTruncate() {
+            Buffer.Clear();
+        }
+
+        protected override bool CanMovePointer(int newPosition) {
+            return false;
         }
 
         protected override int InternalAppend(string data) {
@@ -40,7 +42,7 @@ namespace Linux.IO
             Buffer = null;
         }
 
-        protected override string InternalRead()
+        protected override string InternalRead(int length)
         {
             throw new System.ArgumentException(
                 "Can not Read from LimitedStream, instead call ReadLines()"

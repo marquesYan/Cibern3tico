@@ -35,6 +35,10 @@ namespace Linux.PseudoTerminal
             IsClosed = true;
         }
 
+        public void ClearBuffer() {
+            Buffer.Truncate();
+        }
+
         public void RequestYAxis(int position) {
             _moveYAxis = position;
         }

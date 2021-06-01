@@ -1,8 +1,9 @@
+using System;
 using System.Collections.Generic;
 
 namespace Linux.IO
 {
-    public interface ITextIO {
+    public interface ITextIO : IDisposable {
         int WriteLine(string line);
 
         int WriteLines(string[] lines);
@@ -13,6 +14,10 @@ namespace Linux.IO
         int Write(string data);
 
         string Read();
+        void Truncate();
+
+        string Read(int length);
+        void Seek(int position);
 
         void Close();
     }

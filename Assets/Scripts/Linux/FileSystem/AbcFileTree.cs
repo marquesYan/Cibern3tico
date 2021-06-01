@@ -59,22 +59,19 @@ namespace Linux.FileSystem
             );
         }
 
-        public ITextIO Open(File file, int mode) {
+        public ITextIO Open(string filePath, int mode) {
+            File file = Lookup(filePath);
+            if (file == null) {
+                throw new System.IO.FileNotFoundException(
+                    "No such file or directory: " + filePath
+                );
+            }
+
             if ((file.Type == FileType.F_DIR) || 
                 (file.Type == FileType.F_MNT)) {
                 throw new System.ArgumentException(
                     "File is a directory"  
                 );
-            }
-
-            if (Lookup(file.Path) == null) {
-                if (mode == AccessMode.O_RDONLY) {
-                    throw new System.IO.FileNotFoundException(
-                        "No such file or directory: " + file.Path
-                    );
-                } else {
-                    Add(file);
-                }
             }
 
             return OpenFileHandler(file, mode);

@@ -40,13 +40,17 @@ namespace Linux.Configuration
         }
 
         protected string[] ReadLines() {
-            ITextIO stream = Fs.Open(DataSource(), AccessMode.O_RDONLY);
-            return stream.ReadLines();
+            using (ITextIO stream = Fs.Open(DataSource().Path, AccessMode.O_RDONLY))
+            {
+                return stream.ReadLines();
+            }
         }
 
         protected int AppendLine(string line) {
-            ITextIO stream = Fs.Open(DataSource(), AccessMode.O_APONLY);
-            return stream.WriteLine(line);
+            using(ITextIO stream = Fs.Open(DataSource().Path, AccessMode.O_APONLY))
+            {
+                return stream.WriteLine(line);
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -13,6 +14,10 @@ namespace Linux.IO
             return (mode & (O_WRONLY | O_RDWR | O_APONLY)) != 0;
         }
 
+        public static bool CanCreate(int mode) {
+            return (mode & (O_WRONLY | O_RDWR)) != 0;
+        }
+
         public static bool CanRead(int mode) {
             return (mode & (O_RDONLY | O_RDWR)) != 0;
         }
@@ -24,17 +29,39 @@ namespace Linux.IO
         protected readonly object StreamLock = new object();
 
         public int Mode { get; protected set; }
+        public int Pointer { get; protected set; }
         public bool IsClosed { get; protected set; }
+        public int Length { get; protected set; }
 
         public AbstractTextIO(int mode) {
             Mode = mode;
             IsClosed = false;
+            Pointer = Length = 0;
+
+            if (AccessMode.CanCreate(mode)) {
+                Truncate();
+            }
         }
 
-        protected abstract int InternalWrite(string data);
+        public void Truncate() {
+            if (!AccessMode.CanCreate(Mode)) {
+                ThrowIncorretMode("truncate");
+            }
+            
+            InternalTruncate();
+        }
+
+        protected abstract void InternalTruncate();
         protected abstract int InternalAppend(string data);
-        protected abstract string InternalRead();
+        protected abstract string InternalRead(int length);
+
+        protected abstract bool CanMovePointer(int newPosition);
         protected abstract void InternalClose();
+
+        public void Dispose() {
+            Close();
+            GC.SuppressFinalize(this);
+        }
 
         public virtual int WriteLine(string line) {
             return Write(line + LINE_FEED);
@@ -55,14 +82,14 @@ namespace Linux.IO
 
             string lineFeed = $"{LINE_FEED}";
 
-            while (missingLineFeed) {
-                foreach(string input in Read().Split()) {
-                    if (input == lineFeed) {
-                        missingLineFeed = false;
-                        break;
-                    } else {
-                        content.Append(input);
-                    }
+            string buffer;
+
+            while (Length > 0 && missingLineFeed) {
+                buffer = Read(1);
+                if (buffer == lineFeed) {
+                    missingLineFeed = false;
+                } else {
+                    content.Append(buffer);
                 }
             }
 
@@ -85,27 +112,47 @@ namespace Linux.IO
             lock(StreamLock) {
                 EnsureNotClosed();
 
-                if ((Mode & AccessMode.O_APONLY) > 0) {
-                    written = InternalAppend(data);
-                } else {
-                    written = InternalWrite(data);
-                }
+                written = InternalAppend(data);
             }
+
+            Length += written;
 
             return written;
         }
 
-        public string Read() {
+        public string Read(int length) {
             if (!AccessMode.CanRead(Mode)) {
                 ThrowIncorretMode("read");
             }
 
             EnsureNotClosed();
 
-            return InternalRead();
+            string data = InternalRead(length);
+
+            Length -= data.Length;
+
+            return data;
+        }
+
+        public string Read() {
+            return Read(-1);
+        }
+
+        public void Seek(int position) {
+            if (position < 0 && !CanMovePointer(position)) {
+                throw new System.IO.IOException(
+                    "Can not seek to position: " + position
+                );
+            }
+
+            Pointer = position;
         }
 
         public void Close() {
+            if (IsClosed) {
+                return;
+            }
+
             lock(StreamLock) {
                 IsClosed = true;
                 InternalClose();

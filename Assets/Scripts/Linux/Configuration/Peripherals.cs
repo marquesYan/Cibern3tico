@@ -100,22 +100,16 @@ namespace Linux.Configuration
                 Perm.FromInt(4, 4, 4)
             );
 
-            ITextIO stream = Fs.Open(file, AccessMode.O_WRONLY);
-
-            try {
+            using(ITextIO stream = Fs.Open(file.Path, AccessMode.O_WRONLY))
+            {
                 stream.WriteLine(content);
-            } finally {
-                stream.Close();
             }
         }
 
         protected string ReadSpec(File file) {
-            ITextIO stream = Fs.Open(file, AccessMode.O_RDONLY);
-
-            try {
+            using(ITextIO stream = Fs.Open(file.Path, AccessMode.O_RDONLY))
+            {
                 return stream.ReadLine();
-            } finally {
-                stream.Close();
             }
         }
     }
