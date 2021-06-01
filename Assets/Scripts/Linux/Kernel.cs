@@ -11,6 +11,8 @@ using Linux.Sys.IO;
 using Linux.FileSystem;
 using Linux.PseudoTerminal;
 using Linux.Utilities;
+using Linux.Library;
+using Linux.Sys.RunTime;
 
 namespace Linux
 {
@@ -28,6 +30,9 @@ namespace Linux
         public UdevTable EventTable;
         public UEvent MasterKbdEvent;
         public UEvent MasterConsoleEvent;
+        public CommandHandler CmdHandler;
+        
+        public ITextIO ControllingTty; 
 
         float _bootDelay = 0.0001f;
 
@@ -68,18 +73,6 @@ namespace Linux
                 0, 0,
                 Perm.FromInt(7, 5, 5)
             );
-
-            // // Create TTY
-            // int devPerm = Perm.FromInt(5, 2, 0);
-
-            // File[] devices = new File[] {
-            //     new TtyDevice(Terminal, "/dev/tty", 0, 0, Perm.FromInt(6, 6, 6)),
-            //     new ConsoleDevice(FakeBootFile(), "/dev/console", 0, 0, Perm.FromInt(6, 0, 0)),
-            // };
-
-            // foreach (File dev in devices) {
-            //     Fs.AddFrom(devDirectory, dev);
-            // }
         }
 
         void FindPeripheralComponents() {
@@ -117,28 +110,19 @@ namespace Linux
             }
 
             if (MasterConsoleEvent != null && MasterKbdEvent != null) {
-                //   
+                ControllingTty = new Pty(
+                    Fs.Open(MasterKbdEvent.FilePath, AccessMode.O_RDONLY),
+                    Fs.Open(MasterConsoleEvent.FilePath, AccessMode.O_WRONLY)
+                );
             }
         }
 
         void TriggerStartup() {
-            var startup = new Thread(new ThreadStart(() => {
-                // new StartupStage(this);
-                ITextIO kbd = Fs.Open(
-                    Fs.Lookup($"/dev/input/event{MasterKbdEvent.Id}"),
-                    AccessMode.O_RDONLY
-                );
+            CmdHandler = new CommandHandler(this);
 
-                while (true) {
-                    string key = kbd.Read();
-                    Debug.Log("recv key: " + key);
-                    // string wKey = $"{CharacterControl.C_WRITE_KEY}{key}";
-                    // MasterConsoleEvent.DevPointer.Write(key);
-                }
-                // Init(); 
-            }));
+            new StartupStage(this);
 
-            startup.Start();
+            Init();
         }
 
         public Process StartProcess(
@@ -157,7 +141,7 @@ namespace Linux
             }
 
             Thread mainTask = new Thread(
-                new ThreadStart(new CommandInterpreter(this).Handle)
+                new ThreadStart(CmdHandler.Handle)
             );
 
             Process process = ProcTable.Create(
@@ -177,10 +161,6 @@ namespace Linux
         }
 
         void Init() {
-            var utility = new TestUtility();
-
-            Fs.AddFrom(Fs.Lookup("/usr/sbin"), utility);
-
             User root = UsersDb.LookupUid(0);
 
             StartProcess(
@@ -189,13 +169,6 @@ namespace Linux
                 new string[] { "/usr/sbin/init" }
             );
         }
-
-        // void HandleTerm() {
-        //     string login = Terminal.Input("Login:");
-        //     Debug.Log("Login: " + login);
-        //     string password = Terminal.Input("Password:");
-        //     Debug.Log("Password: " + password);
-        // }
 
         string FakeBootFile() {
             return System.IO.Path.Combine(Application.dataPath, "Resources", "boot.txt"); 

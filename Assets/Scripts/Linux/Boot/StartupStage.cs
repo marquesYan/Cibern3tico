@@ -10,16 +10,15 @@ using Linux.Sys;
 using Linux.Sys.Input.Drivers;
 using Linux.Utilities.Sbin;
 using Linux.Utilities;
+using Linux.Library;
 
 namespace Linux.Boot
 {    
     public class StartupStage {
         protected Linux.Kernel Kernel;
-        protected VirtualTerminal Terminal;
 
         public StartupStage(Linux.Kernel kernel) {
             Kernel = kernel;
-            Terminal = Kernel.Terminal;
             Start();
         }
 
@@ -36,21 +35,21 @@ namespace Linux.Boot
             // int directoriesCount = Kernel.Fs.Root.ChildsCount();
             // Print($"filesystem structure has {directoriesCount} directories");
 
-            MakeLinuxUtilities();
-            Print("file utilities: created");
+            MakeLinuxLibrary();
+            // Print("file utilities: created");
 
             // MakeLinuxDev();
             // Print("devices: created");
 
-            MakeLinuxSys();
-            Print("sys: created");
+            // MakeLinuxSys();
+            // Print("sys: created");
 
             // MakeLinuxConfigurations();
             // Print("configurations: created");
 
 
             Kernel.ProcTable = new ProcessesTable(Kernel.Fs);
-            Print("process table: created");
+            // Print("process table: created");
 
             // Init();
             
@@ -65,36 +64,18 @@ namespace Linux.Boot
             // );
         }
 
-        void MakeLinuxUtilities() {
-            int binPerm = Perm.FromInt(7, 5, 5);
+        void MakeLinuxLibrary() {
+            File systemBinDir = Kernel.Fs.Lookup("/usr/sbin");
 
-            Kernel.Fs.CreateDir(
-                "/usr/bin",
-                0, 0, 
-                binPerm
+            Kernel.Fs.AddFrom(
+                systemBinDir,
+                new TestLibrary(
+                    "/usr/sbin/init",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
             );
-
-            Kernel.Fs.CreateDir(
-                "/usr/sbin",
-                0, 0,
-                binPerm
-            );
-
-            // File[] binaries = new File[] { 
-            //     new LsUtility("/usr/bin/ls", 0, 0, binPerm),
-            // };
-
-            // foreach (File utility in binaries) {
-            //     Fs.AddFrom(binDirectory, utility);
-            // }
-
-            // File[] sytemBinaries = new File[] { 
-            //     new InitUtility("/usr/sbin/init", 0, 0, binPerm),
-            // };
-
-            // foreach (File utility in sytemBinaries) {
-            //     Fs.AddFrom(sbinDirectory, utility);
-            // }
         }
 
         void MakeLinuxSys() {
@@ -113,32 +94,6 @@ namespace Linux.Boot
                 );
             }
         }
-
-        // void FindPeripheralComponents() {
-        //     var usb1 = new Pci(
-        //         "xHCI Host Controller",
-        //         "SAD",
-        //         "0000:00:04.0",
-        //         189,
-        //         122,
-        //         PciClass.INPUT
-        //     );
-
-        //     Kernel.PciTable.Add(usb1);
-        //     Print($"found {usb1.Product} at: {usb1.Slot}");
-
-        //     var usb2 = new Pci(
-        //         "xHCI Host Controller",
-        //         "SAD",
-        //         "0000:00:06.0",
-        //         189,
-        //         122,
-        //         PciClass.INPUT
-        //     );
-
-        //     Kernel.PciTable.Add(usb2);
-        //     Print($"found {usb2.Product} at: {usb2.Slot}");
-        // }
 
          // IEnumerator Initialize() {
         //     Debug.Log("Initilizing Subsystem");

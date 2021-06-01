@@ -11,6 +11,7 @@ namespace Linux.Configuration
 
         public readonly GenericDevice Device;
         public readonly IUdevDriver Driver;
+        public readonly string FilePath;
 
         public UEvent(
             int id,
@@ -20,6 +21,7 @@ namespace Linux.Configuration
             Id = id;
             Device = device;
             Driver = driver;
+            FilePath = $"/dev/input/event{Id}";
         }
     }
 
@@ -53,7 +55,7 @@ namespace Linux.Configuration
             Events.Add(pci, uEvent);
 
             Fs.Create(
-                $"/dev/input/event{uEvent.Id}",
+                uEvent.FilePath,
                 0, 0,
                 Perm.FromInt(6, 6, 0),
                 FileType.F_CHR,

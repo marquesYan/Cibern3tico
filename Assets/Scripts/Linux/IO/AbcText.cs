@@ -25,7 +25,7 @@ namespace Linux.IO
 
     public abstract class AbstractTextIO : ITextIO {
 
-        const char LINE_FEED = '\n';
+        public const char LINE_FEED = '\n';
         protected readonly object StreamLock = new object();
 
         public int Mode { get; protected set; }

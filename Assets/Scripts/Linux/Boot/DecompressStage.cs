@@ -87,6 +87,10 @@ namespace Linux.Boot
                 "/media",
                 "/opt",
                 "/var",
+
+                "/usr/sbin",
+                "/usr/share",
+                "/usr/lib",
             };
 
             string[] dir555 = new string[] { 

@@ -39,6 +39,10 @@ namespace Linux.Configuration
             return items;
         }
 
+        public List<T> ToList() {
+            return LoadFromFs();
+        }
+
         protected string[] ReadLines() {
             using (ITextIO stream = Fs.Open(DataSource().Path, AccessMode.O_RDONLY))
             {
