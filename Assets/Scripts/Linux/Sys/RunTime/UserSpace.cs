@@ -71,6 +71,10 @@ namespace Linux.Sys.RunTime
             return KernelSpace.GetCurrentUser().Login;
         }
 
+        public string[] GetArgs() {
+            return KernelSpace.GetCurrentProc().CmdLine;
+        }
+
         public void WaitPid(int pid) {
             KernelSpace.WaitPid(pid);
         }
@@ -93,7 +97,7 @@ namespace Linux.Sys.RunTime
 
         public string Input(string prompt, char end) {
             Print(prompt, end);
-            Tty.Write(CharacterControl.C_BLOCK_REMOVE);
+            Tty.Write(CharacterControl.C_BLOCK);
             return Stdin.ReadLine();
         }
 

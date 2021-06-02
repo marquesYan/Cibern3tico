@@ -12,6 +12,8 @@ namespace Linux.PseudoTerminal
         protected LimitedStream Buffer;
         protected List<int> CursorIndexes;
 
+        protected int BlockedIndex = -1;
+
         public int Pointer {
             get {
                 return Buffer.Pointer;
@@ -45,7 +47,7 @@ namespace Linux.PseudoTerminal
         }
 
         public void Block() {
-            // TODO
+            BlockedIndex = Pointer;
         }
 
         public void Add(string text) {
@@ -58,7 +60,7 @@ namespace Linux.PseudoTerminal
 
         public void RemoveAtFront() {
             if (IsAtEnd()) {
-                return;   
+                return;
             }
 
             Buffer.Remove();
@@ -70,14 +72,14 @@ namespace Linux.PseudoTerminal
                 return;
             }
 
-            MovePointer(-1);
+            if (MovePointer(-1)) {
+                Buffer.Remove();
 
-            Buffer.Remove();
+                UpdateLinesCache();
 
-            UpdateLinesCache();
-
-            // Always move Cursor after UpdateLinesCache()
-            MoveCursor(-1, () => CurrentLine.Length);
+                // Always move Cursor after UpdateLinesCache()
+                MoveCursor(-1, () => CurrentLine.Length);
+            }
         }
 
         public void MoveLine(int step) {
@@ -93,8 +95,9 @@ namespace Linux.PseudoTerminal
         }
 
         public void MoveCursor(int step) {
-            MovePointer(step);
-            MoveCursor(step, GetCursorIndex);
+            if (MovePointer(step)) {
+                MoveCursor(step, GetCursorIndex);
+            }
         }
 
         void MoveCursor(int step, OnCursorUpward onUpward) {
@@ -122,10 +125,10 @@ namespace Linux.PseudoTerminal
             CursorIndexes[LineIndex] = cursor;
         }
 
-        void MovePointer(int step) {
+        bool MovePointer(int step) {
             if (Buffer.Length == 0) {
                 Buffer.Seek(0);
-                return;
+                return false;
             }
 
             int pointer = Pointer + step;
@@ -136,7 +139,12 @@ namespace Linux.PseudoTerminal
                 pointer = Buffer.Length;
             }
 
+            if (IsMoveBlocked(pointer)) {
+                return false;
+            }
+
             Buffer.Seek(pointer);
+            return true;
         }
 
         public string[] GetLines() {
@@ -145,6 +153,11 @@ namespace Linux.PseudoTerminal
             }
 
             return _linesCache;
+        }
+
+        protected bool IsMoveBlocked(int newPointer) {
+            return BlockedIndex != -1 &&
+                    newPointer < BlockedIndex;
         }
 
         protected void UpdateCurrentLine(int index) {

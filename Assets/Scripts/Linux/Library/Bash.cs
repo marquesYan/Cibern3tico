@@ -35,7 +35,8 @@ namespace Linux.Library
                     keepRunning = false;
                 } else {
                     try {
-                        int pid = userSpace.CreateProcess(cmd.Split(' '));
+                        string[] cmdLine = ParseCmd(userSpace, cmd);
+                        int pid = userSpace.CreateProcess(cmdLine);
                         userSpace.WaitPid(pid);
                     } catch (System.Exception exception) {
                         userSpace.Stderr.WriteLine(exception.Message);
@@ -44,6 +45,23 @@ namespace Linux.Library
             }
 
             return 0;
+        }
+
+        protected string[] ParseCmd(UserSpace userSpace, string cmd) {
+            string[] tokens = cmd.Split(' ');
+
+            for (var i = 0; i < tokens.Length; i++) {
+                string token = tokens[i];
+
+                switch (token) {
+                    case "$$": {
+                        tokens[i] = userSpace.GetPid().ToString();
+                        break;
+                    }
+                }
+            }
+
+            return tokens;
         }
     }
 }

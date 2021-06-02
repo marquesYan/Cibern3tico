@@ -35,9 +35,6 @@ namespace Linux.PseudoTerminal
             CursorLinesMngr = new CursorLines(bufferSize);
 
             IsClosed = false;
-
-            // CursorIndexes = new List<int>();
-            // CursorIndexes.Add(0);
         }
 
         public void Close() {
@@ -75,8 +72,8 @@ namespace Linux.PseudoTerminal
         }
 
         protected int WriteToBuffer(string message) {
-            RequestHighYAxis();
             CursorLinesMngr.Add(message);
+            RequestHighYAxis();
             return message.Length;
         }
 
@@ -129,11 +126,13 @@ namespace Linux.PseudoTerminal
                 DrawLine(line);
 
                 if (i == CursorLinesMngr.LineIndex) {
-                    // int index = GetCursorIndex(i);
-                    // string fmt = line.Substring(0, index);
-                    // Debug.Log("calc cursor size: " + fmt);
-                    // Debug.Log("calc cursor lenght: " + fmt.Length);
-                    CursorSize = CalcSize(line);
+                    string lineToCalc = line;
+                    if (string.IsNullOrEmpty(line)) {
+                        // Calculate the height of a real character
+                        lineToCalc = "A";
+                    }
+
+                    CursorSize = CalcSize(lineToCalc);
                 }
 
                 i++;
@@ -144,20 +143,11 @@ namespace Linux.PseudoTerminal
             switch(key) {
                 case CharacterControl.C_DBACKSPACE: {
                     CursorLinesMngr.RemoveAtBack();
-                    // Buffer.TryRemove(Buffer.CurrentLine.Length - 1);
-                    // UpdateCursorIndex(-1, true);
-                    // if (CursorLinesMngr.CursorPosition > 0) {
-                    //     CursorLinesMngr.RemoveAtCursorPosition(-1);
-                    // }
                     break;
                 }
 
                 case CharacterControl.C_DDELETE: {
                     CursorLinesMngr.RemoveAtFront();
-                    // if (!CursorLinesMngr.IsAtEnd()) {
-                        // Delete token at cursor position
-                        // CursorLinesMngr.RemoveAtCursorPosition(0);
-                    // }
                     break;
                 }
 
@@ -181,7 +171,7 @@ namespace Linux.PseudoTerminal
                     break;
                 }
 
-                case CharacterControl.C_BLOCK_REMOVE: {
+                case CharacterControl.C_BLOCK: {
                     CursorLinesMngr.Block();
                     break;
                 }
@@ -192,37 +182,5 @@ namespace Linux.PseudoTerminal
                 }
             }
         }
-
-        // protected void UpdateCursorIndex(int step, bool seekBuffer) {
-        //     int index = GetCurrentCursorIndex();
-
-        //     index += step;
-
-        //     if (index < 0) {
-        //         index = 0;
-        //     } else if (index > Buffer.CurrentLine.Length - 1) {
-        //         index = Buffer.CurrentLine.Length;
-        //     }
-
-        //     // if (Buffer.BlockedIndex < index) {
-        //     CursorIndexes[Buffer.CurrentLineIndex] = index;
-
-        //     Debug.Log("new index: " + index);
-        //     // Buffer.Seek(index);
-        //     // }
-        // }
-
-        // protected int GetCurrentCursorIndex() {
-        //     return GetCursorIndex(Buffer.CurrentLineIndex);
-        // }
-
-        // protected int GetCursorIndex(int line) {
-        //     try {
-        //         return CursorIndexes[line];
-        //     } catch (System.ArgumentOutOfRangeException) {
-        //         CursorIndexes.Insert(line, 0);
-        //         return 0;
-        //     }
-        // }
     }
 }
