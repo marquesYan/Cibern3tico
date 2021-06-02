@@ -43,6 +43,10 @@ namespace Linux.Sys.Input.Drivers
                 WriteKeyboard(CharacterControl.C_DLEFT_ARROW);
             } else if (UnityEngine.Input.GetKeyDown(KeyCode.RightArrow)) {
                 WriteKeyboard(CharacterControl.C_DRIGHT_ARROW);
+            } else if (UnityEngine.Input.GetKeyDown(KeyCode.UpArrow)) {
+                WriteKeyboard(CharacterControl.C_DUP_ARROW);
+            } else if (UnityEngine.Input.GetKeyDown(KeyCode.DownArrow)) {
+                WriteKeyboard(CharacterControl.C_DDOWN_ARROW);
             }
         }
 

@@ -1,6 +1,7 @@
 namespace Linux.PseudoTerminal {
     public static class CharacterControl {
-        public const string C_WRITE_KEY = "^WKY^";
+        public const string C_BLOCK_REMOVE = "^BLK";
+
         public const string C_DBACKSPACE = "^BKS";
         public const string C_DDELETE = "^DEL";
         public const string C_DTAB = "^TAB";

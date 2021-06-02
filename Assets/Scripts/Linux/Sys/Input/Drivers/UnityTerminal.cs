@@ -65,6 +65,11 @@ namespace Linux
             _window = GUILayout.Window(88, _window, DrawConsole, "", WindowStyle);
         }
 
+        protected override Vector CalcSize(string message) {
+            Vector2 vector = LabelStyle.CalcSize(new GUIContent(message));
+            return new Vector(vector.x, vector.y);
+        }
+
         void FocusTextField()
         {
             GUI.FocusControl("command_text_field");
@@ -143,13 +148,6 @@ namespace Linux
         }
 
         void DrawConsole(int windowID) {
-            GUILayout.BeginVertical();
-
-            _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, false, false, GUIStyle.none, GUIStyle.none);
-            GUILayout.FlexibleSpace();
-            DrawTerm();
-            GUILayout.EndScrollView();
-
             // MoveCursorToEnd();
 
             _lastEvent = Event.current;
@@ -161,10 +159,32 @@ namespace Linux
             }
 
             // characters "appears" to be 8 pixel width
-            // InputStyle.DrawCursor(new Rect(54 + (CursorManager.CursorPosition * 8), Screen.height - InputStyle.fixedHeight, 4, 4), new GUIContent("|"), 0, 0);
-            GUILayout.Label(CursorManager.DrawText(), InputStyle);
+            // GUILayout.Label(CursorManager.DrawText(), InputStyle);
 
             GUILayout.EndHorizontal();
+
+            GUILayout.BeginVertical();
+
+            _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, false, false, GUIStyle.none, GUIStyle.none);
+            // GUILayout.FlexibleSpace();
+            DrawTerm();
+
+            if (CursorSize != null) {
+                Vector2 cursorPos = LabelStyle.GetCursorPixelPosition(
+                    new Rect(0, 0, 0, 0),
+                    new GUIContent(CursorLinesMngr.CurrentLine),
+                    CursorLinesMngr.Cursor
+                );
+
+                // CursorSize.X, CursorSize.Y * Buffer.CurrentLineIndex
+
+                LabelStyle.DrawCursor(
+                    new Rect(cursorPos.x, (CursorSize.Y * CursorLinesMngr.LineIndex)-20, 4, 4),
+                    new GUIContent("|"), 0, 0
+                );
+            }
+            GUILayout.EndScrollView();
+
             GUILayout.EndVertical();
         }
 

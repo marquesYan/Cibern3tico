@@ -1,20 +1,29 @@
-using System.Collections.Generic;
+using System.Text;
 
 namespace Linux.IO
 {
-    public class LimitedStream : AbstractTextIO {
-        protected List<string> Buffer = new List<string>();
+    public class LimitedStream : BufferedStream {
+        protected StringBuilder Buffer = new StringBuilder();
+
+        public int Length { get; protected set; }
 
         public int Size { get; protected set; }
+
+        // public int Length {
+        //     get {
+        //         return Buffer.Length;
+        //     }
+        // }
 
         public LimitedStream(
             int maxSize
         ) : base(AccessMode.O_RDWR) {
             Size = maxSize;
+            Length = 0;
         }
 
-        public override string[] ReadLines() {
-            return Buffer.ToArray();
+        public void Remove(int index) {
+            Buffer.Remove(Pointer + index, 1);
         }
 
         protected override void InternalTruncate() {
@@ -22,31 +31,30 @@ namespace Linux.IO
         }
 
         protected override bool CanMovePointer(int newPosition) {
-            return false;
+            return newPosition < Length;
         }
 
         protected override int InternalAppend(string data) {
+            Buffer.Insert(Pointer, data);
+
             int written = data.Length;
 
-            Buffer.Add(data);
-
-            if (Buffer.Count > Size) {
-                written += Buffer[0].Length;
-                Buffer.RemoveAt(0);
+            if (Buffer.Length > Size) {
+                written -= 1;
+                Buffer.Remove(0, 1);
             }
+
+            Length += written;
 
             return written;
         }
 
-        protected override void InternalClose() {
-            Buffer = null;
+        protected override string InternalRead(int length) {
+            return Buffer.ToString();
         }
 
-        protected override string InternalRead(int length)
-        {
-            throw new System.ArgumentException(
-                "Can not Read from LimitedStream, instead call ReadLines()"
-            );
+        protected override void InternalClose() {
+            Buffer = null;
         }
     }
 }

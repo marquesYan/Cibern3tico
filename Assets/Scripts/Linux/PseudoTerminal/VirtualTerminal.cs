@@ -1,9 +1,20 @@
 using System.Text;
 using System.Collections.Generic;
 using Linux.IO;
+using UnityEngine;
 
 namespace Linux.PseudoTerminal
 {
+    public class Vector {
+        public float X;
+        public float Y;
+
+        public Vector(float x, float y) {
+            X = x;
+            Y = y;
+        }
+    }
+
     public abstract class VirtualTerminal
     {
         event System.Action OnFirstDraw;
@@ -12,31 +23,30 @@ namespace Linux.PseudoTerminal
         int _moveXAxis = -1;
         int _typedKeysCount;
 
-        protected AbstractTextIO Buffer;
-
         protected bool IsFirstDraw = true;
 
-        protected string KeyboardEvent;
+        protected CursorLines CursorLinesMngr;
 
-        protected CursorDisplay CursorManager;
+        protected Vector CursorSize;
 
         public bool IsClosed { get; protected set; }
 
         public VirtualTerminal(int bufferSize) {
-            Buffer = new LimitedStream(bufferSize);
-
-            CursorManager = new CursorDisplay();
+            CursorLinesMngr = new CursorLines(bufferSize);
 
             IsClosed = false;
+
+            // CursorIndexes = new List<int>();
+            // CursorIndexes.Add(0);
         }
 
         public void Close() {
-            Buffer.Close();
+            CursorLinesMngr.Close();
             IsClosed = true;
         }
 
         public void ClearBuffer() {
-            Buffer.Truncate();
+            CursorLinesMngr.Truncate();
         }
 
         public void RequestYAxis(int position) {
@@ -60,14 +70,14 @@ namespace Linux.PseudoTerminal
         }
 
         public int SendToSreen(string message) {
-            if (message.StartsWith(CharacterControl.C_WRITE_KEY)) {
-                string key = message.Remove(0, CharacterControl.C_WRITE_KEY.Length);
-                HandleInputKey(key);
-                return 1;
-            }
+            HandleInputKey(message);
+            return message.Length;
+        }
 
+        protected int WriteToBuffer(string message) {
             RequestHighYAxis();
-            return Buffer.Write(message);
+            CursorLinesMngr.Add(message);
+            return message.Length;
         }
 
         public void SubscribeFirstDraw(System.Action onFirstDraw) {
@@ -84,6 +94,8 @@ namespace Linux.PseudoTerminal
         protected abstract void MoveXAxis(int position);
         protected abstract void DrawLine(string message);
         protected abstract void HandleDraw();
+
+        protected abstract Vector CalcSize(string message);
 
         public abstract void MoveCursorToEnd();
 
@@ -112,48 +124,103 @@ namespace Linux.PseudoTerminal
         }
 
         protected void FlushBuffer() {
-            foreach (string message in Buffer.ReadLines()) {
-                switch (message) {
-                    default: {
-                        DrawLine(message);
-                        break;
-                    }
+            int i = 0;
+            foreach (string line in CursorLinesMngr.GetLines()) {
+                DrawLine(line);
+
+                if (i == CursorLinesMngr.LineIndex) {
+                    // int index = GetCursorIndex(i);
+                    // string fmt = line.Substring(0, index);
+                    // Debug.Log("calc cursor size: " + fmt);
+                    // Debug.Log("calc cursor lenght: " + fmt.Length);
+                    CursorSize = CalcSize(line);
                 }
+
+                i++;
             }
         }
 
         protected void HandleInputKey(string key) {
             switch(key) {
                 case CharacterControl.C_DBACKSPACE: {
-                    if (CursorManager.CursorPosition > 0) {
-                        CursorManager.RemoveAtCursorPosition(-1);
-                    }
+                    // Buffer.TryRemove(Buffer.CurrentLine.Length - 1);
+                    // UpdateCursorIndex(-1, true);
+                    // if (CursorLinesMngr.CursorPosition > 0) {
+                    //     CursorLinesMngr.RemoveAtCursorPosition(-1);
+                    // }
                     break;
                 }
 
                 case CharacterControl.C_DDELETE: {
-                    if (!CursorManager.IsAtEnd()) {
+                    if (!CursorLinesMngr.IsAtEnd()) {
                         // Delete token at cursor position
-                        CursorManager.RemoveAtCursorPosition(0);
+                        // CursorLinesMngr.RemoveAtCursorPosition(0);
                     }
                     break;
                 }
 
                 case CharacterControl.C_DLEFT_ARROW: {
-                    CursorManager.Move(-1);
+                    CursorLinesMngr.MoveCursor(-1);
                     break;
                 }
 
                 case CharacterControl.C_DRIGHT_ARROW: {
-                    CursorManager.Move(1);
+                    CursorLinesMngr.MoveCursor(1);
+                    break;
+                }
+
+                case CharacterControl.C_DUP_ARROW: {
+                    CursorLinesMngr.MoveLine(-1);
+                    break;
+                }
+
+                case CharacterControl.C_DDOWN_ARROW: {
+                    CursorLinesMngr.MoveLine(1);
+                    break;
+                }
+
+                case CharacterControl.C_BLOCK_REMOVE: {
+                    CursorLinesMngr.Block();
                     break;
                 }
 
                 default: {
-                    CursorManager.AddToCollection(key);
+                    CursorLinesMngr.Add(key);
                     break;
                 }
             }
         }
+
+        // protected void UpdateCursorIndex(int step, bool seekBuffer) {
+        //     int index = GetCurrentCursorIndex();
+
+        //     index += step;
+
+        //     if (index < 0) {
+        //         index = 0;
+        //     } else if (index > Buffer.CurrentLine.Length - 1) {
+        //         index = Buffer.CurrentLine.Length;
+        //     }
+
+        //     // if (Buffer.BlockedIndex < index) {
+        //     CursorIndexes[Buffer.CurrentLineIndex] = index;
+
+        //     Debug.Log("new index: " + index);
+        //     // Buffer.Seek(index);
+        //     // }
+        // }
+
+        // protected int GetCurrentCursorIndex() {
+        //     return GetCursorIndex(Buffer.CurrentLineIndex);
+        // }
+
+        // protected int GetCursorIndex(int line) {
+        //     try {
+        //         return CursorIndexes[line];
+        //     } catch (System.ArgumentOutOfRangeException) {
+        //         CursorIndexes.Insert(line, 0);
+        //         return 0;
+        //     }
+        // }
     }
 }
