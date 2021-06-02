@@ -89,6 +89,7 @@ namespace Linux.Boot
                 "/var",
 
                 "/usr/sbin",
+                "/usr/bin",
                 "/usr/share",
                 "/usr/lib",
             };

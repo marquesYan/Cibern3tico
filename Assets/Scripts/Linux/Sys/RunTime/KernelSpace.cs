@@ -31,6 +31,29 @@ namespace Linux.Sys.RunTime
             return Kernel.UsersDb.LookupUid(proc.Uid);
         }
 
+        public void WaitPid(int pid) {
+            Process proc = LookupProcessByPid(pid);
+
+            if (proc == null) {
+                throw new System.ArgumentException(
+                    "No such process: " + pid
+                );
+            }
+
+            proc.MainTask.Join();
+        }
+
+        protected Process LookupProcessByPid(int pid) {
+            Process proc = GetCurrentProc();
+
+            if (IsRootUser() || proc.ChildPids.Contains(pid)) {
+                return Kernel.ProcTable.LookupPid(pid);
+            }
+
+            ThrowPermissionDenied();
+            return null;
+        }
+
         public File LookupByFD(int fd) {
             Process proc = GetCurrentProc();
 
@@ -104,6 +127,11 @@ namespace Linux.Sys.RunTime
                 return Kernel.Fs.Open(file.Path, mode);
             }
 
+            ThrowPermissionDenied();
+            return null;
+        }
+
+        public void ThrowPermissionDenied() {
             throw new System.AccessViolationException(
                 "Permission denied" 
             );

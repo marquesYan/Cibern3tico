@@ -15,7 +15,7 @@ namespace Linux.Configuration
         public string[] Environ { get; protected set; }
         public Thread MainTask { get; protected set; }
         public List<Thread> BackgroundTasks { get; protected set; }
-        public List<string> ChildPids { get; protected set; }
+        public List<int> ChildPids { get; protected set; }
         public List<int> Fds { get; protected set; }
         public string Cwd { get; protected set; }
         public string Root { get; protected set; }
@@ -47,7 +47,7 @@ namespace Linux.Configuration
             }
 
             BackgroundTasks = new List<Thread>();
-            ChildPids = new List<string>();
+            ChildPids = new List<int>();
             Fds = new List<int>();
         }
 

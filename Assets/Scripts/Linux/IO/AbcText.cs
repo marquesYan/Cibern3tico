@@ -84,12 +84,14 @@ namespace Linux.IO
 
             string buffer;
 
-            while (Length > 0 && missingLineFeed) {
-                buffer = Read(1);
-                if (buffer == lineFeed) {
-                    missingLineFeed = false;
-                } else {
-                    content.Append(buffer);
+            while (missingLineFeed) {
+                if (Length > 0) {
+                    buffer = Read(1);
+                    if (buffer == lineFeed) {
+                        missingLineFeed = false;
+                    } else {
+                        content.Append(buffer);
+                    }
                 }
             }
 

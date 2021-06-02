@@ -4,8 +4,8 @@ using UnityEngine;
 
 namespace Linux.Library
 {    
-    public class TestLibrary : CompiledBin {
-        public TestLibrary(
+    public class Init : CompiledBin {
+        public Init(
             string absolutePath,
             int uid,
             int gid,
@@ -14,8 +14,18 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            string answer = userSpace.Input("confirm? [Y/n]");
-            userSpace.Print("answer is " + answer);
+            int pid = userSpace.CreateProcess(
+                new string[] { "/usr/sbin/ttyctl" }
+            );
+
+            userSpace.Print("getty pid: " + pid);
+
+            int shPid = userSpace.CreateProcess(
+                new string[] { "/usr/bin/bash" }
+            );
+
+            userSpace.WaitPid(shPid);
+
             return 0;
         }
     }

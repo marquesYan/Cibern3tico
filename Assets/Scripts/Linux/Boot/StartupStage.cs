@@ -65,12 +65,23 @@ namespace Linux.Boot
         }
 
         void MakeLinuxLibrary() {
-            File systemBinDir = Kernel.Fs.Lookup("/usr/sbin");
+            File systemBinDir = Kernel.Fs.LookupOrFail("/usr/sbin");
+            File binDir = Kernel.Fs.LookupOrFail("/usr/bin");
 
             Kernel.Fs.AddFrom(
-                systemBinDir,
+                binDir,
                 new TestLibrary(
-                    "/usr/sbin/init",
+                    "/usr/bin/testlib",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                binDir,
+                new Bash(
+                    "/usr/bin/bash",
                     0, 0,
                     Perm.FromInt(7, 5, 5),
                     FileType.F_REG
@@ -79,8 +90,18 @@ namespace Linux.Boot
 
             Kernel.Fs.AddFrom(
                 systemBinDir,
-                new Getty(
+                new TtyCtl(
                     "/usr/sbin/ttyctl",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                systemBinDir,
+                new Init(
+                    "/usr/sbin/init",
                     0, 0,
                     Perm.FromInt(7, 5, 5),
                     FileType.F_REG

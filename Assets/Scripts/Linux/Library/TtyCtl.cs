@@ -6,8 +6,8 @@ using UnityEngine;
 
 namespace Linux.Library
 {    
-    public class ManageTty : CompiledBin {
-        public ManageTty(
+    public class TtyCtl : CompiledBin {
+        public TtyCtl(
             string absolutePath,
             int uid,
             int gid,
@@ -27,7 +27,7 @@ namespace Linux.Library
 
             while (true) {
                 key = pty.Read();
-                pty.Write(CharacterControl.C_WRITE_KEY + key); 
+                pty.Write(key);
             }
 
             return 0;

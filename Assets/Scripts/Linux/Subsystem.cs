@@ -40,7 +40,7 @@ namespace Linux
         IPciDriver GetUnityDriver() {
             var usbDriver = new UsbControllerDriver();
             usbDriver.Register(new UnityKbdDriver());
-            usbDriver.Register(new UnityConsoleDriver(1024));
+            usbDriver.Register(new UnityConsoleDriver(1024 ^ 2));
             return usbDriver;
         }
 
