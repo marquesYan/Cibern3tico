@@ -7,6 +7,8 @@ namespace Linux.PseudoTerminal
     public class CursorLines {
         string[] _linesCache;
 
+        public delegate int OnCursorUpward();
+
         protected LimitedStream Buffer;
         protected List<int> CursorIndexes;
 
@@ -50,14 +52,32 @@ namespace Linux.PseudoTerminal
             Buffer.Write(text);
             UpdateLinesCache();
 
+            // Always move Cursor after UpdateLinesCache()
             MoveCursor(text.Length);
         }
 
-        public void Remove(int index) {
-            Buffer.Remove(index);
+        public void RemoveAtFront() {
+            if (IsAtEnd()) {
+                return;   
+            }
+
+            Buffer.Remove();
+            UpdateLinesCache();
+        }
+
+        public void RemoveAtBack() {
+            if (IsAtBegin()) {
+                return;
+            }
+
+            MovePointer(-1);
+
+            Buffer.Remove();
+
             UpdateLinesCache();
 
-            MoveCursor(-index);
+            // Always move Cursor after UpdateLinesCache()
+            MoveCursor(-1, () => CurrentLine.Length);
         }
 
         public void MoveLine(int step) {
@@ -73,38 +93,50 @@ namespace Linux.PseudoTerminal
         }
 
         public void MoveCursor(int step) {
+            MovePointer(step);
+            MoveCursor(step, GetCursorIndex);
+        }
+
+        void MoveCursor(int step, OnCursorUpward onUpward) {
+            if (Buffer.Length == 0) {
+                return;
+            }
+
+            int cursor = GetCursorIndex() + step;
+
+            if (cursor < 0) {
+                if (LineIndex > 0) {
+                    UpdateCurrentLine(LineIndex - 1);
+                }
+
+                cursor = onUpward();
+            } else if (cursor > CurrentLine.Length) {
+                if (LineIndex > _linesCache.Length) {
+                    cursor = CurrentLine.Length;
+                } else {
+                    UpdateCurrentLine(LineIndex + 1);
+                    cursor = GetCursorIndex();
+                }
+            }
+
+            CursorIndexes[LineIndex] = cursor;
+        }
+
+        void MovePointer(int step) {
             if (Buffer.Length == 0) {
                 Buffer.Seek(0);
                 return;
             }
 
-            int pointer = Buffer.Length + Pointer + step;
-            int cursor = GetCursorIndex() + step;
+            int pointer = Pointer + step;
 
             if (pointer <= 0) {
-                pointer = cursor = 0;
+                pointer = 0;
             } else if (CheckAtEnd(pointer)) {
                 pointer = Buffer.Length;
             }
 
-            if (cursor < 0) {
-                if (LineIndex > 0) {
-                    UpdateCurrentLine(LineIndex - 1);
-                    cursor = CurrentLine.Length;
-                } else {
-                    cursor = 0;
-                }
-            } else if (cursor >= CurrentLine.Length) {
-                if (LineIndex >= _linesCache.Length) {
-                    cursor = CurrentLine.Length;
-                } else {
-                    UpdateCurrentLine(LineIndex + 1);
-                    cursor = CurrentLine.Length;
-                }
-            }
-
             Buffer.Seek(pointer);
-            CursorIndexes[LineIndex] = cursor;
         }
 
         public string[] GetLines() {
@@ -130,7 +162,7 @@ namespace Linux.PseudoTerminal
             return index >= Buffer.Length;
         }
 
-        void UpdateLinesCache() {
+        protected void UpdateLinesCache() {
             _linesCache = Buffer.ReadLines();
             UpdateCurrentLine(_linesCache.Length - 1);
         }

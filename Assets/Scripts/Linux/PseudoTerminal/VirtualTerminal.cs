@@ -143,6 +143,7 @@ namespace Linux.PseudoTerminal
         protected void HandleInputKey(string key) {
             switch(key) {
                 case CharacterControl.C_DBACKSPACE: {
+                    CursorLinesMngr.RemoveAtBack();
                     // Buffer.TryRemove(Buffer.CurrentLine.Length - 1);
                     // UpdateCursorIndex(-1, true);
                     // if (CursorLinesMngr.CursorPosition > 0) {
@@ -152,10 +153,11 @@ namespace Linux.PseudoTerminal
                 }
 
                 case CharacterControl.C_DDELETE: {
-                    if (!CursorLinesMngr.IsAtEnd()) {
+                    CursorLinesMngr.RemoveAtFront();
+                    // if (!CursorLinesMngr.IsAtEnd()) {
                         // Delete token at cursor position
                         // CursorLinesMngr.RemoveAtCursorPosition(0);
-                    }
+                    // }
                     break;
                 }
 

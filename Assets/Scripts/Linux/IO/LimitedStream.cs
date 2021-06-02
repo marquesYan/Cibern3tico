@@ -22,8 +22,9 @@ namespace Linux.IO
             Length = 0;
         }
 
-        public void Remove(int index) {
-            Buffer.Remove(Pointer + index, 1);
+        public void Remove() {
+            Buffer.Remove(Pointer, 1);
+            Length--;
         }
 
         protected override void InternalTruncate() {
