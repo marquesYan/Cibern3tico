@@ -16,19 +16,19 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            Kernel kernel = userSpace.AccessKernelSpace().Kernel;
-            PrimaryPty pty = kernel.PtyTable.ControllingPty;
+            // Kernel kernel = userSpace.AccessKernelSpace().Kernel;
+            // PrimaryPty pty = kernel.PtyTable.ControllingPty;
 
-            if (pty == null) {
-                return 1;
-            }
+            // if (pty == null) {
+            //     return 1;
+            // }
 
-            string key;
+            // string key;
 
-            while (true) {
-                key = pty.Read();
-                pty.Write(key);
-            }
+            // while (true) {
+            //     key = pty.Read();
+            //     pty.Write(key);
+            // }
 
             return 0;
         }

@@ -9,6 +9,12 @@ namespace Linux.Sys.RunTime
     public class KernelSpace {
         public Linux.Kernel Kernel;
 
+        public bool IsShutdown { 
+            get {
+                return Kernel.IsShutdown;
+            }
+        }
+
         public KernelSpace(Linux.Kernel kernel) {
             Kernel = kernel;
         }

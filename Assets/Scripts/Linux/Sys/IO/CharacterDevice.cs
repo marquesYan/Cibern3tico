@@ -5,11 +5,15 @@ using Linux.IO;
 
 namespace Linux.Sys.IO
 {
-    public class CharacterDevice : AbstractTextIO
+    public class CharacterDevice : AbstractTextIO, IoctlDevice
     {
         protected Queue<string> Buffer = new Queue<string>();
 
         public CharacterDevice(int mode) : base(mode) { }
+
+        public virtual void Ioctl(int signal, params string[] args) {
+            //
+        }
 
         protected override void InternalTruncate() {
             Buffer.Clear();

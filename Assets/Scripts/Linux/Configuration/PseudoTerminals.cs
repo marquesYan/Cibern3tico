@@ -1,56 +1,53 @@
-using System.Collections.Generic;
 using Linux.FileSystem;
 using Linux.IO;
+using Linux.Sys.Input;
 using Linux.PseudoTerminal;
 
 namespace Linux.Configuration
 {
     public class PseudoTerminalTable {
-        protected List<string> Ptys;
-
         protected VirtualFileTree Fs;
+        protected ITtyDriver TtyDriver;
 
-        public PrimaryPty ControllingPty;
+        public int Count { get; protected set;}
 
-        public PseudoTerminalTable(VirtualFileTree fs) {
+        public PseudoTerminalTable(
+            VirtualFileTree fs,
+            ITtyDriver ttyDriver
+        ) {
             Fs = fs;
-            Ptys = new List<string>();
+            TtyDriver = ttyDriver;
+
+            Count = 0;
 
             Fs.CreateDir(
                 "/dev/pts",
                 0, 0, 
                 Perm.FromInt(7, 5, 5)
             );
-        }
-
-        public void SetControllingPty(PrimaryPty pty) {
-            ControllingPty = pty;
 
             Fs.Create(
-                "/dev/pts/pmtx",
+                "/dev/pts/ptmx",
                 0, 0,
-                Perm.FromInt(0, 0, 0),
-                FileType.F_CHR,
-                ControllingPty
+                Perm.FromInt(6, 6, 6)
             );
         }
 
         public File Add(User user) {
-            if (ControllingPty == null) {
-                return null;
-            }
+            PrimaryPty pty = new PrimaryPty();
+            SecondaryPty pts = new SecondaryPty();
 
-            SecondaryPty pts = ControllingPty.CreateSecondary();
+            TtyDriver.Add(pty, pts);
 
             var ptsFile = Fs.Create(
-                $"/dev/pts/{Ptys.Count}",
+                $"/dev/pts/{Count}",
                 user.Uid, 0,
                 Perm.FromInt(6, 2, 0),
                 FileType.F_CHR,
                 pts
             );
 
-            Ptys.Add(ptsFile.Path);
+            Count++;
 
             return ptsFile;
         }

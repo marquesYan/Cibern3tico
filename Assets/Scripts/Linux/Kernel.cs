@@ -7,6 +7,7 @@ using Linux.IO;
 using Linux.Sys;
 using Linux.Sys.Drivers;
 using Linux.Sys.Input;
+using Linux.Sys.Input.Drivers;
 using Linux.Sys.IO;
 using Linux.FileSystem;
 using Linux.PseudoTerminal;
@@ -21,6 +22,8 @@ namespace Linux
 
         public UnityTerminal Terminal { get; protected set; }
         public VirtualMachine Machine { get; protected set; }
+
+        public bool IsShutdown { get; protected set; }
     
         public VirtualFileTree Fs;
         public ProcessesTable ProcTable;
@@ -36,6 +39,7 @@ namespace Linux
 
         public Kernel(VirtualMachine machine) {
             Machine = machine;
+            IsShutdown = false;
             new DecompressStage(this);
         }
 
@@ -51,8 +55,10 @@ namespace Linux
             EventTable = new UdevTable(Fs);
             FindBiosDrivers();
 
-            PtyTable = new PseudoTerminalTable(Fs);
-            FindControllingTty();
+            var ttyDriver = new GenericPtyDriver(this);
+
+            PtyTable = new PseudoTerminalTable(Fs, ttyDriver);
+            // FindControllingTty();
 
             TriggerStartup();
         }
@@ -98,18 +104,16 @@ namespace Linux
         }
 
         void FindControllingTty() {
-            UEvent kbdEvent = EventTable.LookupByType(DevType.KEYBOARD);
+            // UEvent consoleEvent = EventTable.LookupByType(DevType.CONSOLE);
 
-            UEvent consoleEvent = EventTable.LookupByType(DevType.CONSOLE);
+            // if (kbdEvent != null && consoleEvent != null) {
+            //     var controllingPty = new PrimaryPty(
+            //         Fs.Open(kbdEvent.FilePath, AccessMode.O_RDONLY),
+            //         Fs.Open(consoleEvent.FilePath, AccessMode.O_WRONLY)
+            //     );
 
-            if (kbdEvent != null && consoleEvent != null) {
-                var controllingPty = new PrimaryPty(
-                    Fs.Open(kbdEvent.FilePath, AccessMode.O_RDONLY),
-                    Fs.Open(consoleEvent.FilePath, AccessMode.O_WRONLY)
-                );
-
-                PtyTable.SetControllingPty(controllingPty);
-            }
+            //     PtyTable.SetControllingPty(controllingPty);
+            // }
         }
 
         void TriggerStartup() {
