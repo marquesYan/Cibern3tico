@@ -1,3 +1,4 @@
+using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
 using UnityEngine;
@@ -14,11 +15,19 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            // int pid = userSpace.CreateProcess(
-            //     new string[] { "/usr/sbin/ttyctl" }
-            // );
+            Linux.Kernel kernel = userSpace.Api.AccessKernel();
 
-            // userSpace.Print("getty pid: " + pid);
+            userSpace.Api.Trap(
+                ProcessSignal.SIGHUP,
+                (int[] args) => {
+                    // Graceful shutdown
+                    kernel.KillAllChildProcesses(ProcessSignal.SIGTERM);
+
+                    // Forced shutdown
+                    kernel.KillAllChildProcesses(ProcessSignal.SIGKILL);
+                }
+            );
+
             Debug.Log("opening pty...");
             int pty = userSpace.Api.OpenPty();
 

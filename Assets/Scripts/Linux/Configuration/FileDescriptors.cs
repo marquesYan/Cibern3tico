@@ -3,17 +3,6 @@ using Linux.IO;
 
 namespace Linux.Configuration
 {
-    public class FdEntry {
-        public readonly int Fd;
-
-        public readonly ITextIO Stream;
-
-        public FdEntry(int fd, ITextIO stream) {
-            Fd = fd;
-            Stream = stream;
-        }
-    }
-
     public class FileDescriptorsTable {
         protected Dictionary<Process, Dictionary<int, ITextIO>> Descriptors;
 
@@ -36,6 +25,17 @@ namespace Linux.Configuration
         public FileDescriptorsTable() {
             Descriptors = new Dictionary<Process, Dictionary<int, ITextIO>>();
             Counters = new Dictionary<int, List<int>>();
+        }
+
+        public void Remove(Process process) {
+            if (!HasProcess(process)) {
+                throw new System.ArgumentException(
+                    $"Process with PID '{process.Pid}' does not exist"
+                );
+            }
+
+            Descriptors.Remove(process);
+            Counters.Remove(process.Pid);
         }
 
         public ITextIO LookupFd(Process process, int fd) {

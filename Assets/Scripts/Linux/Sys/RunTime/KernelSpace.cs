@@ -41,6 +41,12 @@ namespace Linux.Sys.RunTime
             return -1;
         }
 
+        public void Trap(ProcessSignal signal, SignalHandler handler) {
+            Process proc = GetCurrentProc();
+
+            Kernel.ProcSigTable.Add(proc, signal, handler);
+        }
+
         public void WaitPid(int pid) {
             Process proc = LookupProcessByPid(pid);
 

@@ -82,8 +82,46 @@ namespace Linux.Configuration
             FdTable = new FileDescriptorsTable();
         }
 
+        public void Close() {
+            FdTable = null;
+        }
+
+        public List<Process> GetProcesses() {
+            return FdTable.GetProcesses();
+        }
+
+        public void Remove(Process process) {
+            lock(_procLock) {
+                if (process.PPid != 0) {
+                    Process parent = LookupPid(process.PPid);
+
+                    if (parent == null) {
+                        throw new System.InvalidOperationException(
+                            $"Parent process does not exist: {process.Pid}"
+                        );
+                    }
+
+                    parent.ChildPids.Remove(process.Pid);
+                }
+                
+                FdTable.Remove(process);
+            }
+        }
+
         public void Add(Process process) {
             lock(_procLock) {
+                if (process.PPid != 0) {
+                    Process parent = LookupPid(process.PPid);
+
+                    if (parent == null) {
+                        throw new System.ArgumentException(
+                            $"Parent process does not exist: {process.PPid}"
+                        );
+                    }
+
+                    parent.ChildPids.Add(process.Pid);
+                }
+                
                 FdTable.Add(process);
                 ProcessToFile(process);
             }
@@ -114,8 +152,7 @@ namespace Linux.Configuration
                     mainTask
                 );
 
-                FdTable.Add(process);
-                ProcessToFile(process);
+                Add(process);
 
                 return process;
             }

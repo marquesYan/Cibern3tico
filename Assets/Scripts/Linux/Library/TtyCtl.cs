@@ -1,6 +1,7 @@
 using System;
 using System.Timers;
 using Linux.Sys.RunTime;
+using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.PseudoTerminal;
 using Linux;
@@ -29,6 +30,15 @@ namespace Linux.Library
                 return 1;
             }
 
+            bool eventIsSet = true;
+
+            userSpace.Api.Trap(
+                ProcessSignal.SIGTERM,
+                (int[] args) => {
+                    eventIsSet = false;
+                }
+            );
+
             Debug.Log("ttyctl running");
 
             string inputQueue = args[2];
@@ -52,7 +62,7 @@ namespace Linux.Library
 
             PtyLineDiscipline lineDiscipline = new PtyLineDiscipline(ptStream);
 
-            while (!userSpace.IsShutdown) {
+            while (eventIsSet) {
                 // Debug.Log("waiting user keyboard...");
                 string key = rStream.Read(1);
 

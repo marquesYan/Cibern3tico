@@ -35,6 +35,10 @@ namespace Linux
         
         public PseudoTerminalTable PtyTable;
 
+        public ProcessSignalsTable ProcSigTable;
+
+        protected Process InitProcess;
+
         float _bootDelay = 0.0001f;
 
         public Kernel(VirtualMachine machine) {
@@ -60,12 +64,37 @@ namespace Linux
             PtyTable = new PseudoTerminalTable(Fs, ttyDriver);
             // FindControllingTty();
 
+            ProcSigTable = new ProcessSignalsTable();
+
             TriggerStartup();
         }
 
         public void Shutdown() {
             Debug.Log("Shutting down");
             IsShutdown = true;
+
+            EventTable.Close();
+
+            Debug.Log("childs: " +string.Join(",", InitProcess.ChildPids));
+
+            ProcSigTable.Dispatch(InitProcess, ProcessSignal.SIGHUP);
+
+            while (InitProcess.ChildPids.Count > 0) {
+                Debug.Log("waiting shutdown on kernel processes");
+                Thread.Sleep(1000);
+            }
+
+            try {
+                KillProcess(InitProcess);
+            } catch (System.TimeoutException) {
+                try {
+                    KillProcess(InitProcess, ProcessSignal.SIGKILL);
+                } catch {
+                    //
+                }
+            }
+
+            ProcTable.Close();
         }
 
         public void Interrupt(Pci pci, IRQCode code) {
@@ -74,6 +103,65 @@ namespace Linux
             if (uEvent != null) {
                 uEvent.Driver.Handle(code);
             }
+        }
+
+        public void KillAllChildProcesses(ProcessSignal signal) {
+            int[] childPids = InitProcess.ChildPids.ToArray();
+
+            foreach (int pid in childPids) {
+                Process process = ProcTable.LookupPid(pid);
+                if (process != null) {
+                    try {
+                        KillProcess(process, signal);
+                    } catch (System.TimeoutException exception) {
+                        Debug.Log($"process {process.Pid}: {exception.Message}");
+                    }
+                }
+            }
+        }
+
+        public void KillProcess(Process process) {
+            KillProcess(process, ProcessSignal.SIGTERM);
+        }
+
+        public void KillProcess(Process process, ProcessSignal signal) {
+            Debug.Log("will kill the process pid: " + process.Pid);
+
+            process.ChildPids.ForEach(pid => {
+                Process child = ProcTable.LookupPid(pid);
+                if (child != null) {
+                    KillProcess(child, signal);
+                }
+            });
+
+            switch(signal) {
+                case ProcessSignal.SIGKILL: {
+                    process.MainTask.Abort();
+                    break;
+                }
+
+                default: {
+                    ProcSigTable.Dispatch(process, signal);
+                    break;
+                }
+            }
+
+            int maxAttempts = 10;
+            int attempt = 0;
+
+            while (process.MainTask.IsAlive && attempt < maxAttempts) {
+                Debug.Log("waiting process to finish");
+                Thread.Sleep(500);
+                attempt++;
+            }
+
+            if (process.MainTask.IsAlive) {
+                throw new System.TimeoutException(
+                    "Failed to kill process, waited too much"
+                );
+            }
+
+            ProcTable.Remove(process);
         }
 
         void MountDevFs() {
@@ -114,19 +202,6 @@ namespace Linux
                     }
                 }
             }
-        }
-
-        void FindControllingTty() {
-            // UEvent consoleEvent = EventTable.LookupByType(DevType.CONSOLE);
-
-            // if (kbdEvent != null && consoleEvent != null) {
-            //     var controllingPty = new PrimaryPty(
-            //         Fs.Open(kbdEvent.FilePath, AccessMode.O_RDONLY),
-            //         Fs.Open(consoleEvent.FilePath, AccessMode.O_WRONLY)
-            //     );
-
-            //     PtyTable.SetControllingPty(controllingPty);
-            // }
         }
 
         void TriggerStartup() {
@@ -186,7 +261,7 @@ namespace Linux
         void Init() {
             User root = UsersDb.LookupUid(0);
 
-            Process theOne = BuildProcess(
+            InitProcess = BuildProcess(
                 0,
                 root,
                 new string[] { "/usr/sbin/init" }
@@ -194,11 +269,11 @@ namespace Linux
 
             var devNull = "/dev/null";
 
-            ProcTable.AttachIO(theOne, devNull, AccessMode.O_RDONLY, 0);
-            ProcTable.AttachIO(theOne, devNull, AccessMode.O_WRONLY, 1);
-            ProcTable.AttachIO(theOne, devNull, AccessMode.O_WRONLY, 2);
+            ProcTable.AttachIO(InitProcess, devNull, AccessMode.O_RDONLY, 0);
+            ProcTable.AttachIO(InitProcess, devNull, AccessMode.O_WRONLY, 1);
+            ProcTable.AttachIO(InitProcess, devNull, AccessMode.O_WRONLY, 2);
 
-            theOne.MainTask.Start();
+            InitProcess.MainTask.Start();
         }
 
         string FakeBootFile() {
