@@ -20,5 +20,7 @@ namespace Linux.IO
         void Seek(int position);
 
         void Close();
+
+        int GetMode();
     }
 }

@@ -1,10 +1,9 @@
-using Linux.PseudoTerminal;
-using Linux.Sys;
+using Linux.Sys.IO;
 
 namespace Linux.Sys.Input
 {
     public interface ITtyDriver : IDeviceDriver
     {
-        void Add(PrimaryPty pty, SecondaryPty pts);
+        int Add(CharacterDevice ptm, CharacterDevice pts, string ptsFile);
     }
 }

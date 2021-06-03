@@ -1,23 +1,30 @@
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.Library;
+using UnityEngine;
 
 namespace Linux.Sys.RunTime
 {    
     public class CommandHandler {
-        protected KernelSpace Kernel;
+        protected KernelSpace Api;
+        protected Linux.Kernel Kernel;
 
         public CommandHandler(Linux.Kernel kernel) {
-            Kernel = new KernelSpace(kernel);
+            Kernel = kernel;
+            Api = new KernelSpace(Kernel);
         }
 
         public void Handle() {
-            Process process = Kernel.GetCurrentProc();
+            string executable = Api.GetExecutable();
 
-            File execFile = Kernel.LookupFile(process.Executable);
+            File execFile = Kernel.Fs.LookupOrFail(executable);
 
             if (execFile is CompiledBin) {
-                ((CompiledBin) execFile).Execute(new UserSpace(Kernel));
+                try {
+                    ((CompiledBin) execFile).Execute(new UserSpace(Api));
+                } catch (System.Exception exception) {
+                    Debug.Log($"{execFile.Name}: {exception.Message}");
+                }
             }
         }
     }

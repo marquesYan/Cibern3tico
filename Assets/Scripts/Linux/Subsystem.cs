@@ -11,7 +11,7 @@ namespace Linux
 
         public Linux.Kernel Kernel;
 
-        public Pci ConsolePci;
+        public Pci DisplayPci;
         public Pci KeyboardPci;
 
         void Start() {
@@ -19,10 +19,10 @@ namespace Linux
 
             machine.BiosDrivers.Add(GetUnityDriver());
 
-            ConsolePci = machine.AttachUSB(
-                "Unity Game Console",
+            DisplayPci = machine.AttachUSB(
+                "Unity Game Display",
                 UnityVendorId,
-                DevType.CONSOLE,
+                DevType.DISPLAY,
                 "0000:00:04.0"
             );
 
@@ -40,8 +40,12 @@ namespace Linux
         IPciDriver GetUnityDriver() {
             var usbDriver = new UsbControllerDriver();
             usbDriver.Register(new UnityKbdDriver());
-            usbDriver.Register(new UnityConsoleDriver(1024 ^ 2));
+            usbDriver.Register(new UnityDisplayDriver(1024 ^ 2));
             return usbDriver;
+        }
+
+        void OnApplicationQuit() {
+            Kernel.Shutdown();
         }
 
         void Update() {
@@ -49,7 +53,7 @@ namespace Linux
         }
 
         void OnGUI() {
-            Kernel.Interrupt(ConsolePci, IRQCode.WRITE);
+            Kernel.Interrupt(DisplayPci, IRQCode.WRITE);
         }
     }
 }

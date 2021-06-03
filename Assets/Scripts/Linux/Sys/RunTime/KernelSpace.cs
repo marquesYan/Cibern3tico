@@ -3,6 +3,7 @@ using System.Threading;
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.IO;
+using UnityEngine;
 
 namespace Linux.Sys.RunTime
 {    
@@ -19,22 +20,25 @@ namespace Linux.Sys.RunTime
             Kernel = kernel;
         }
 
-        public bool IsRootUser() {
-            return GetCurrentUser().Uid == 0;
-        }
+        // Public Calls
 
-        public Process GetCurrentProc() {
-            return Kernel.ProcTable.LookupThread(Thread.CurrentThread);
-        }
+        public int Open(string filePath, int mode) {
+            File file = LookupFile(filePath);
 
-        public File LookupFile(string path) {
-            return Kernel.Fs.Lookup(path);
-        }
+            if (file == null) {
+                throw new System.IO.FileNotFoundException(
+                    "No such file or directory: " + filePath
+                );
+            }
 
-        public User GetCurrentUser() {
-            Process proc = GetCurrentProc();
+            if (IsFileModePermitted(file, mode)) {
+                Process proc = GetCurrentProc();
 
-            return Kernel.UsersDb.LookupUid(proc.Uid);
+                return Kernel.ProcTable.AttachIO(proc, filePath, mode);
+            }
+
+            ThrowPermissionDenied();
+            return -1;
         }
 
         public void WaitPid(int pid) {
@@ -49,64 +53,135 @@ namespace Linux.Sys.RunTime
             proc.MainTask.Join();
         }
 
-        protected Process LookupProcessByPid(int pid) {
-            Process proc = GetCurrentProc();
-
-            if (IsRootUser() || proc.ChildPids.Contains(pid)) {
-                return Kernel.ProcTable.LookupPid(pid);
-            }
-
-            ThrowPermissionDenied();
-            return null;
+        public int OpenPty() {
+            return Kernel.PtyTable.Add(GetCurrentUser());
         }
 
-        public File LookupByFD(int fd) {
+        public int GetPid() {
+            return GetCurrentProc().Pid;
+        }
+
+        public int GetPPid() {
+            return GetCurrentProc().PPid;
+        }
+
+        public string GetCwd() {
+            return GetCurrentProc().Cwd;
+        }
+
+        public int GetUid() {
+            return GetCurrentUser().Uid;
+        }
+
+        public string GetLogin() {
+            return GetCurrentUser().Login;
+        }
+
+        public string[] GetArgs() {
+            return GetCurrentProc().CmdLine;
+        }
+
+        public string GetExecutable() {
+            return GetCurrentProc().Executable;
+        }
+
+        public bool IsRootUser() {
+            return GetUid() == 0;
+        }
+
+        public ITextIO LookupByFD(int fd) {
             Process proc = GetCurrentProc();
 
-            string path = Kernel.ProcTable.ProcessDirectory(proc);
+            return Kernel.ProcTable.LookupFd(proc, fd);
+        }
 
-            return LookupFile(
-                PathUtils.Combine(path, "fd", fd.ToString())
+        public int Dup2(int pid, int fd) {
+            Process proc = GetCurrentProc();
+
+            EnsureFdsExists(proc, new int[] { fd });
+
+            Process destinationProc = Kernel.ProcTable.LookupPid(pid);
+
+            if (!CanAccessProcess(destinationProc)) {
+                ThrowPermissionDenied();
+            }
+            
+            return Kernel.ProcTable.DuplicateFd(
+                proc,
+                fd,
+                destinationProc    
             );
         }
 
-        public Process CreateProcess(string[] cmdLine) {
-            if (cmdLine.Length == 0) {
-                throw new System.ArgumentException("No command line");
-            }
+        public int StartProcess(
+            string[] cmdLine,
+            params int[] fds
+        ) {
+            Process currentProc = GetCurrentProc();
 
-            File executable = LookupFile(cmdLine[0]);
+            EnsureFdsExists(currentProc, fds);
 
-            if (executable == null) {
-                throw new System.ArgumentException(
-                    "Command not found: " + cmdLine[0]
-                );
-            }
-
-            User user = GetCurrentUser();
-
-            Process proc = GetCurrentProc();
-
-            return Kernel.StartProcess(
-                proc.Pid,
-                user,
-                cmdLine
+            Process proc = CreateProcess(
+                cmdLine,
+                0,
+                1,
+                2
             );
+
+            foreach(int fd in fds) {
+                Dup2(proc.Pid, fd);
+            }
+
+            proc.MainTask.Start();
+
+            return proc.Pid;
         }
 
-        public ITextIO GetControllingTty() {
-            File file = LookupByFD(255);
+        public int StartProcess(string[] cmdLine) {
+            return StartProcess(cmdLine, 0, 1, 2);
+        }
 
-            if (file == null) {
-                throw new System.InvalidOperationException(
-                    "Could not find a controlling terminal"
-                );
-            }
+        public int StartProcess(
+            string[] cmdLine,
+            int stdinFd,
+            int stdoutFd,
+            int stderrFd
+        ) {
+            Process proc = CreateProcess(
+                cmdLine,
+                stdinFd,
+                stdoutFd,
+                stderrFd
+            );
 
-            return Open(file.Path, AccessMode.O_RDWR);
+            proc.MainTask.Start();
+
+            return proc.Pid;
+        }
+
+        // Privileged Access Required
+
+        public Kernel AccessKernel() {
+            EnsureIsRoot();
+
+            return Kernel;
+        }
+
+        public File LookupFile(string path) {
+            EnsureIsRoot();
+
+            return Kernel.Fs.Lookup(path);
+        }
+
+        public Process LookupProcessByPid(int pid) {
+            EnsureIsRoot();
+
+            return Kernel.ProcTable.LookupPid(pid);
         }
 
         public List<Group> LookupUserGroups(User user) {
+            EnsureIsRoot();
+
             return Kernel.GroupsDb.ToList().FindAll(
                 group => {
                     foreach (string login in group.Users) {
@@ -120,35 +195,98 @@ namespace Linux.Sys.RunTime
             );
         }
 
-        public ITextIO Open(string filePath, int mode) {
-            File file = LookupFile(filePath);
+        protected bool CanAccessProcess(Process otherProc) {
+            if (IsRootUser()) {
+                return true;
+            }
 
-            if (file == null) {
-                throw new System.IO.FileNotFoundException(
-                    "No such file or directory: " + filePath
+            Process currentProc = GetCurrentProc();
+
+            return currentProc.ChildPids.Contains(otherProc.Pid);
+        }
+
+        protected Process CreateProcess(
+            string[] cmdLine,
+            int stdinFd,
+            int stdoutFd,
+            int stderrFd
+        ) {
+            if (cmdLine.Length == 0) {
+                throw new System.ArgumentException("No command line");
+            }
+
+            File executable = LookupFile(cmdLine[0]);
+
+            if (executable == null) {
+                throw new System.ArgumentException(
+                    "Command not found: " + cmdLine[0]
                 );
             }
 
-            if (IsFileModePermitted(file, mode)) {
-                return Kernel.Fs.Open(file.Path, mode);
-            }
+            int[] fds = new int[] {
+                stdinFd,
+                stdoutFd,
+                stderrFd
+            };
 
-            ThrowPermissionDenied();
-            return null;
+            Process proc = GetCurrentProc();
+
+            EnsureFdsExists(proc, fds);
+
+            User user = GetCurrentUser();
+
+            return Kernel.CreateProcess(
+                proc.Pid,
+                user,
+                cmdLine,
+                stdinFd,
+                stdoutFd,
+                stderrFd
+            );
         }
 
-        public void ThrowPermissionDenied() {
+        protected User GetCurrentUser() {
+            Process proc = GetCurrentProc();
+
+            return Kernel.UsersDb.LookupUid(proc.Uid);
+        }
+
+        protected Process GetCurrentProc() {
+            return Kernel.ProcTable.LookupThread(Thread.CurrentThread);
+        }
+
+        protected void EnsureFdsExists(Process process, int[] fds) {
+            foreach (int fd in fds) {
+                if (Kernel.ProcTable.LookupFd(process, fd) == null) {
+                    throw new System.ArgumentException(
+                        $"File descriptor not found: {fd}"  
+                    );
+                }
+            }
+        }
+
+        protected void ThrowPermissionDenied() {
             throw new System.AccessViolationException(
                 "Permission denied" 
             );
         }
 
         protected bool IsFileModePermitted(File file, int mode) {
+            if (IsRootUser()) {
+                return true;
+            }
+
             User user = GetCurrentUser();
 
             int checkMode = FindUserCheckMode(user, file, mode);
 
             return (checkMode | file.Permission) != 0;
+        }
+
+        protected void EnsureIsRoot() {
+            if (!IsRootUser()) {
+                ThrowPermissionDenied();
+            }
         }
 
         protected int FindUserCheckMode(User user, File file, int mode) {

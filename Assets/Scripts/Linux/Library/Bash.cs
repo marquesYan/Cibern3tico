@@ -18,15 +18,19 @@ namespace Linux.Library
         public override int Execute(UserSpace userSpace) {
             bool keepRunning = true;
 
-            while (keepRunning) {
-                string cwdName = PathUtils.BaseName(userSpace.GetCwd());
-                string login = userSpace.GetLogin();
+            Debug.Log("bash is running");
+            Debug.Log("bash stdin: " + userSpace.Stdin);
 
+            while (keepRunning) {
+                string cwdName = PathUtils.BaseName(userSpace.Api.GetCwd());
+                string login = userSpace.Api.GetLogin();
+
+                Debug.Log("waiting bash input: ");
                 string cmd = userSpace.Input(
                     $"[{login}@hacking01 {cwdName}]$",
                     ' '
                 );
-
+                Debug.Log("recv cmd: " + cmd);
                 if (string.IsNullOrEmpty(cmd)) {
                     continue;
                 }
@@ -36,8 +40,8 @@ namespace Linux.Library
                 } else {
                     try {
                         string[] cmdLine = ParseCmd(userSpace, cmd);
-                        int pid = userSpace.CreateProcess(cmdLine);
-                        userSpace.WaitPid(pid);
+                        int pid = userSpace.Api.StartProcess(cmdLine);
+                        userSpace.Api.WaitPid(pid);
                     } catch (System.Exception exception) {
                         userSpace.Stderr.WriteLine(exception.Message);
                     }
@@ -55,7 +59,7 @@ namespace Linux.Library
 
                 switch (token) {
                     case "$$": {
-                        tokens[i] = userSpace.GetPid().ToString();
+                        tokens[i] = userSpace.Api.GetPid().ToString();
                         break;
                     }
                 }

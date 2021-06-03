@@ -7,7 +7,7 @@ namespace Linux.IO
     public static class AccessMode {
         public const int O_RDONLY = 0b_0100;
         public const int O_WRONLY = 0b_0010;
-        public const int O_RDWR = 0b_0001;
+        public const int O_RDWR =   0b_0001;
         public const int O_APONLY = 0b_1000;
 
         public static bool CanWrite(int mode) {
@@ -41,6 +41,10 @@ namespace Linux.IO
             if (AccessMode.CanCreate(mode)) {
                 Truncate();
             }
+        }
+
+        public int GetMode() {
+            return Mode;
         }
 
         public void Truncate() {

@@ -4,7 +4,7 @@ namespace Linux.Sys
 {    
     public enum DevType {
         KEYBOARD,
-        CONSOLE,
+        DISPLAY,
     }
 
     public class GenericDevice {

@@ -1,94 +1,50 @@
 using System;
 using Linux.PseudoTerminal;
+using Linux.FileSystem;
 using Linux.IO;
 
 namespace Linux.Sys.RunTime
 {    
     public class UserSpace {
-        protected KernelSpace KernelSpace;
+        public KernelSpace Api;
+
+        public bool IsShutdown {
+            get { return Api.IsShutdown; }
+        }
 
         public ITextIO Tty {
-            get { 
-                return Open(
-                    KernelSpace.LookupByFD(255).Path,
-                    AccessMode.O_RDWR
-                );
+            get {
+                return Api.LookupByFD(255);
             }
         }
 
         public ITextIO Stdout { 
             get { 
-                return Open(
-                    KernelSpace.LookupByFD(1).Path,
-                    AccessMode.O_APONLY
-                );
+                return Api.LookupByFD(1);
             }
         }
         public ITextIO Stdin { 
             get { 
-                return Open(
-                    KernelSpace.LookupByFD(0).Path,
-                    AccessMode.O_RDONLY
-                );
+                return Api.LookupByFD(0);
             }
         }
         public ITextIO Stderr { 
             get {
-                return Open(
-                    KernelSpace.LookupByFD(2).Path,
-                    AccessMode.O_APONLY
-                );
+                return Api.LookupByFD(2);
             }
         }
 
         public UserSpace(KernelSpace kernelSpace) {
-            KernelSpace = kernelSpace;
-        }
-
-        public KernelSpace AccessKernelSpace() {
-            if (KernelSpace.IsRootUser()) {
-                return KernelSpace;
-            }
-
-            throw new System.AccessViolationException(
-                "Permission denied"
-            );
-        }
-
-        public int GetPid() {
-            return KernelSpace.GetCurrentProc().Pid;
-        }
-
-        public int GetPPid() {
-            return KernelSpace.GetCurrentProc().PPid;
-        }
-
-        public string GetCwd() {
-            return KernelSpace.GetCurrentProc().Cwd;
-        }
-
-        public string GetLogin() {
-            return KernelSpace.GetCurrentUser().Login;
-        }
-
-        public string[] GetArgs() {
-            return KernelSpace.GetCurrentProc().CmdLine;
-        }
-
-        public void WaitPid(int pid) {
-            KernelSpace.WaitPid(pid);
+            Api = kernelSpace;
         }
 
         public ITextIO Open(string filePath, int mode) {
-            return KernelSpace.Open(filePath, mode);
+            int fd = Api.Open(filePath, mode);
+            return Api.LookupByFD(fd);
         }
 
         public void Print(string message, char end) {
             Stdout.Write(message + end);
-        }
-
-        public int CreateProcess(string[] cmdLine) {
-            return KernelSpace.CreateProcess(cmdLine).Pid;
         }
 
         public void Print(string message) {
@@ -97,7 +53,7 @@ namespace Linux.Sys.RunTime
 
         public string Input(string prompt, char end) {
             Print(prompt, end);
-            Tty.Write(CharacterControl.C_BLOCK);
+            Stdout.Write(CharacterControl.C_BLOCK);
             return Stdin.ReadLine();
         }
 

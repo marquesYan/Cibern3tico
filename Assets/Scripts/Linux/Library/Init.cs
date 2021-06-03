@@ -14,17 +14,20 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            int pid = userSpace.CreateProcess(
-                new string[] { "/usr/sbin/ttyctl" }
+            // int pid = userSpace.CreateProcess(
+            //     new string[] { "/usr/sbin/ttyctl" }
+            // );
+
+            // userSpace.Print("getty pid: " + pid);
+            Debug.Log("opening pty...");
+            int pty = userSpace.Api.OpenPty();
+
+            int shPid = userSpace.Api.StartProcess(
+                new string[] { "/usr/bin/bash" },
+                pty, pty, pty
             );
 
-            userSpace.Print("getty pid: " + pid);
-
-            int shPid = userSpace.CreateProcess(
-                new string[] { "/usr/bin/bash" }
-            );
-
-            userSpace.WaitPid(shPid);
+            userSpace.Api.WaitPid(shPid);
 
             return 0;
         }

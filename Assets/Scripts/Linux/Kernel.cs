@@ -7,7 +7,7 @@ using Linux.IO;
 using Linux.Sys;
 using Linux.Sys.Drivers;
 using Linux.Sys.Input;
-using Linux.Sys.Input.Drivers;
+using Linux.Sys.Input.Drivers.Tty;
 using Linux.Sys.IO;
 using Linux.FileSystem;
 using Linux.PseudoTerminal;
@@ -63,6 +63,11 @@ namespace Linux
             TriggerStartup();
         }
 
+        public void Shutdown() {
+            Debug.Log("Shutting down");
+            IsShutdown = true;
+        }
+
         public void Interrupt(Pci pci, IRQCode code) {
             UEvent uEvent = EventTable.LookupByPci(pci);
 
@@ -77,6 +82,14 @@ namespace Linux
                 "/dev",
                 0, 0,
                 Perm.FromInt(7, 5, 5)
+            );
+
+            Fs.Create(
+                "/dev/null",
+                0, 0,
+                Perm.FromInt(6, 6, 6),
+                FileType.F_CHR,
+                new DevNull()
             );
         }
 
@@ -124,7 +137,30 @@ namespace Linux
             Init();
         }
 
-        public Process StartProcess(
+        public Process CreateProcess(
+            int ppid,
+            User user,
+            string[] cmdLine,
+            int stdin,
+            int stdout,
+            int stderr
+        ) {
+            Process parent = ProcTable.LookupPid(ppid);
+
+            Process process = BuildProcess(
+                ppid,
+                user,
+                cmdLine
+            );
+
+            ProcTable.DuplicateFd(parent, stdin, process, 0);
+            ProcTable.DuplicateFd(parent, stdout, process, 1);
+            ProcTable.DuplicateFd(parent, stderr, process, 2);
+
+            return process;
+        }
+
+        Process BuildProcess(
             int ppid,
             User user,
             string[] cmdLine
@@ -144,26 +180,25 @@ namespace Linux
                 mainTask
             );
 
-            File ptsFile = PtyTable.Add(user);
-
-            ProcTable.AttachFileDescriptor(process, ptsFile.Path, 0);
-            ProcTable.AttachFileDescriptor(process, ptsFile.Path, 1);
-            ProcTable.AttachFileDescriptor(process, ptsFile.Path, 2);
-            ProcTable.AttachFileDescriptor(process, ptsFile.Path, 255);
-
-            process.MainTask.Start();
-
             return process;
         }
 
         void Init() {
             User root = UsersDb.LookupUid(0);
 
-            StartProcess(
+            Process theOne = BuildProcess(
                 0,
                 root,
                 new string[] { "/usr/sbin/init" }
             );
+
+            var devNull = "/dev/null";
+
+            ProcTable.AttachIO(theOne, devNull, AccessMode.O_RDONLY, 0);
+            ProcTable.AttachIO(theOne, devNull, AccessMode.O_WRONLY, 1);
+            ProcTable.AttachIO(theOne, devNull, AccessMode.O_WRONLY, 2);
+
+            theOne.MainTask.Start();
         }
 
         string FakeBootFile() {

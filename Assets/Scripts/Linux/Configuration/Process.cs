@@ -71,24 +71,20 @@ namespace Linux.Configuration
     }
 
     public class ProcessesTable {
-        readonly object procLock = new object();
+        readonly object _procLock = new object();
 
         protected VirtualFileTree Fs;
 
-        protected List<Process> Processes;
+        protected FileDescriptorsTable FdTable;
 
         public ProcessesTable(VirtualFileTree fs) {
             Fs = fs;
-            Processes = new List<Process>();
+            FdTable = new FileDescriptorsTable();
         }
 
         public void Add(Process process) {
-            lock(procLock) {
-                if (LookupPid(process.Pid) != null) {
-                    throw new System.ArgumentException("Process already exists");
-                }
-
-                Processes.Add(process);
+            lock(_procLock) {
+                FdTable.Add(process);
                 ProcessToFile(process);
             }
         }
@@ -103,67 +99,128 @@ namespace Linux.Configuration
             string cwd,
             Thread mainTask
         ) {
-            int pid;
+            lock(_procLock) {
+                int pid = FdTable.HighestPid + 1;
 
-            lock(procLock) {
-                if (Processes.Count == 0) {
-                    pid = 1;
-                } else {
-                    do {
-                        pid = Processes[Processes.Count - 1].Pid + 1;
-                    } while (LookupPid(pid) != null);
-                }
+                Process process = new Process(
+                    ppid,
+                    pid,
+                    uid,
+                    gid,
+                    cmdLine,
+                    environ,
+                    root,
+                    cwd,
+                    mainTask
+                );
+
+                FdTable.Add(process);
+                ProcessToFile(process);
+
+                return process;
             }
-
-            Process process = new Process(
-                ppid,
-                pid,
-                uid,
-                gid,
-                cmdLine,
-                environ,
-                root,
-                cwd,
-                mainTask
-            );
-
-            Add(process);
-
-            return process;
         }
 
-        public void AttachFileDescriptor(
+        public void AttachIO(
             Process process,
             string filePath,
+            int mode,
             int fd
         ) {
-            File file = Fs.LookupOrFail(filePath);
+            lock(_procLock) {
+                EnsureProcessExists(process);
 
-            if (!Processes.Contains(process)) {
-                throw new System.ArgumentException(
-                    "Process not exists"
+                ITextIO stream = Fs.Open(filePath, mode);
+
+                FdTable.Add(process, stream, fd);
+
+                File file = Fs.LookupOrFail(filePath);
+
+                Fs.CreateSymbolicLink(
+                    file,
+                    GetFdPath(process, fd),
+                    Perm.FromInt(mode, 0, 0)
                 );
+
+                process.Fds.Add(fd);
+            }
+        }
+
+        public int AttachIO(
+            Process process,
+            string filePath,
+            int mode
+        ) {
+            int fd;
+
+            lock(_procLock) {
+                fd = FdTable.GetAvailableFd(process);    
             }
 
-            Fs.CreateSymbolicLink(
-                file,
-                PathUtils.Combine(
-                    ProcessDirectory(process), 
-                    "fd",
-                    fd.ToString()
-                ),
-                Perm.FromInt(7, 0, 0)
+            AttachIO(process, filePath, mode, fd);
+
+            return fd;
+        }
+
+        public void DuplicateFd(
+            Process process,
+            int fd,
+            Process destProcess,
+            int destFd
+        ) {
+            ITextIO stream = LookupFd(process, fd);
+
+            string fdPath = GetFdPath(process, fd);
+
+            File file = Fs.LookupOrFail(fdPath).SourceFile;
+
+            AttachIO(
+                destProcess,
+                file.Path,
+                stream.GetMode(),
+                destFd
+            );
+        }
+
+        public int DuplicateFd(
+            Process process,
+            int fd,
+            Process destProcess
+        ) {
+            int destinationFd;
+
+            lock(_procLock) {
+                destinationFd = FdTable.GetAvailableFd(destProcess);
+            }
+
+            DuplicateFd(
+                process, 
+                fd, 
+                destProcess,
+                destinationFd
             );
 
-            process.Fds.Add(fd);
+            return destinationFd;
+        }
+
+        public string GetFdPath(Process process, int fd) {
+            return PathUtils.Combine(
+                ProcessDirectory(process), 
+                "fd",
+                fd.ToString()
+            );
+        }
+
+        public ITextIO LookupFd(Process process, int fd) {
+            return FdTable.LookupFd(process, fd);
         }
 
         public Process LookupPid(int pid) {
-            return Processes.Find(p => p.Pid == pid);
+            return FdTable.LookupPid(pid);
         }
 
         public Process LookupThread(Thread thread) {
-            return Processes.Find(p => p.MainTask == thread);
+            return FdTable.GetProcesses().Find(p => p.MainTask == thread);
         }
 
         // protected List<Process> LoadFromFs() {
@@ -181,6 +238,14 @@ namespace Linux.Configuration
 
         public string ProcessDirectory(Process process) {
             return PathUtils.Combine("/proc", $"{process.Pid}");
+        }
+
+        protected void EnsureProcessExists(Process process) {
+            if (!FdTable.HasProcess(process)) {
+                throw new System.ArgumentException(
+                    $"Process with PID '{process.Pid}' does not exist"
+                );
+            }
         }
 
         void ProcessToFile(Process process) {

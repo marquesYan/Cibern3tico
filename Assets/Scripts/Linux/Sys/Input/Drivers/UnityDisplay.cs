@@ -38,19 +38,19 @@ namespace Linux.Sys.Input.Drivers
         }
     }
 
-    public class UnityConsoleDriver : IUdevDriver
+    public class UnityDisplayDriver : IUdevDriver
     {
         protected TerminalDevice BackendDevice;
         protected UnityTerminal VtTerminal;
 
-        public UnityConsoleDriver(int bufferSize) {
+        public UnityDisplayDriver(int bufferSize) {
             VtTerminal = new UnityTerminal(bufferSize);
             BackendDevice = new TerminalDevice(VtTerminal);
         }
 
         public bool IsSupported(GenericDevice device) {
             return device.VendorId == 255 &&
-                    device.Type == DevType.CONSOLE;
+                    device.Type == DevType.DISPLAY;
         }
 
         public ITextIO CreateDevice() {

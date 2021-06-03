@@ -11,7 +11,7 @@ namespace Linux.Sys.IO
 
         public CharacterDevice(int mode) : base(mode) { }
 
-        public virtual void Ioctl(int signal, params string[] args) {
+        public virtual void Ioctl(ushort signal, ref ushort[] args) {
             //
         }
 
@@ -20,7 +20,10 @@ namespace Linux.Sys.IO
         }
 
         protected override int InternalAppend(string data) {
-            Buffer.Enqueue(data);
+            foreach (char inputChar in data) {
+                Buffer.Enqueue(inputChar.ToString());
+            }
+
             return data.Length;
         }
 

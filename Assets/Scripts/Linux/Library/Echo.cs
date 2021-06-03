@@ -14,7 +14,7 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            string[] args = userSpace.GetArgs();
+            string[] args = userSpace.Api.GetArgs();
             args[0] = "";
             userSpace.Print(string.Join("", args));
             return 0;

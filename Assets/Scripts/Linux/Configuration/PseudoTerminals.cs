@@ -33,11 +33,9 @@ namespace Linux.Configuration
             );
         }
 
-        public File Add(User user) {
-            PrimaryPty pty = new PrimaryPty();
+        public int Add(User user) {
+            PrimaryPty ptm = new PrimaryPty();
             SecondaryPty pts = new SecondaryPty();
-
-            TtyDriver.Add(pty, pts);
 
             var ptsFile = Fs.Create(
                 $"/dev/pts/{Count}",
@@ -49,7 +47,9 @@ namespace Linux.Configuration
 
             Count++;
 
-            return ptsFile;
+            int ptsFd = TtyDriver.Add(ptm, pts, ptsFile.Path);
+
+            return ptsFd;
         }
     }
 }
