@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Linux.Configuration;
@@ -64,13 +65,7 @@ namespace Linux.Sys.RunTime
         }
 
         public void WaitPid(int pid) {
-            Process proc = LookupProcessByPid(pid);
-
-            if (proc == null) {
-                throw new System.ArgumentException(
-                    "No such process: " + pid
-                );
-            }
+            Process proc = AccessOtherProcess(pid);
 
             proc.MainTask.Join();
         }
@@ -107,6 +102,20 @@ namespace Linux.Sys.RunTime
             return GetCurrentProc().Executable;
         }
 
+        public void KillProcess(int pid) {
+            KillProcess(pid, ProcessSignal.SIGTERM);
+        }
+
+        public void KillProcess(int pid, ProcessSignal signal) {
+            Process process = AccessOtherProcess(pid);
+
+            Kernel.KillProcess(process, signal);
+        }
+
+        public Dictionary<string, string> GetEnviron() {
+            return new Dictionary<string, string>(GetCurrentProc().Environ);
+        }
+
         public bool IsRootUser() {
             return GetUid() == 0;
         }
@@ -122,11 +131,7 @@ namespace Linux.Sys.RunTime
 
             EnsureFdsExists(proc, new int[] { fd });
 
-            Process destinationProc = Kernel.ProcTable.LookupPid(pid);
-
-            if (!CanAccessProcess(destinationProc)) {
-                ThrowPermissionDenied();
-            }
+            Process destinationProc = AccessOtherProcess(pid);
             
             Kernel.ProcTable.DuplicateFd(
                 proc,
@@ -224,6 +229,22 @@ namespace Linux.Sys.RunTime
             Process currentProc = GetCurrentProc();
 
             return currentProc.ChildPids.Contains(otherProc.Pid);
+        }
+
+        protected Process AccessOtherProcess(int pid) {
+            Process process = Kernel.ProcTable.LookupPid(pid);
+
+            if (process == null) {
+                throw new ArgumentException(
+                    "No such process: " + pid
+                );
+            }
+
+            if (!CanAccessProcess(process)) {
+                ThrowPermissionDenied();
+            }
+
+            return process;
         }
 
         protected Process CreateProcess(

@@ -8,7 +8,7 @@ namespace Linux.Configuration
     public enum ProcessSignal: ushort {
         SIGTERM = 4,
         SIGKILL = 9,
-        SIGHUP = 2,
+        SIGHUP = 1,
     }
 
     public class ProcessSignalsTable {

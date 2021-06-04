@@ -30,7 +30,7 @@ namespace Linux.Sys.Input.Drivers.Tty {
             SpecialChars = CharacterControl.GetConstants();
 
             Pts.Ioctl(
-                (ushort)PtyIoctl.TIO_SET_DRIVER_FLAGS,
+                PtyIoctl.TIO_SET_DRIVER_FLAGS,
                 ref Flags
             );
 
@@ -80,7 +80,7 @@ namespace Linux.Sys.Input.Drivers.Tty {
 
             if (output != null) {
                 Output.Ioctl(
-                    (ushort)PtyIoctl.TIO_SEND_KEY,
+                    PtyIoctl.TIO_SEND_KEY,
                     output
                 );
             }
@@ -96,7 +96,7 @@ namespace Linux.Sys.Input.Drivers.Tty {
             }
 
             if (shouldWrite) {
-                Pts.Ioctl((ushort)PtyIoctl.TIO_RCV_INPUT, key);
+                Pts.Ioctl(PtyIoctl.TIO_RCV_INPUT, key);
             }
         }
         
@@ -184,8 +184,6 @@ namespace Linux.Sys.Input.Drivers.Tty {
             } else if (pointer >= Buffer.Length) {
                 pointer = Buffer.Length - 1;
             }
-
-            Debug.Log("new pointer:" + pointer);
 
             Pointer = pointer;
         }

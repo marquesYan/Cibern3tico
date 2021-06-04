@@ -90,6 +90,16 @@ namespace Linux.Boot
 
             Kernel.Fs.AddFrom(
                 binDir,
+                new Kill(
+                    "/usr/bin/kill",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                binDir,
                 new Echo(
                     "/usr/bin/echo",
                     0, 0,

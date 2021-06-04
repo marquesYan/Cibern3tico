@@ -12,7 +12,7 @@ namespace Linux.Configuration
         public int Gid { get; protected set; }
         public string Executable { get; protected set; }
         public string[] CmdLine { get; protected set; }
-        public string[] Environ { get; protected set; }
+        public Dictionary<string, string> Environ { get; protected set; }
         public Thread MainTask { get; protected set; }
         public List<Thread> BackgroundTasks { get; protected set; }
         public List<int> ChildPids { get; protected set; }
@@ -26,7 +26,7 @@ namespace Linux.Configuration
             int uid,
             int gid,
             string[] cmdLine,
-            string[] environ,
+            Dictionary<string, string> environ,
             string root,
             string cwd,
             Thread mainTask
@@ -132,7 +132,7 @@ namespace Linux.Configuration
             int uid,
             int gid,
             string[] cmdLine,
-            string[] environ,
+            Dictionary<string, string> environ,
             string root,
             string cwd,
             Thread mainTask
@@ -317,7 +317,15 @@ namespace Linux.Configuration
             );
 
             WriteSpec(cmdLineFile, process.CmdLine);
-            WriteSpec(environFile, process.Environ);
+
+            string[] environ = new string[process.Environ.Count];
+
+            int i = 0;
+            foreach(KeyValuePair<string, string> kvp in process.Environ) {
+                environ[i] = $"{kvp.Key}={kvp.Value}";
+            }
+
+            WriteSpec(environFile, environ);
         }
 
         // Process FileToProcess(File file) {

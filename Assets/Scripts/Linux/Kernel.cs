@@ -244,12 +244,18 @@ namespace Linux
                 new ThreadStart(CmdHandler.Handle)
             );
 
+            Dictionary<string, string> defaultEnviron = new Dictionary<string, string>();
+            defaultEnviron.Add("USER", user.Login);
+            defaultEnviron.Add("SHELL", user.Shell);
+            defaultEnviron.Add("PWD", user.HomeDir);
+            defaultEnviron.Add("HOME", user.HomeDir);
+
             Process process = ProcTable.Create(
                 ppid,
                 user.Uid,
                 user.Gid,
                 cmdLine,
-                new string[1],
+                defaultEnviron,
                 Fs.Root.Path,
                 user.HomeDir,
                 mainTask
