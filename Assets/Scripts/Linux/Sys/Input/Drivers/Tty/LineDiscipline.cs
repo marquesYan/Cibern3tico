@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using Linux.IO;
+using Linux.PseudoTerminal;
 using Linux.Sys.IO;
 using UnityEngine;
 
@@ -8,11 +10,13 @@ namespace Linux.Sys.Input.Drivers.Tty {
 
         protected BufferedStream Buffer;
 
-        
+        protected List<string> SpecialChars;
+
         public CharacterDevice Pts;
 
         public PtyLineDiscipline(CharacterDevice pts) {
             Pts = pts;
+            SpecialChars = CharacterControl.GetConstants();
 
             Pts.Ioctl(
                 (ushort)PtyIoctl.TIO_SET_DRIVER_FLAGS,
@@ -27,6 +31,7 @@ namespace Linux.Sys.Input.Drivers.Tty {
         protected void CookPty() {
             Flags[0] |= PtyFlags.BUFFERED;
             Flags[0] |= PtyFlags.ECHO;
+            Flags[0] |= PtyFlags.SPECIAL_CHARS;
         }
 
         public string Receive(string input) {
@@ -37,19 +42,31 @@ namespace Linux.Sys.Input.Drivers.Tty {
             }
 
             if ((Flags[0] & PtyFlags.BUFFERED) != 0) {
-                Buffer.Write(input);
+                if (!IsSpecialChar(input)) {
+                    Buffer.Write(input);
+                }
 
                 if (input == $"{AbstractTextIO.LINE_FEED}") {
                     string data = Buffer.Read();
-                    Debug.Log("sending buffer to Pts: " + data);
-                    Pts.Write(data);
+                    WritePts(data);
                 }
             } else {
-                Debug.Log("sending unbuffered data to Pts");
-                Pts.Write(input);
+                WritePts(input);
             }
 
             return output;
+        }
+
+        protected void WritePts(string key) {
+            if ((Flags[0] & PtyFlags.SPECIAL_CHARS) == 0) {
+                Pts.Write(key);
+            } else if (!IsSpecialChar(key)) {
+                Pts.Write(key);
+            }
+        }
+        
+        protected bool IsSpecialChar(string key) {
+            return SpecialChars.Contains(key);
         }
     }
 }

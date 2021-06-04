@@ -1,4 +1,4 @@
-using System;
+using System.Threading;
 using Linux.PseudoTerminal;
 using Linux.FileSystem;
 using Linux.IO;
@@ -53,7 +53,8 @@ namespace Linux.Sys.RunTime
 
         public string Input(string prompt, char end) {
             Print(prompt, end);
-            Stdout.Write(CharacterControl.C_BLOCK);
+
+            Thread.Sleep(200);
             return Stdin.ReadLine();
         }
 

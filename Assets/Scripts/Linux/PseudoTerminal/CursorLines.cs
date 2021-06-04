@@ -56,6 +56,16 @@ namespace Linux.PseudoTerminal
 
             // Always move Cursor after UpdateLinesCache()
             MoveCursor(text.Length);
+
+            Block();
+        }
+
+        public void AddKey(string text) {
+            Buffer.Write(text);
+            UpdateLinesCache();
+
+            // Always move Cursor after UpdateLinesCache()
+            MoveCursor(text.Length);
         }
 
         public void RemoveAtFront() {

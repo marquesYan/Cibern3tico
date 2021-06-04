@@ -1,5 +1,5 @@
 using System;
-using System.Timers;
+using System.Threading;
 using Linux.Sys.RunTime;
 using Linux.Configuration;
 using Linux.FileSystem;
@@ -25,7 +25,6 @@ namespace Linux.Library
             string[] args = userSpace.Api.GetArgs();
 
             if (args.Length < 4) {
-                Debug.Log("invalid command");
                 userSpace.Print($"Usage: {args[0]} ptsFd inputQueue outputQueue");
                 return 1;
             }
@@ -55,15 +54,25 @@ namespace Linux.Library
             ITextIO rStream = userSpace.Open(inputQueue, AccessMode.O_RDONLY);
 
             Debug.Log("opening output queue: " + outputQueue);
-            ITextIO wStream = userSpace.Open(outputQueue, AccessMode.O_WRONLY);
+            IoctlDevice wStream = (IoctlDevice)userSpace.Open(outputQueue, AccessMode.O_WRONLY);
 
             Debug.Log("getting pts file descriptor: " + ptsFd);
             CharacterDevice ptStream = (CharacterDevice)userSpace.Api.LookupByFD(ptsFd);
 
             PtyLineDiscipline lineDiscipline = new PtyLineDiscipline(ptStream);
 
+            new Thread(new ThreadStart(() => {
+                while (eventIsSet) {
+                    string data = ptStream.Read(1);
+                    wStream.Write(data);
+                }
+            })).Start();
+
+            Thread.Sleep(200);
+
+            ushort[] keyBuffer = new ushort[1];
+
             while (eventIsSet) {
-                // Debug.Log("waiting user keyboard...");
                 string key = rStream.Read(1);
 
                 string output = lineDiscipline.Receive(key);
@@ -71,26 +80,28 @@ namespace Linux.Library
                 if (output == null) {
                     Debug.Log("line discipline says no echo");
                 } else {
-                    // Debug.Log("recv input from queue: " + key);
-                    wStream.Write(key);
+                    wStream.Ioctl(
+                        (ushort)PtyIoctl.TIO_SEND_KEY,
+                        output
+                    );
                 }
             }
 
             return 0;
         }
 
-        protected void RunTimeout(Action action, int timeout) {
-            var timer = new Timer();
-            timer.Interval = timeout;
+        // protected void RunTimeout(Action action, int timeout) {
+        //     var timer = new Timer();
+        //     timer.Interval = timeout;
 
-            timer.Start();
+        //     timer.Start();
 
-            timer.Elapsed += (sender, e) => {
-                action.EndInvoke(null);
-                throw new TimeoutException();
-            };
+        //     timer.Elapsed += (sender, e) => {
+        //         action.EndInvoke(null);
+        //         throw new TimeoutException();
+        //     };
 
-            action.BeginInvoke(null, null);
-        }
+        //     action.BeginInvoke(null, null);
+        // }
     }
 }

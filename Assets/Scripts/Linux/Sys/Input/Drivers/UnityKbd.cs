@@ -55,7 +55,7 @@ namespace Linux.Sys.Input.Drivers
         }
 
         void HandleStringKey(string key) {
-            switch (StringToBytes(key)) {
+            switch (TextUtils.ToByte(key)) {
                 case 0x08: {
                     key = CharacterControl.C_DBACKSPACE;
                     break;
@@ -73,10 +73,6 @@ namespace Linux.Sys.Input.Drivers
             }
 
             WriteKeyboard(key);
-        }
-
-        byte StringToBytes(string token) {
-            return Encoding.ASCII.GetBytes(token)[0];
         }
     }
 }

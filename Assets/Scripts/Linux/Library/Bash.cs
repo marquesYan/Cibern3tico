@@ -24,32 +24,35 @@ namespace Linux.Library
                 keepRunning = false;
             });
 
-            // while (keepRunning) {
-            string cwdName = PathUtils.BaseName(userSpace.Api.GetCwd());
-            string login = userSpace.Api.GetLogin();
+            Debug.Log("bash stdout:" + userSpace.Stdout);
+            Debug.Log("bash stdin:" + userSpace.Stdin);
 
-            Debug.Log("waiting bash input: ");
-            string cmd = userSpace.Input(
-                $"[{login}@hacking01 {cwdName}]$",
-                ' '
-            );
-            Debug.Log("recv cmd: " + cmd);
-            // if (string.IsNullOrEmpty(cmd)) {
-            //     continue;
-            // }
+            while (keepRunning) {
+                string cwdName = PathUtils.BaseName(userSpace.Api.GetCwd());
+                string login = userSpace.Api.GetLogin();
 
-            if (cmd == "exit") {
-                keepRunning = false;
-            } else {
-                try {
-                    string[] cmdLine = ParseCmd(userSpace, cmd);
-                    int pid = userSpace.Api.StartProcess(cmdLine);
-                    userSpace.Api.WaitPid(pid);
-                } catch (System.Exception exception) {
-                    userSpace.Stderr.WriteLine(exception.Message);
+                Debug.Log("waiting bash input: ");
+                string cmd = userSpace.Input(
+                    $"[{login}@hacking01 {cwdName}]$",
+                    ' '
+                );
+                Debug.Log("recv cmd: " + cmd);
+                if (string.IsNullOrEmpty(cmd)) {
+                    continue;
+                }
+
+                if (cmd == "exit") {
+                    keepRunning = false;
+                } else {
+                    try {
+                        string[] cmdLine = ParseCmd(userSpace, cmd);
+                        int pid = userSpace.Api.StartProcess(cmdLine);
+                        userSpace.Api.WaitPid(pid);
+                    } catch (System.Exception exception) {
+                        userSpace.Stderr.WriteLine(exception.Message);
+                    }
                 }
             }
-            // }
 
             return 0;
         }

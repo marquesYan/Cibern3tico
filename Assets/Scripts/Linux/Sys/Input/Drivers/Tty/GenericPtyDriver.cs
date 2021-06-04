@@ -58,7 +58,7 @@ namespace Linux.Sys.Input.Drivers.Tty
                 ptsFd
             );
 
-            Thread.Sleep(1000);
+            Thread.Sleep(500);
 
             return ptsFd;
         }

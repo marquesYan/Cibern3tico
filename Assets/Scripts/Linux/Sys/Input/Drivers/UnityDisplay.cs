@@ -3,16 +3,36 @@ using UnityEngine;
 using Linux.Devices.Input;
 using Linux.IO;
 using Linux.Sys.IO;
+using Linux.Sys.Input.Drivers.Tty;
 
 namespace Linux.Sys.Input.Drivers
 {
-    public class TerminalDevice : AbstractTextIO {
+    public class TerminalDevice : AbstractTextIO, IoctlDevice {
         protected UnityTerminal BackendTerminal;
 
         public TerminalDevice(
             UnityTerminal backendTerminal
         ) : base(AccessMode.O_WRONLY) {
             BackendTerminal = backendTerminal;
+        }
+
+        public void Ioctl(ushort signal, ref ushort[] args) {
+            //
+        }
+
+        public void Ioctl(ushort signal, string arg) {
+            switch (signal) {
+                case (ushort)PtyIoctl.TIO_SEND_KEY: {
+                    BackendTerminal.ReceiveKeyCode(arg);
+                    break;
+                }
+
+                default: {
+                    throw new System.ArgumentException(
+                        "Unknow ioctl signal: " + signal
+                    );
+                }
+            }
         }
 
         protected override void InternalTruncate() {
@@ -26,7 +46,7 @@ namespace Linux.Sys.Input.Drivers
         }
 
         protected override int InternalAppend(string data) {
-            return BackendTerminal.SendToSreen(data);
+            return BackendTerminal.WriteToScreen(data);
         }
 
         protected override string InternalRead(int length) {

@@ -15,15 +15,16 @@ namespace Linux.Sys.IO
             //
         }
 
+        public virtual void Ioctl(ushort signal, string arg) {
+            //
+        }
+
         protected override void InternalTruncate() {
             Buffer.Clear();
         }
 
         protected override int InternalAppend(string data) {
-            foreach (char inputChar in data) {
-                Buffer.Enqueue(inputChar.ToString());
-            }
-
+            Buffer.Enqueue(data);
             return data.Length;
         }
 

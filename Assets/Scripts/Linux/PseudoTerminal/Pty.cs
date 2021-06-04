@@ -29,6 +29,12 @@ namespace Linux.PseudoTerminal
                     break;
                 }
 
+                case (ushort)PtyIoctl.TIO_SEND_KEY: {
+                    string key = TextUtils.FromInt(args[0]);
+                    Buffer.Enqueue(key);
+                    break;
+                }
+
                 default: {
                     throw new System.ArgumentException(
                         "Unknow ioctl signal: " + signal
@@ -36,11 +42,6 @@ namespace Linux.PseudoTerminal
                 }
             }
         }
-
-        protected override int InternalAppend(string data) {
-            Debug.Log("receiving on pts: " + data);
-            return base.InternalAppend(data);
-        } 
     }
 
     public class PrimaryPty : CharacterDevice

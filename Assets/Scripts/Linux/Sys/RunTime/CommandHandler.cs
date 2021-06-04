@@ -24,6 +24,7 @@ namespace Linux.Sys.RunTime
                     ((CompiledBin) execFile).Execute(new UserSpace(Api));
                 } catch (System.Exception exception) {
                     Debug.Log($"{execFile.Name}: {exception.Message}");
+                    Debug.Log(exception.ToString());
                 }
             }
         }

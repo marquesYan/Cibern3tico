@@ -66,12 +66,11 @@ namespace Linux.PseudoTerminal
             _moveCursorToEnd = true;
         }
 
-        public int SendToSreen(string message) {
-            HandleInputKey(message);
-            return message.Length;
+        public void ReceiveKeyCode(string key) {
+            HandleInputKey(key);
         }
 
-        protected int WriteToBuffer(string message) {
+        public int WriteToScreen(string message) {
             CursorLinesMngr.Add(message);
             RequestHighYAxis();
             return message.Length;
@@ -171,13 +170,8 @@ namespace Linux.PseudoTerminal
                     break;
                 }
 
-                case CharacterControl.C_BLOCK: {
-                    CursorLinesMngr.Block();
-                    break;
-                }
-
                 default: {
-                    CursorLinesMngr.Add(key);
+                    CursorLinesMngr.AddKey(key);
                     break;
                 }
             }
