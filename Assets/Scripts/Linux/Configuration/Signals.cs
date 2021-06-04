@@ -6,7 +6,7 @@ namespace Linux.Configuration
     public delegate void SignalHandler(params int[] args);
 
     public enum ProcessSignal: ushort {
-        SIGTERM = 4,
+        SIGTERM = 15,
         SIGKILL = 9,
         SIGHUP = 1,
     }

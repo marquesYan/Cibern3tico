@@ -2,6 +2,7 @@ using System.Threading;
 using System.Text;
 using System.Collections.Generic;
 using Linux.IO;
+using Linux;
 
 namespace Linux.Sys.IO
 {
@@ -33,10 +34,15 @@ namespace Linux.Sys.IO
         }
 
         protected override string InternalRead(int length) {
-            string outputChar;
+            string outputChar = null;
 
-            while (!TryDequeue(out outputChar)) {
+            while (Kernel.IsRunning && !TryDequeue(out outputChar)) {
                 Thread.Sleep(200);
+            }
+
+            // Ensure return a string object
+            if (outputChar == null) {
+                outputChar = "";
             }
 
             return outputChar;

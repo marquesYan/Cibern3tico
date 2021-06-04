@@ -8,9 +8,9 @@ namespace Linux.Sys.RunTime
     public class UserSpace {
         public KernelSpace Api;
 
-        public bool IsShutdown {
-            get { return Api.IsShutdown; }
-        }
+        // public bool IsShutdown {
+        //     get { return Api.IsShutdown; }
+        // }
 
         public ITextIO Tty {
             get {

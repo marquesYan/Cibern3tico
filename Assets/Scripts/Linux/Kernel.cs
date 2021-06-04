@@ -23,7 +23,7 @@ namespace Linux
         public UnityTerminal Terminal { get; protected set; }
         public VirtualMachine Machine { get; protected set; }
 
-        public bool IsShutdown { get; protected set; }
+        // public bool IsShutdown { get; protected set; }
     
         public VirtualFileTree Fs;
         public ProcessesTable ProcTable;
@@ -41,9 +41,11 @@ namespace Linux
 
         float _bootDelay = 0.0001f;
 
+        public static bool IsRunning { get; protected set; }
+
         public Kernel(VirtualMachine machine) {
             Machine = machine;
-            IsShutdown = false;
+            IsRunning = true;
             new DecompressStage(this);
         }
 
@@ -71,7 +73,7 @@ namespace Linux
 
         public void Shutdown() {
             Debug.Log("Shutting down");
-            IsShutdown = true;
+            IsRunning = false;
 
             EventTable.Close();
 
@@ -84,15 +86,15 @@ namespace Linux
                 Thread.Sleep(1000);
             }
 
-            try {
-                KillProcess(InitProcess);
-            } catch (System.TimeoutException) {
-                try {
-                    KillProcess(InitProcess, ProcessSignal.SIGKILL);
-                } catch {
-                    //
-                }
+            // Try gracefully
+            KillProcess(InitProcess);
+
+            if (!WaitProcessUntil(InitProcess, 60)) {
+                // Go hard
+                KillProcess(InitProcess, ProcessSignal.SIGKILL);
             }
+
+            Thread.Sleep(1000);
 
             ProcTable.Close();
         }
@@ -125,14 +127,14 @@ namespace Linux
         }
 
         public void KillProcess(Process process, ProcessSignal signal) {
-            Debug.Log("will kill the process pid: " + process.Pid);
-
-            process.ChildPids.ForEach(pid => {
+            int[] childPids = process.ChildPids.ToArray();
+            
+            foreach (int pid in childPids) {
                 Process child = ProcTable.LookupPid(pid);
                 if (child != null) {
                     KillProcess(child, signal);
                 }
-            });
+            }
 
             switch(signal) {
                 case ProcessSignal.SIGKILL: {
@@ -146,22 +148,20 @@ namespace Linux
                 }
             }
 
-            int maxAttempts = 10;
+            ProcTable.Remove(process);
+        }
+
+        bool WaitProcessUntil(Process process, int seconds) {
+            int maxAttempts = seconds;
             int attempt = 0;
 
             while (process.MainTask.IsAlive && attempt < maxAttempts) {
                 Debug.Log("waiting process to finish");
-                Thread.Sleep(500);
+                Thread.Sleep(1000);
                 attempt++;
             }
-
-            if (process.MainTask.IsAlive) {
-                throw new System.TimeoutException(
-                    "Failed to kill process, waited too much"
-                );
-            }
-
-            ProcTable.Remove(process);
+            
+            return !process.MainTask.IsAlive;
         }
 
         void MountDevFs() {

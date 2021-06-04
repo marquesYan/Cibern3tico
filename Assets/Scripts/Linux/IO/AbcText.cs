@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Linux;
 using UnityEngine;
 
 namespace Linux.IO
@@ -89,7 +90,7 @@ namespace Linux.IO
 
             string buffer;
 
-            while (missingLineFeed) {
+            while (Kernel.IsRunning && missingLineFeed) {
                 if (Length > 0) {
                     buffer = Read(1);
                     if (buffer == lineFeed) {
