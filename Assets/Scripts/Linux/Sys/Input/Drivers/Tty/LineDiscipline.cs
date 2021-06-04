@@ -6,16 +6,24 @@ using UnityEngine;
 
 namespace Linux.Sys.Input.Drivers.Tty {
     public class PtyLineDiscipline {
+        ushort[] _nullArg = new ushort[0];
+
         protected ushort[] Flags = { 0 };
 
         protected BufferedStream Buffer;
 
         protected List<string> SpecialChars;
 
-        public CharacterDevice Pts;
+        protected CharacterDevice Pts;
 
-        public PtyLineDiscipline(CharacterDevice pts) {
+        protected IoctlDevice Output;
+
+        public PtyLineDiscipline(
+            CharacterDevice pts,
+            IoctlDevice output
+        ) {
             Pts = pts;
+            Output = output;
             SpecialChars = CharacterControl.GetConstants();
 
             Pts.Ioctl(
@@ -32,17 +40,28 @@ namespace Linux.Sys.Input.Drivers.Tty {
             Flags[0] |= PtyFlags.BUFFERED;
             Flags[0] |= PtyFlags.ECHO;
             Flags[0] |= PtyFlags.SPECIAL_CHARS;
+            Flags[0] |= PtyFlags.AUTO_CONTROL;
         }
 
-        public string Receive(string input) {
+        public void Receive(string input) {
             string output = input;
 
             if ((Flags[0] & PtyFlags.ECHO) == 0) {
                 output = null;
             }
 
-            if ((Flags[0] & PtyFlags.BUFFERED) != 0) {
-                if (!IsSpecialChar(input)) {
+            if (((Flags[0] & PtyFlags.AUTO_CONTROL) != 0) 
+                    && IsSpecialChar(input)) {
+                HandleCharControl(input);
+                output = null;
+            }
+
+            if ((Flags[0] & PtyFlags.BUFFERED) == 0) {
+                WritePts(input);                
+            } else {
+                if (IsSpecialChar(input)) {
+                    output = null;
+                } else {
                     Buffer.Write(input);
                 }
 
@@ -50,11 +69,14 @@ namespace Linux.Sys.Input.Drivers.Tty {
                     string data = Buffer.Read();
                     WritePts(data);
                 }
-            } else {
-                WritePts(input);
             }
 
-            return output;
+            if (output != null) {
+                Output.Ioctl(
+                    (ushort)PtyIoctl.TIO_SEND_KEY,
+                    output
+                );
+            }
         }
 
         protected void WritePts(string key) {
@@ -67,6 +89,46 @@ namespace Linux.Sys.Input.Drivers.Tty {
         
         protected bool IsSpecialChar(string key) {
             return SpecialChars.Contains(key);
+        }
+
+        protected void HandleCharControl(string key) {
+            ushort signal = (ushort)GetIoctlFromControl(key);
+
+            Output.Ioctl(signal, ref _nullArg);
+        }
+
+        protected PtyIoctl GetIoctlFromControl(string key) {
+            switch(key) {
+                case CharacterControl.C_DBACKSPACE: {
+                    return PtyIoctl.TIO_REMOVE_BACK;
+                }
+
+                case CharacterControl.C_DDELETE: {
+                    return PtyIoctl.TIO_REMOVE_FRONT;
+                }
+
+                case CharacterControl.C_DLEFT_ARROW: {
+                    return PtyIoctl.TIO_LEFT_ARROW;
+                }
+
+                case CharacterControl.C_DRIGHT_ARROW: {
+                    return PtyIoctl.TIO_RIGHT_ARROW;
+                }
+
+                case CharacterControl.C_DUP_ARROW: {
+                    return PtyIoctl.TIO_UP_ARROW;
+                }
+
+                case CharacterControl.C_DDOWN_ARROW: {
+                    return PtyIoctl.TIO_DOWN_ARROW;
+                }
+
+                default: {
+                    throw new System.ArgumentException(
+                        "Unknow character control: " + key
+                    );
+                }
+            }
         }
     }
 }

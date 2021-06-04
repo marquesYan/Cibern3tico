@@ -29,18 +29,20 @@ namespace Linux.PseudoTerminal
                     break;
                 }
 
-                case (ushort)PtyIoctl.TIO_SEND_KEY: {
-                    string key = TextUtils.FromInt(args[0]);
-                    Buffer.Enqueue(key);
-                    break;
-                }
-
                 default: {
                     throw new System.ArgumentException(
                         "Unknow ioctl signal: " + signal
                     );
                 }
             }
+        }
+
+        protected override int InternalAppend(string data) {
+            foreach (char inputChar in data) {
+                Buffer.Enqueue(inputChar.ToString());
+            }
+
+            return data.Length;
         }
     }
 

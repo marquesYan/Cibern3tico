@@ -59,32 +59,31 @@ namespace Linux.Library
             Debug.Log("getting pts file descriptor: " + ptsFd);
             CharacterDevice ptStream = (CharacterDevice)userSpace.Api.LookupByFD(ptsFd);
 
-            PtyLineDiscipline lineDiscipline = new PtyLineDiscipline(ptStream);
-
             new Thread(new ThreadStart(() => {
                 while (eventIsSet) {
                     string data = ptStream.Read(1);
+                    
+                    try {
+                        Debug.Log("recv from pts: " + TextUtils.ToByte(data));
+                    } catch {
+                        Debug.Log("recv from pts raw: " + data);
+                    }
+
                     wStream.Write(data);
                 }
             })).Start();
 
             Thread.Sleep(200);
 
-            ushort[] keyBuffer = new ushort[1];
+            PtyLineDiscipline lineDiscipline = new PtyLineDiscipline(
+                ptStream,
+                wStream
+            );
 
             while (eventIsSet) {
                 string key = rStream.Read(1);
 
-                string output = lineDiscipline.Receive(key);
-
-                if (output == null) {
-                    Debug.Log("line discipline says no echo");
-                } else {
-                    wStream.Ioctl(
-                        (ushort)PtyIoctl.TIO_SEND_KEY,
-                        output
-                    );
-                }
+                lineDiscipline.Receive(key);
             }
 
             return 0;

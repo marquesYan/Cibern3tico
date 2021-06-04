@@ -66,14 +66,38 @@ namespace Linux.PseudoTerminal
             _moveCursorToEnd = true;
         }
 
-        public void ReceiveKeyCode(string key) {
-            HandleInputKey(key);
+        public void RemoveCharAtFront() {
+            CursorLinesMngr.RemoveAtFront();
+        }
+
+        public void RemoveCharAtBack() {
+            CursorLinesMngr.RemoveAtBack();
+        }
+
+        public void MoveCursorUp() {
+            CursorLinesMngr.MoveLine(-1);
+        }
+
+        public void MoveCursorDown() {
+            CursorLinesMngr.MoveLine(1);
+        }
+
+        public void MoveCursorRight() {
+            CursorLinesMngr.MoveCursor(1);
+        }
+
+        public void MoveCursorLeft() {
+            CursorLinesMngr.MoveCursor(-1);
         }
 
         public int WriteToScreen(string message) {
             CursorLinesMngr.Add(message);
             RequestHighYAxis();
             return message.Length;
+        }
+
+        public void ReceiveKey(string key) {
+            CursorLinesMngr.AddKey(key);
         }
 
         public void SubscribeFirstDraw(System.Action onFirstDraw) {
@@ -135,45 +159,6 @@ namespace Linux.PseudoTerminal
                 }
 
                 i++;
-            }
-        }
-
-        protected void HandleInputKey(string key) {
-            switch(key) {
-                case CharacterControl.C_DBACKSPACE: {
-                    CursorLinesMngr.RemoveAtBack();
-                    break;
-                }
-
-                case CharacterControl.C_DDELETE: {
-                    CursorLinesMngr.RemoveAtFront();
-                    break;
-                }
-
-                case CharacterControl.C_DLEFT_ARROW: {
-                    CursorLinesMngr.MoveCursor(-1);
-                    break;
-                }
-
-                case CharacterControl.C_DRIGHT_ARROW: {
-                    CursorLinesMngr.MoveCursor(1);
-                    break;
-                }
-
-                case CharacterControl.C_DUP_ARROW: {
-                    CursorLinesMngr.MoveLine(-1);
-                    break;
-                }
-
-                case CharacterControl.C_DDOWN_ARROW: {
-                    CursorLinesMngr.MoveLine(1);
-                    break;
-                }
-
-                default: {
-                    CursorLinesMngr.AddKey(key);
-                    break;
-                }
             }
         }
     }
