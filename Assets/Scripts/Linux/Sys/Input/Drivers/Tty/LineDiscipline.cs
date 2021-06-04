@@ -14,12 +14,12 @@ namespace Linux.Sys.Input.Drivers.Tty {
 
         protected List<string> SpecialChars;
 
-        protected CharacterDevice Pts;
+        protected IoctlDevice Pts;
 
         protected IoctlDevice Output;
 
         public PtyLineDiscipline(
-            CharacterDevice pts,
+            IoctlDevice pts,
             IoctlDevice output
         ) {
             Pts = pts;
@@ -80,10 +80,16 @@ namespace Linux.Sys.Input.Drivers.Tty {
         }
 
         protected void WritePts(string key) {
+            bool shouldWrite = false;
+
             if ((Flags[0] & PtyFlags.SPECIAL_CHARS) == 0) {
-                Pts.Write(key);
+                shouldWrite = true;
             } else if (!IsSpecialChar(key)) {
-                Pts.Write(key);
+                shouldWrite = true;
+            }
+
+            if (shouldWrite) {
+                Pts.Ioctl((ushort)PtyIoctl.TIO_RCV_INPUT, key);
             }
         }
         

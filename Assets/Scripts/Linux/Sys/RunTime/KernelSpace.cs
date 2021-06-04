@@ -41,6 +41,22 @@ namespace Linux.Sys.RunTime
             return -1;
         }
 
+        public string GetFdPath(int fd) {
+            Process proc = GetCurrentProc();
+
+            return Kernel.ProcTable.GetFdPath(proc, fd);
+        }
+
+        public string RealPath(string path) {
+            File file = LookupFile(path);
+
+            if (file.Type == FileType.F_SYL) {
+                return file.SourceFile.Path;
+            }
+
+            return file.Path;
+        }
+
         public void Trap(ProcessSignal signal, SignalHandler handler) {
             Process proc = GetCurrentProc();
 
@@ -101,7 +117,7 @@ namespace Linux.Sys.RunTime
             return Kernel.ProcTable.LookupFd(proc, fd);
         }
 
-        public int Dup2(int pid, int fd) {
+        public void Dup2(int pid, int fd) {
             Process proc = GetCurrentProc();
 
             EnsureFdsExists(proc, new int[] { fd });
@@ -112,10 +128,11 @@ namespace Linux.Sys.RunTime
                 ThrowPermissionDenied();
             }
             
-            return Kernel.ProcTable.DuplicateFd(
+            Kernel.ProcTable.DuplicateFd(
                 proc,
                 fd,
-                destinationProc    
+                destinationProc,
+                fd
             );
         }
 
@@ -173,12 +190,6 @@ namespace Linux.Sys.RunTime
             return Kernel;
         }
 
-        public File LookupFile(string path) {
-            EnsureIsRoot();
-
-            return Kernel.Fs.Lookup(path);
-        }
-
         public Process LookupProcessByPid(int pid) {
             EnsureIsRoot();
 
@@ -199,6 +210,10 @@ namespace Linux.Sys.RunTime
                     return false;
                 }
             );
+        }
+
+        protected File LookupFile(string path) {
+            return Kernel.Fs.Lookup(path);
         }
 
         protected bool CanAccessProcess(Process otherProc) {

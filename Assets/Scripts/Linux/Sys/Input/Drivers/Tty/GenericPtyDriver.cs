@@ -1,5 +1,6 @@
 using System.Threading;
 using Linux.Configuration;
+using Linux.PseudoTerminal;
 using Linux.IO;
 using Linux.Sys.IO;
 using Linux.Sys.RunTime;
@@ -13,16 +14,16 @@ namespace Linux.Sys.Input.Drivers.Tty
 
         protected delegate bool Predicate();
 
-        protected Linux.Kernel Kernel;
+        protected KernelSpace KernelSpace;
 
         protected UEvent KbdEvent;
         protected UEvent DisplayEvent;
 
         public GenericPtyDriver(Linux.Kernel kernel) {
-            Kernel = kernel;
+            KernelSpace = new KernelSpace(kernel);
 
-            KbdEvent = Kernel.EventTable.LookupByType(DevType.KEYBOARD);
-            DisplayEvent = Kernel.EventTable.LookupByType(DevType.DISPLAY);
+            KbdEvent = kernel.EventTable.LookupByType(DevType.KEYBOARD);
+            DisplayEvent = kernel.EventTable.LookupByType(DevType.DISPLAY);
         }
 
         public bool IsSupported(GenericDevice device) {
@@ -33,22 +34,31 @@ namespace Linux.Sys.Input.Drivers.Tty
             //
         }
 
-        public int Add(
-            CharacterDevice ptm,
-            CharacterDevice pts,
-            string ptsFile
-        ) {
-            // var ptyCtl = new PtyCtlModule(pty, pts);
+        public CharacterDevice GetPt() {
+            SecondaryPty secondaryPty;
 
-            // lock(_ptyLock) {
-            //     Ptys.Add(ptyCtl);
-            // }
+            if (DisplayEvent == null) {
+                secondaryPty = new SecondaryPty(_ => { });
+            } else {
+                int displayFd = KernelSpace.Open(
+                    DisplayEvent.FilePath,
+                    AccessMode.O_WRONLY
+                );
 
-            KernelSpace kernelSpace = new KernelSpace(Kernel);
+                ITextIO wStream = KernelSpace.LookupByFD(displayFd);
 
-            int ptsFd = kernelSpace.Open(ptsFile, AccessMode.O_RDWR);
+                secondaryPty = new SecondaryPty(data => {
+                    wStream.Write(data);
+                });
+            }
 
-            int pid = kernelSpace.StartProcess(
+            return (CharacterDevice)secondaryPty;
+        }
+
+        public int UnlockPt(string ptsFile) {
+            int ptsFd = KernelSpace.Open(ptsFile, AccessMode.O_RDWR);
+
+            int pid = KernelSpace.StartProcess(
                 new string[] {
                     "/usr/sbin/ttyctl",
                     ptsFd.ToString(),

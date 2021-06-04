@@ -1,7 +1,7 @@
 using Linux.FileSystem;
 using Linux.IO;
+using Linux.Sys.IO;
 using Linux.Sys.Input;
-using Linux.PseudoTerminal;
 
 namespace Linux.Configuration
 {
@@ -34,10 +34,9 @@ namespace Linux.Configuration
         }
 
         public int Add(User user) {
-            PrimaryPty ptm = new PrimaryPty();
-            SecondaryPty pts = new SecondaryPty();
+            CharacterDevice pts = TtyDriver.GetPt();
 
-            var ptsFile = Fs.Create(
+            File ptsFile = Fs.Create(
                 $"/dev/pts/{Count}",
                 user.Uid, 0,
                 Perm.FromInt(6, 2, 0),
@@ -47,7 +46,7 @@ namespace Linux.Configuration
 
             Count++;
 
-            int ptsFd = TtyDriver.Add(ptm, pts, ptsFile.Path);
+            int ptsFd = TtyDriver.UnlockPt(ptsFile.Path);
 
             return ptsFd;
         }

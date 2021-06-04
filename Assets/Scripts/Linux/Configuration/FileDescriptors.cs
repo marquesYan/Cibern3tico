@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Linux.IO;
+using UnityEngine;
 
 namespace Linux.Configuration
 {
@@ -90,6 +91,13 @@ namespace Linux.Configuration
                 );
             }
 
+            Debug.Log("adding stream to PID: " + process.Pid);
+
+            foreach(KeyValuePair<int, ITextIO> kvp in Descriptors[process]) {
+                Debug.Log("existing fd: " + kvp.Key);           
+                Debug.Log("existing stream: " + kvp.Value);           
+            }
+
             Descriptors[process].Add(fd, stream);
             Counters[process.Pid].Add(fd);
         }
@@ -98,8 +106,6 @@ namespace Linux.Configuration
             if (!HasProcess(process)) {                
                 return 0;
             }
-
-            List<int> fdList = Counters[process.Pid];
 
             int candidate = 0;
 

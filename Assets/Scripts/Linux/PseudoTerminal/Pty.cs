@@ -9,7 +9,11 @@ namespace Linux.PseudoTerminal
     public class SecondaryPty : CharacterDevice {
         protected ushort[] Flags;
 
-        public SecondaryPty() : base(AccessMode.O_RDWR) { }
+        protected Action<string> OnWrite;
+
+        public SecondaryPty(Action<string> onWrite) : base(AccessMode.O_RDWR) {
+            OnWrite = onWrite;
+        }
 
         public override void Ioctl(ushort signal, ref ushort[] args) {
             switch (signal) {
@@ -37,12 +41,35 @@ namespace Linux.PseudoTerminal
             }
         }
 
-        protected override int InternalAppend(string data) {
-            foreach (char inputChar in data) {
-                Buffer.Enqueue(inputChar.ToString());
-            }
+        public override void Ioctl(ushort signal, string data) {
+            switch (signal) {
+                case (ushort)PtyIoctl.TIO_RCV_INPUT: {
+                    DigestInput(data);
+                    break;
+                }
 
-            return data.Length;
+                default: {
+                    throw new System.ArgumentException(
+                        "Unknow ioctl signal: " + signal
+                    );
+                }
+            }
+        }
+
+        protected override int InternalAppend(string data) {
+            OnWrite(data);
+
+            return 0;
+        }
+
+        protected void DigestInput(string data) {
+            lock(StreamLock) {
+                foreach (char inputChar in data) {
+                    Buffer.Enqueue(inputChar.ToString());
+                }
+
+                Length += data.Length;
+            }
         }
     }
 

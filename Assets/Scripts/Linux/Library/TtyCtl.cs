@@ -1,10 +1,7 @@
 using System;
-using System.Threading;
-using Linux.Sys.RunTime;
 using Linux.Configuration;
+using Linux.Sys.RunTime;
 using Linux.FileSystem;
-using Linux.PseudoTerminal;
-using Linux;
 using Linux.IO;
 using Linux.Sys.IO;
 using Linux.Sys.Input.Drivers.Tty;
@@ -50,30 +47,11 @@ namespace Linux.Library
                 return 2;
             }
 
-            Debug.Log("opening input queue: " + inputQueue);
             ITextIO rStream = userSpace.Open(inputQueue, AccessMode.O_RDONLY);
 
-            Debug.Log("opening output queue: " + outputQueue);
             IoctlDevice wStream = (IoctlDevice)userSpace.Open(outputQueue, AccessMode.O_WRONLY);
 
-            Debug.Log("getting pts file descriptor: " + ptsFd);
-            CharacterDevice ptStream = (CharacterDevice)userSpace.Api.LookupByFD(ptsFd);
-
-            new Thread(new ThreadStart(() => {
-                while (eventIsSet) {
-                    string data = ptStream.Read(1);
-                    
-                    try {
-                        Debug.Log("recv from pts: " + TextUtils.ToByte(data));
-                    } catch {
-                        Debug.Log("recv from pts raw: " + data);
-                    }
-
-                    wStream.Write(data);
-                }
-            })).Start();
-
-            Thread.Sleep(200);
+            IoctlDevice ptStream = (IoctlDevice)userSpace.Api.LookupByFD(ptsFd);
 
             PtyLineDiscipline lineDiscipline = new PtyLineDiscipline(
                 ptStream,

@@ -19,13 +19,11 @@ namespace Linux.Sys.Input.Drivers
         public void Ioctl(ushort signal, ref ushort[] args) {
             switch (signal) {
                 case (ushort)PtyIoctl.TIO_LEFT_ARROW: {
-                    Debug.Log("moving cursor LEFT");
                     BackendTerminal.MoveCursorLeft();
                     break;
                 }
 
                 case (ushort)PtyIoctl.TIO_RIGHT_ARROW: {
-                    Debug.Log("moving cursor RIGHT");
                     BackendTerminal.MoveCursorRight();
                     break;
                 }

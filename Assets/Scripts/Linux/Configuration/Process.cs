@@ -167,10 +167,6 @@ namespace Linux.Configuration
             lock(_procLock) {
                 EnsureProcessExists(process);
 
-                ITextIO stream = Fs.Open(filePath, mode);
-
-                FdTable.Add(process, stream, fd);
-
                 File file = Fs.LookupOrFail(filePath);
 
                 Fs.CreateSymbolicLink(
@@ -178,6 +174,10 @@ namespace Linux.Configuration
                     GetFdPath(process, fd),
                     Perm.FromInt(mode, 0, 0)
                 );
+
+                ITextIO stream = Fs.Open(filePath, mode);
+
+                FdTable.Add(process, stream, fd);
 
                 process.Fds.Add(fd);
             }
@@ -242,7 +242,7 @@ namespace Linux.Configuration
 
         public string GetFdPath(Process process, int fd) {
             return PathUtils.Combine(
-                ProcessDirectory(process), 
+                ProcessDirectory(process),
                 "fd",
                 fd.ToString()
             );

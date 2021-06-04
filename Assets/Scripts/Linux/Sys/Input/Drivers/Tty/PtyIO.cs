@@ -11,6 +11,7 @@ namespace Linux.Sys.Input.Drivers.Tty
         TIO_SET_DRIVER_FLAGS,
         TIO_SET_ATTR,
         TIO_SEND_KEY,
+        TIO_RCV_INPUT,
         TIO_REMOVE_FRONT,
         TIO_REMOVE_BACK,
         TIO_TAB,
