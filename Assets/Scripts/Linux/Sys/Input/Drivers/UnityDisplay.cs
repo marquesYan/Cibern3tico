@@ -18,13 +18,23 @@ namespace Linux.Sys.Input.Drivers
 
         public void Ioctl(ushort signal, ref ushort[] args) {
             switch (signal) {
-                case (ushort)PtyIoctl.TIO_LEFT_ARROW: {
+                case PtyIoctl.TIO_LEFT_ARROW: {
                     BackendTerminal.MoveCursorLeft();
                     break;
                 }
 
-                case (ushort)PtyIoctl.TIO_RIGHT_ARROW: {
+                case PtyIoctl.TIO_RIGHT_ARROW: {
                     BackendTerminal.MoveCursorRight();
+                    break;
+                }
+
+                case PtyIoctl.TIO_REMOVE_BACK: {
+                    BackendTerminal.RemoveCharAtBack();
+                    break;
+                }
+
+                case PtyIoctl.TIO_REMOVE_FRONT: {
+                    BackendTerminal.RemoveCharAtFront();
                     break;
                 }
             }
@@ -32,7 +42,7 @@ namespace Linux.Sys.Input.Drivers
 
         public void Ioctl(ushort signal, string arg) {
             switch (signal) {
-                case (ushort)PtyIoctl.TIO_SEND_KEY: {
+                case PtyIoctl.TIO_SEND_KEY: {
                     BackendTerminal.ReceiveKey(arg);
                     break;
                 }

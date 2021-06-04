@@ -17,7 +17,7 @@ namespace Linux.PseudoTerminal
 
         public override void Ioctl(ushort signal, ref ushort[] args) {
             switch (signal) {
-                case (ushort)PtyIoctl.TIO_SET_DRIVER_FLAGS: {
+                case PtyIoctl.TIO_SET_DRIVER_FLAGS: {
                     if (Flags == null) {
                         Flags = args;
                     } else {
@@ -28,7 +28,7 @@ namespace Linux.PseudoTerminal
                     break;
                 }
 
-                case (ushort)PtyIoctl.TIO_SET_ATTR: {
+                case PtyIoctl.TIO_SET_ATTR: {
                     Flags[0] |= args[0];
                     break;
                 }
@@ -43,7 +43,7 @@ namespace Linux.PseudoTerminal
 
         public override void Ioctl(ushort signal, string data) {
             switch (signal) {
-                case (ushort)PtyIoctl.TIO_RCV_INPUT: {
+                case PtyIoctl.TIO_RCV_INPUT: {
                     DigestInput(data);
                     break;
                 }

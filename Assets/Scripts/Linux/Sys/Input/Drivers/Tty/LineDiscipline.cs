@@ -1,7 +1,8 @@
 using System.Collections.Generic;
-using Linux.IO;
+using System.Text;
 using Linux.PseudoTerminal;
 using Linux.Sys.IO;
+using Linux.IO;
 using UnityEngine;
 
 namespace Linux.Sys.Input.Drivers.Tty {
@@ -10,7 +11,9 @@ namespace Linux.Sys.Input.Drivers.Tty {
 
         protected ushort[] Flags = { 0 };
 
-        protected BufferedStream Buffer;
+        protected StringBuilder Buffer;
+
+        protected int Pointer;
 
         protected List<string> SpecialChars;
 
@@ -31,7 +34,8 @@ namespace Linux.Sys.Input.Drivers.Tty {
                 ref Flags
             );
 
-            Buffer = new BufferedStream(AccessMode.O_RDWR);
+            Buffer = new StringBuilder();
+            Pointer = 0;
 
             CookPty();
         }
@@ -62,11 +66,14 @@ namespace Linux.Sys.Input.Drivers.Tty {
                 if (IsSpecialChar(input)) {
                     output = null;
                 } else {
-                    Buffer.Write(input);
+                    WriteBuffer(input);
                 }
 
                 if (input == $"{AbstractTextIO.LINE_FEED}") {
-                    string data = Buffer.Read();
+                    Pointer = 0;
+
+                    string data = Buffer.ToString();
+                    Buffer.Clear();
                     WritePts(data);
                 }
             }
@@ -98,26 +105,30 @@ namespace Linux.Sys.Input.Drivers.Tty {
         }
 
         protected void HandleCharControl(string key) {
-            ushort signal = (ushort)GetIoctlFromControl(key);
+            ushort signal = GetIoctlFromControl(key);
 
             Output.Ioctl(signal, ref _nullArg);
         }
 
-        protected PtyIoctl GetIoctlFromControl(string key) {
+        protected ushort GetIoctlFromControl(string key) {
             switch(key) {
                 case CharacterControl.C_DBACKSPACE: {
+                    RemoveAtBack();
                     return PtyIoctl.TIO_REMOVE_BACK;
                 }
 
                 case CharacterControl.C_DDELETE: {
+                    RemoveAtFront();
                     return PtyIoctl.TIO_REMOVE_FRONT;
                 }
 
                 case CharacterControl.C_DLEFT_ARROW: {
+                    MovePointer(-1);
                     return PtyIoctl.TIO_LEFT_ARROW;
                 }
 
                 case CharacterControl.C_DRIGHT_ARROW: {
+                    MovePointer(1);
                     return PtyIoctl.TIO_RIGHT_ARROW;
                 }
 
@@ -135,6 +146,48 @@ namespace Linux.Sys.Input.Drivers.Tty {
                     );
                 }
             }
+        }
+
+        protected void WriteBuffer(string data) {
+            Buffer.Insert(Pointer, data);
+            Pointer++;
+        }
+
+        protected void RemoveAtFront() {
+            if (Pointer >= Buffer.Length || Buffer.Length == 0) {
+                return;
+            }
+
+            Buffer.Remove(Pointer, 1);
+        }
+
+        protected void RemoveAtBack() {
+            if (Pointer == 0 || Buffer.Length == 0) {
+                return;
+            }
+
+            MovePointer(-1);
+
+            Buffer.Remove(Pointer, 1);
+        }
+
+        protected void MovePointer(int step) {
+            if (Buffer.Length == 0) {
+                Pointer = 0;
+                return;
+            }
+
+            int pointer = Pointer + step;
+
+            if (pointer < 0) {
+                pointer = 0;
+            } else if (pointer >= Buffer.Length) {
+                pointer = Buffer.Length - 1;
+            }
+
+            Debug.Log("new pointer:" + pointer);
+
+            Pointer = pointer;
         }
     }
 }
