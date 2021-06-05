@@ -10,7 +10,7 @@ namespace Linux.PseudoTerminal
         public delegate int OnCursorUpward();
 
         protected LimitedStream Buffer;
-        protected List<int> CursorIndexes;
+        protected Dictionary<int, int> CursorIndexes;
 
         protected int BlockedIndex = -1;
 
@@ -32,8 +32,8 @@ namespace Linux.PseudoTerminal
 
         public CursorLines(int bufferSize) {
             Buffer = new LimitedStream(bufferSize);
-            CursorIndexes = new List<int>();
-            CursorIndexes.Add(0);
+            CursorIndexes = new Dictionary<int, int>();
+
             LineIndex = 0;
             CurrentLine = "";
         }
@@ -191,12 +191,12 @@ namespace Linux.PseudoTerminal
         }
 
         protected int GetCursorIndex() {
-            try {
+            if (CursorIndexes.ContainsKey(LineIndex)) {
                 return CursorIndexes[LineIndex];
-            } catch (System.ArgumentOutOfRangeException) {
-                CursorIndexes.Insert(LineIndex, 0);
-                return 0;
             }
+
+            CursorIndexes.Add(LineIndex, 0);
+            return 0;
         }
     }
 }

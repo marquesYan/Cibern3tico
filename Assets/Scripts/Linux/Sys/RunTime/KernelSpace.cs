@@ -106,13 +106,7 @@ namespace Linux.Sys.RunTime
         // Public Calls
 
         public int Open(string filePath, int mode) {
-            File file = LookupFile(filePath);
-
-            if (file == null) {
-                throw new System.IO.FileNotFoundException(
-                    "No such file or directory: " + filePath
-                );
-            }
+            File file = LookupFileOrFail(filePath);
 
             if (IsFileModePermitted(file, mode)) {
                 Process proc = GetCurrentProc();

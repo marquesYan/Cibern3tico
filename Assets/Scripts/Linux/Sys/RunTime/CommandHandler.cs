@@ -37,7 +37,7 @@ namespace Linux.Sys.RunTime
             int returnCode;
 
             try {
-                returnCode  = bin.Execute(new UserSpace(Api));
+                returnCode = bin.Execute(new UserSpace(Api));
             }
             
             catch (ExitProcessException exc) {
