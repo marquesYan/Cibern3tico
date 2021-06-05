@@ -32,7 +32,7 @@ namespace Linux.Library {
                 path = arguments[0];
             }
 
-            ReadOnlyFile[] files = userSpace.Api.ListDirectory(path);
+            List<ReadOnlyFile> files = userSpace.Api.ListDirectory(path);
 
             StringBuilder buffer = new StringBuilder();
 

@@ -44,11 +44,11 @@ namespace Linux.Library.ShellInterpreter
             }
 
             try {
-                string[] cmdLine = ParseCmd(cmd);
+                string[] cmdLine = SendCmdToParseChain(cmd);
                 int pid = UserSpace.Api.StartProcess(cmdLine);
                 UserSpace.Api.WaitPid(pid);
             } catch (System.Exception exception) {
-                UserSpace.Stderr.WriteLine(exception.Message);
+                UserSpace.Stderr.WriteLine($"-bash: {exception.Message}");
             }
 
             return true;
@@ -59,7 +59,55 @@ namespace Linux.Library.ShellInterpreter
             Environment.Add("OLDPWD", Environment["PWD"]);
         }
 
-        protected string[] ParseCmd(string cmd) {
+        protected string SearchFile(string fileName) {
+            string foundFile = null;
+
+            foreach (string path in Environment["PATH"].Split(':')) {
+                if (UserSpace.Api.FileExists(path)) {
+                    try {
+                        foundFile = FindFileByPath(path, fileName);
+                    } catch (System.Exception e) {
+                        Debug.Log("failed when searching file:" + path);
+                    }
+
+                    if (foundFile != null) {
+                        return foundFile;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        protected string FindFileByPath(string path, string fileName) {
+            List<ReadOnlyFile> files = UserSpace.Api.ListDirectory(path);
+
+            return files.Find(roFile => roFile.Name == fileName).Path;
+        }
+
+        protected string[] SendCmdToParseChain(string cmd) {
+            string[] specialChars = ParseSpecialCharacters(cmd);
+            string[] cmdResolution = ParseCommandFile(specialChars);
+            return cmdResolution;
+        }
+
+        protected string[] ParseCommandFile(string[] cmd) {
+            if (!cmd[0].StartsWith("/")) {
+                string filePath = SearchFile(cmd[0]);
+
+                if (filePath == null) {
+                    throw new System.InvalidOperationException(
+                        "command not found"   
+                    );
+                }
+
+                cmd[0] = filePath;
+            }
+            
+            return cmd;
+        }
+
+        protected string[] ParseSpecialCharacters(string cmd) {
             List<string> tokens = new List<string>();
             Stack<char> stack = new Stack<char>();
 

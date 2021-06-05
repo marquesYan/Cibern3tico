@@ -130,7 +130,11 @@ namespace Linux.Sys.RunTime
             return Kernel.ProcTable.GetFdPath(proc, fd);
         }
 
-        public ReadOnlyFile[] ListDirectory(string path) {
+        public bool FileExists(string path) {
+            return LookupFile(path) != null;
+        }
+
+        public List<ReadOnlyFile> ListDirectory(string path) {
             File directory = LookupFileOrFail(path);
             Debug.Log("directory type: " + directory.Type);
 
@@ -146,12 +150,11 @@ namespace Linux.Sys.RunTime
                 ThrowPermissionDenied();
             }
 
-            ReadOnlyFile[] files = new ReadOnlyFile[directory.ChildsCount()];
+            List<ReadOnlyFile> files = new List<ReadOnlyFile>();
 
-            int i = 0;
             foreach (File child in directory.ListChilds()) {
-                files[i] = ReadOnlyFile.FromFile(child);
-                i++;
+                ReadOnlyFile childFile = ReadOnlyFile.FromFile(child);
+                files.Add(childFile);
             }
 
             return files;
