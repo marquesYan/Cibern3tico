@@ -17,47 +17,23 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            string[] args = userSpace.Api.GetArgs();
+            var parser = new GenericArgParser(
+                userSpace,
+                "Usage: {0} [-n SIGNAL] [PID,]",
+                "Send signal to a process"
+            );
 
             ProcessSignal signal = ProcessSignal.SIGTERM;
-            bool showHelp = false;
+            parser.AddArgument<int>(
+                "n|signal=",
+                "The signal {SIGNAL} number to send. Default is '1' (SIGTERM)",
+                (int signalNum) => signal = (ProcessSignal)signalNum
+            );
 
-            var parser = new OptionSet() {
-                {
-                    "n|signal=", 
-                    "The {SIGNAL} number to send.",
-                    (int signalNum) => signal = (ProcessSignal)signalNum
-                },
-                {
-                    "h|help", 
-                    "Show help message.",
-                    _ => showHelp = true
-                }
-            };
-            
-            List<string> arguments;
-
-            System.Action showHelpInfo = () => {
-                userSpace.Stderr.WriteLine("Try kill --help for more information");
-            };
-
-            try {
-                arguments = parser.Parse(args);
-            } catch (OptionException exc) {
-                userSpace.Stderr.WriteLine($"kill: {exc.Message}");
-                showHelpInfo();
-                return 1;
-            }
-
-            if (showHelp) {
-                ShowHelpMsg(userSpace, parser);
-                return 1;
-            }
-
-            arguments.RemoveAt(0);
+            List<string> arguments = parser.Parse();
 
             if (arguments.Count < 1) {
-                showHelpInfo();
+                parser.ShowHelpInfo();
                 return 1;
             }
 
@@ -74,7 +50,7 @@ namespace Linux.Library
             }
 
             bool success = true;
-            Debug.Log("using signal: " + (ushort)signal);
+
             foreach (int pid in pids) {
                 try {
                     userSpace.Api.KillProcess(pid, signal);
@@ -89,13 +65,6 @@ namespace Linux.Library
                 return 0;
             }
             return 64;
-        }
-
-        protected void ShowHelpMsg(UserSpace userSpace, OptionSet options) {
-            userSpace.Stderr.WriteLine("Usage: kill [-n] PID");
-            userSpace.Stderr.WriteLine("\tSend a signal to a job");
-            userSpace.Stderr.WriteLine("");
-            options.WriteOptionDescriptions(userSpace.Stderr);
         }
     }
 }
