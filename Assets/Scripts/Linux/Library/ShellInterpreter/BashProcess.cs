@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
+using Linux.Library.ShellInterpreter.Builtins;
 using Linux;
 using UnityEngine;
 
@@ -9,13 +10,15 @@ using UnityEngine;
 namespace Linux.Library.ShellInterpreter
 {
     public class BashProcess {
-        protected UserSpace UserSpace;
-
-        protected Dictionary<string, string> Environment;
-
         protected Dictionary<string, string> Variables;
 
+        protected Dictionary<string, AbstractShellBuiltin> Builtins;
+
         protected string Login;
+
+        public UserSpace UserSpace { get; protected set; }
+
+        public Dictionary<string, string> Environment { get; protected set; }
 
         public BashProcess(UserSpace userSpace) {
             UserSpace = userSpace;
@@ -23,8 +26,10 @@ namespace Linux.Library.ShellInterpreter
             Login = userSpace.Api.GetLogin();
 
             Variables = new Dictionary<string, string>();
+            Builtins = new Dictionary<string, AbstractShellBuiltin>();
 
             SetupDefaultEnvironment();
+            RegisterBuiltins();
         }
 
         public bool Run() {
@@ -45,13 +50,36 @@ namespace Linux.Library.ShellInterpreter
 
             try {
                 string[] cmdLine = SendCmdToParseChain(cmd);
-                int pid = UserSpace.Api.StartProcess(cmdLine);
-                UserSpace.Api.WaitPid(pid);
+
+                if (IsBuiltin(cmdLine[0])) {
+                    RunBuiltin(cmdLine);
+                } else {
+                    RunCommand(cmdLine);
+                }
             } catch (System.Exception exception) {
                 UserSpace.Stderr.WriteLine($"-bash: {exception.Message}");
             }
 
             return true;
+        }
+
+        protected int RunBuiltin(string[] cmdLine) {
+            AbstractShellBuiltin builtin = Builtins[cmdLine[0]];
+
+            try {
+                return builtin.Execute(cmdLine);
+            } catch (ExitProcessException e) {
+                return e.ExitCode;
+            }
+        }
+
+        protected void RunCommand(string[] cmdLine) {
+            int pid = UserSpace.Api.StartProcess(cmdLine);
+            UserSpace.Api.WaitPid(pid);
+        }
+
+        protected void RegisterBuiltins() {
+            Builtins["cd"] = new Cd(this);
         }
 
         protected void SetupDefaultEnvironment() {
@@ -91,10 +119,14 @@ namespace Linux.Library.ShellInterpreter
             return cmdResolution;
         }
 
-        protected string[] ParseCommandFile(string[] cmd) {
-            if (!cmd[0].StartsWith("/")) {
-                string filePath = SearchFile(cmd[0]);
+        protected bool IsBuiltin(string cmd) {
+            return Builtins.ContainsKey(cmd);
+        }
 
+        protected string[] ParseCommandFile(string[] cmd) {
+            if (!cmd[0].StartsWith("/") && !IsBuiltin(cmd[0])) {
+                string filePath = SearchFile(cmd[0]);
+                
                 if (filePath == null) {
                     throw new System.InvalidOperationException(
                         "command not found"   

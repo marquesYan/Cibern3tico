@@ -118,6 +118,16 @@ namespace Linux.Sys.RunTime
             return -1;
         }
 
+        public void ChangeDirectory(string path) {
+            File directory = LookupDirectoryOrFail(path);
+
+            if (!CanEnterDirectory(directory)) {
+                ThrowPermissionDenied();
+            }
+
+            Kernel.ProcTable.ChangeDirectory(GetPid(), directory);
+        }
+
         public string GetFdPath(int fd) {
             Process proc = GetCurrentProc();
 
@@ -129,16 +139,7 @@ namespace Linux.Sys.RunTime
         }
 
         public List<ReadOnlyFile> ListDirectory(string path) {
-            File directory = LookupFileOrFail(path);
-            Debug.Log("directory type: " + directory.Type);
-
-            if (!(directory.Type == FileType.F_DIR 
-                    || directory.Type == FileType.F_MNT))
-            {
-                throw new InvalidOperationException(
-                    "Not a directory: " + path
-                );
-            }
+            File directory = LookupDirectoryOrFail(path);
 
             if (!CanListDirectory(directory)) {
                 ThrowPermissionDenied();
@@ -331,6 +332,20 @@ namespace Linux.Sys.RunTime
             return Kernel.Fs.LookupOrFail(path);
         }
 
+        protected File LookupDirectoryOrFail(string path) {
+            File directory = LookupFileOrFail(path);
+
+            if (!(directory.Type == FileType.F_DIR 
+                    || directory.Type == FileType.F_MNT))
+            {
+                throw new InvalidOperationException(
+                    "Not a directory: " + path
+                );
+            }
+
+            return directory;
+        }
+
         protected bool CanAccessProcess(Process otherProc) {
             if (IsRootUser()) {
                 return true;
@@ -423,6 +438,16 @@ namespace Linux.Sys.RunTime
             );
         }
 
+        protected bool CanEnterDirectory(File directory) {
+            if (IsRootUser()) {
+                return true;
+            }
+
+            int checkMode = FindRequiredEnterDirectoryPermission(directory);
+
+            return (checkMode | directory.Permission) != 0;
+        }
+
         protected bool CanListDirectory(File directory) {
             if (IsRootUser()) {
                 return true;
@@ -458,6 +483,20 @@ namespace Linux.Sys.RunTime
         }
 
         protected int FindRequiredListDirectoryPermission(File directory) {
+            User user = GetCurrentUser();
+
+            if (user.Uid == directory.Uid) {
+                return PermModes.S_IRUSR;
+            }
+            
+            if (IsUserMemberOf(user, directory.Gid)) {
+                return PermModes.S_IRGRP;
+            }
+
+            return PermModes.S_IROTH;
+        }
+
+        protected int FindRequiredEnterDirectoryPermission(File directory) {
             User user = GetCurrentUser();
 
             if (user.Uid == directory.Uid) {

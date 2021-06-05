@@ -59,8 +59,8 @@ namespace Linux.Library.ArgumentParser
 			OptionSet.Add(prototype, description, action);
 		}
 
-        public List<string> Parse() {
-            string[] args = UserSpace.Api.GetArgs();
+        public List<string> Parse(string[] cliArgs) {
+            string[] args = cliArgs ?? UserSpace.Api.GetArgs();
 
             List<string> result;
 
@@ -86,6 +86,10 @@ namespace Linux.Library.ArgumentParser
             }
 
             return result;
+        }
+
+        public List<string> Parse() {
+            return Parse(null);
         }
 
         public void ShowHelp() {

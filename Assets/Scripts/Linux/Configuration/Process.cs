@@ -17,8 +17,8 @@ namespace Linux.Configuration
         public List<Thread> BackgroundTasks { get; protected set; }
         public List<int> ChildPids { get; protected set; }
         public List<int> Fds { get; protected set; }
-        public string Cwd { get; protected set; }
         public string Root { get; protected set; }
+        public string Cwd;
 
         public Process(
             int ppid,
@@ -90,16 +90,17 @@ namespace Linux.Configuration
             return FdTable.GetProcesses();
         }
 
+        public void ChangeDirectory(int pid, File directory) {
+            lock(_procLock) {
+                Process process = LookupPidOrFail(pid);
+                process.Cwd = directory.Path;
+            }
+        }
+
         public void Remove(Process process) {
             lock(_procLock) {
                 if (process.PPid != 0) {
-                    Process parent = LookupPid(process.PPid);
-
-                    if (parent == null) {
-                        throw new System.InvalidOperationException(
-                            $"Parent process does not exist: {process.Pid}"
-                        );
-                    }
+                    Process parent = LookupPidOrFail(process.PPid);
 
                     parent.ChildPids.Remove(process.Pid);
                 }
@@ -108,16 +109,22 @@ namespace Linux.Configuration
             }
         }
 
+        public Process LookupPidOrFail(int pid) {
+            Process process = LookupPid(pid);
+
+            if (process == null) {
+                throw new System.InvalidOperationException(
+                    $"No such process with PID: {pid}"
+                );
+            }
+
+            return process;
+        }
+
         public void Add(Process process) {
             lock(_procLock) {
                 if (process.PPid != 0) {
-                    Process parent = LookupPid(process.PPid);
-
-                    if (parent == null) {
-                        throw new System.ArgumentException(
-                            $"Parent process does not exist: {process.PPid}"
-                        );
-                    }
+                    Process parent = LookupPidOrFail(process.PPid);
 
                     parent.ChildPids.Add(process.Pid);
                 }
@@ -323,6 +330,7 @@ namespace Linux.Configuration
             int i = 0;
             foreach(KeyValuePair<string, string> kvp in process.Environ) {
                 environ[i] = $"{kvp.Key}={kvp.Value}";
+                i++;
             }
 
             WriteSpec(environFile, environ);
