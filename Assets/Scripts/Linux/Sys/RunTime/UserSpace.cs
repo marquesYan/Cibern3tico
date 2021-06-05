@@ -38,6 +38,10 @@ namespace Linux.Sys.RunTime
             Api = kernelSpace;
         }
 
+        public void Exit(int exitCode) {
+            throw new ExitProcessException(exitCode);
+        }
+
         public ITextIO Open(string filePath, int mode) {
             int fd = Api.Open(filePath, mode);
             return Api.LookupByFD(fd);

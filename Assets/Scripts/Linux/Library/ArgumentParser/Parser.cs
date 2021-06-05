@@ -69,6 +69,9 @@ namespace Linux.Library.ArgumentParser
             } catch (OptionException exc) {
                 UserSpace.Stderr.WriteLine($"{ProgName}: {exc.Message}");
                 ShowHelpInfo();
+                UserSpace.Exit(127);
+
+                // Just compiler awareness
                 return null;
             }
 
@@ -76,6 +79,9 @@ namespace Linux.Library.ArgumentParser
 
             if (IsShowingHelp) {
                 ShowHelp();
+                UserSpace.Exit(127);
+
+                // Just compiler awareness
                 return null;
             }
 
