@@ -7,15 +7,97 @@ using Linux.IO;
 using UnityEngine;
 
 namespace Linux.Sys.RunTime
-{    
+{
+    public class ReadOnlyFile {
+        public readonly string Path;
+
+        public readonly string Name;
+
+        public readonly string CreatedAt;
+    
+        public readonly string UpdatedAt;
+
+        public readonly FileType Type;
+
+        public readonly int Permission;
+
+        public readonly int Uid;
+
+        public readonly int Gid;
+
+        public readonly ReadOnlyFile Parent;
+
+        public readonly ReadOnlyFile SourceFile;
+
+        public ReadOnlyFile(
+            string path,
+            string name,
+            string createdAt,
+            string updatedAt,
+            FileType type,
+            int permission,
+            int uid,
+            int gid,
+            ReadOnlyFile parent,
+            ReadOnlyFile sourceFile
+        ) {
+            Path = path;
+            Name = name;
+            CreatedAt = createdAt;
+            UpdatedAt = updatedAt;
+            Type = type;
+            Permission = permission;
+            Uid = uid;
+            Gid = gid;
+            Parent = parent;
+            SourceFile = sourceFile;
+        }
+
+        public static ReadOnlyFile FromFile(File file) {
+            ReadOnlyFile parent = null;
+            ReadOnlyFile sourceFile = null;
+
+            if (file.Parent != null) {
+                // The root file points Parent to himself
+                if (file.Parent == file) {
+                    parent = new ReadOnlyFile(
+                        file.Parent.Path,
+                        file.Parent.Name,
+                        file.Parent.CreatedAt.ToString(),
+                        file.Parent.UpdatedAt.ToString(),
+                        file.Parent.Type,
+                        file.Parent.Permission,
+                        file.Parent.Uid,
+                        file.Parent.Gid,
+                        null,
+                        null
+                    );
+                } else {
+                    parent = ReadOnlyFile.FromFile(file.Parent);
+                }
+            }
+            
+            if (file.SourceFile != null) {
+                sourceFile = ReadOnlyFile.FromFile(file.SourceFile);
+            }
+
+            return new ReadOnlyFile(
+                file.Path,
+                file.Name,
+                file.CreatedAt.ToString(),
+                file.UpdatedAt.ToString(),
+                file.Type,
+                file.Permission,
+                file.Uid,
+                file.Gid,
+                parent,
+                sourceFile
+            );
+        }
+    }
+
     public class KernelSpace {
         public Linux.Kernel Kernel;
-
-        // public bool IsShutdown { 
-        //     get {
-        //         return Kernel.IsShutdown;
-        //     }
-        // }
 
         public KernelSpace(Linux.Kernel kernel) {
             Kernel = kernel;
@@ -48,8 +130,35 @@ namespace Linux.Sys.RunTime
             return Kernel.ProcTable.GetFdPath(proc, fd);
         }
 
+        public ReadOnlyFile[] ListDirectory(string path) {
+            File directory = LookupFileOrFail(path);
+            Debug.Log("directory type: " + directory.Type);
+
+            if (!(directory.Type == FileType.F_DIR 
+                    || directory.Type == FileType.F_MNT))
+            {
+                throw new InvalidOperationException(
+                    "Not a directory: " + path
+                );
+            }
+
+            if (!CanListDirectory(directory)) {
+                ThrowPermissionDenied();
+            }
+
+            ReadOnlyFile[] files = new ReadOnlyFile[directory.ChildsCount()];
+
+            int i = 0;
+            foreach (File child in directory.ListChilds()) {
+                files[i] = ReadOnlyFile.FromFile(child);
+                i++;
+            }
+
+            return files;
+        }
+
         public string RealPath(string path) {
-            File file = LookupFile(path);
+            File file = LookupFileOrFail(path);
 
             if (file.Type == FileType.F_SYL) {
                 return file.SourceFile.Path;
@@ -221,6 +330,10 @@ namespace Linux.Sys.RunTime
             return Kernel.Fs.Lookup(path);
         }
 
+        protected File LookupFileOrFail(string path) {
+            return Kernel.Fs.LookupOrFail(path);
+        }
+
         protected bool CanAccessProcess(Process otherProc) {
             if (IsRootUser()) {
                 return true;
@@ -313,6 +426,16 @@ namespace Linux.Sys.RunTime
             );
         }
 
+        protected bool CanListDirectory(File directory) {
+            if (IsRootUser()) {
+                return true;
+            }
+
+            int checkMode = FindRequiredListDirectoryPermission(directory);
+
+            return (checkMode | directory.Permission) != 0;
+        }
+
         protected bool IsFileModePermitted(File file, int mode) {
             if (IsRootUser()) {
                 return true;
@@ -331,6 +454,26 @@ namespace Linux.Sys.RunTime
             }
         }
 
+        protected bool IsUserMemberOf(User user, int gid) {
+            List<Group> groups = LookupUserGroups(user);
+
+            return groups.Find(g => g.Gid == gid) != null;
+        }
+
+        protected int FindRequiredListDirectoryPermission(File directory) {
+            User user = GetCurrentUser();
+
+            if (user.Uid == directory.Uid) {
+                return PermModes.S_IRUSR & PermModes.S_IXUSR;
+            }
+            
+            if (IsUserMemberOf(user, directory.Gid)) {
+                return PermModes.S_IRGRP & PermModes.S_IXGRP;
+            }
+
+            return PermModes.S_IROTH & PermModes.S_IXOTH;
+        }
+
         protected int FindUserCheckMode(User user, File file, int mode) {
             if (user.Uid == file.Uid) {
                 switch (mode) {
@@ -340,21 +483,19 @@ namespace Linux.Sys.RunTime
                     case AccessMode.O_WRONLY: return PermModes.S_IWUSR;
                 }
             } else {
-                List<Group> groups = LookupUserGroups(user);
-
-                if (groups.Find(g => g.Gid == file.Gid) == null) {
-                    switch (mode) {
-                        case AccessMode.O_RDONLY: return PermModes.S_IROTH;
-                        case AccessMode.O_RDWR: return PermModes.S_IROTH & PermModes.S_IWOTH;
-                        case AccessMode.O_APONLY:
-                        case AccessMode.O_WRONLY: return PermModes.S_IWOTH;
-                    }
-                } else {
+                if (IsUserMemberOf(user, file.Gid)) {
                     switch (mode) {
                         case AccessMode.O_RDONLY: return PermModes.S_IRGRP;
                         case AccessMode.O_RDWR: return PermModes.S_IRGRP & PermModes.S_IWGRP;
                         case AccessMode.O_APONLY:
                         case AccessMode.O_WRONLY: return PermModes.S_IWGRP;
+                    }
+                } else {
+                    switch (mode) {
+                        case AccessMode.O_RDONLY: return PermModes.S_IROTH;
+                        case AccessMode.O_RDWR: return PermModes.S_IROTH & PermModes.S_IWOTH;
+                        case AccessMode.O_APONLY:
+                        case AccessMode.O_WRONLY: return PermModes.S_IWOTH;
                     }
                 }
             }
