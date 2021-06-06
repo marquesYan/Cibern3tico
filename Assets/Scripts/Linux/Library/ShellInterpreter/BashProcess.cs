@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+using System.Text;
+using System.Text.RegularExpressions;
+using PushdownAutomaton;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
@@ -10,6 +13,8 @@ using UnityEngine;
 namespace Linux.Library.ShellInterpreter
 {
     public class BashProcess {
+        protected Regex SetVariablesRegex = new Regex(@"^([a-zA-Z_]+)=([a-zA-Z0-9_]*)(?:;?)$");
+
         protected Dictionary<string, string> Variables;
 
         protected Dictionary<string, AbstractShellBuiltin> Builtins;
@@ -37,7 +42,7 @@ namespace Linux.Library.ShellInterpreter
 
             string cmd = UserSpace.Input(
                 $"[{Login}@hacking01 {cwdName}]$",
-                ' '
+                " "
             );
             Debug.Log("recv cmd: " + cmd);
             if (string.IsNullOrEmpty(cmd)) {
@@ -49,12 +54,14 @@ namespace Linux.Library.ShellInterpreter
             }
 
             try {
-                string[] cmdLine = SendCmdToParseChain(cmd);
+                if (!ParseSetVariables(cmd)) {
+                    string[] cmdLine = SendCmdToParseChain(cmd);
 
-                if (IsBuiltin(cmdLine[0])) {
-                    RunBuiltin(cmdLine);
-                } else {
-                    RunCommand(cmdLine);
+                    if (IsBuiltin(cmdLine[0])) {
+                        RunBuiltin(cmdLine);
+                    } else {
+                        RunCommand(cmdLine);
+                    }   
                 }
             } catch (System.Exception exception) {
                 UserSpace.Stderr.WriteLine($"-bash: {exception.Message}");
@@ -80,11 +87,14 @@ namespace Linux.Library.ShellInterpreter
 
         protected void RegisterBuiltins() {
             Builtins["cd"] = new Cd(this);
+            Builtins["env"] = new Env(this);
         }
 
         protected void SetupDefaultEnvironment() {
             Environment.Add("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin");
             Environment.Add("OLDPWD", Environment["PWD"]);
+
+            Variables["$"] = UserSpace.Api.GetPid().ToString();
         }
 
         protected string SearchFile(string fileName) {
@@ -114,8 +124,9 @@ namespace Linux.Library.ShellInterpreter
         }
 
         protected string[] SendCmdToParseChain(string cmd) {
-            string[] specialChars = ParseSpecialCharacters(cmd);
-            string[] cmdResolution = ParseCommandFile(specialChars);
+            cmd = ReplaceShellVariables(cmd);
+            string[] cmdLine = cmd.Split(' ');
+            string[] cmdResolution = ParseCommandFile(cmdLine);
             return cmdResolution;
         }
 
@@ -139,36 +150,29 @@ namespace Linux.Library.ShellInterpreter
             return cmd;
         }
 
-        protected string[] ParseSpecialCharacters(string cmd) {
-            List<string> tokens = new List<string>();
-            Stack<char> stack = new Stack<char>();
+        protected bool ParseSetVariables(string cmd) {
+            MatchCollection matches = SetVariablesRegex.Matches(cmd);
 
-            for (var i = 0; i < cmd.Length; i++) {
-                char token = cmd[i];
-
-                switch (token) {
-                    // case '"':
-                    // case '\'': {
-                    //     stack.Push(token);
-                    //     break;
-                    // }
-
-                    case '$': {
-                        if (cmd[i + 1] == '$') {
-                            i++;
-                            tokens.Add(UserSpace.Api.GetPid().ToString());
-                        }
-                        break;
-                    }
-
-                    default: {
-                        tokens.Add(token.ToString());
-                        break;
-                    }
-                }
+            if (matches.Count == 0) {
+                return false;
             }
 
-            return string.Join("", tokens).Split(' ');
+            foreach (Match match in matches) {
+                GroupCollection groups = match.Groups;
+                Variables[groups[1].Value] = groups[2].Value;
+            }
+
+            return true;
+        }
+
+        protected string ReplaceShellVariables(string cmd) {
+            foreach (KeyValuePair<string, string> kvp in Variables) {
+                cmd = new Regex(
+                    @"(\$" + Regex.Escape(kvp.Key) + ")"
+                ).Replace(cmd, kvp.Value);
+            }
+            
+            return cmd;
         }
     }
 }

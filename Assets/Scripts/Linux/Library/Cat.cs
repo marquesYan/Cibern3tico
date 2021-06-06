@@ -31,7 +31,7 @@ namespace Linux.Library
             string path = userSpace.ResolvePath(arguments[0]);
 
             ITextIO stream = userSpace.Open(path, AccessMode.O_RDONLY);
-            userSpace.Print(stream.Read());
+            userSpace.Print(stream.Read(), "");
 
             return 0;
         }

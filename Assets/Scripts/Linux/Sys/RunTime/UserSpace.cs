@@ -58,15 +58,15 @@ namespace Linux.Sys.RunTime
             return Api.LookupByFD(fd);
         }
 
-        public void Print(string message, char end) {
+        public void Print(string message, string end) {
             Stdout.Write(message + end);
         }
 
         public void Print(string message) {
-            Print(message, AbstractTextIO.LINE_FEED);
+            Print(message, $"{AbstractTextIO.LINE_FEED}");
         }
 
-        public string Input(string prompt, char end) {
+        public string Input(string prompt, string end) {
             Print(prompt, end);
 
             Thread.Sleep(200);
@@ -74,7 +74,7 @@ namespace Linux.Sys.RunTime
         }
 
         public string Input(string prompt) {
-            return Input(prompt, AbstractTextIO.LINE_FEED);
+            return Input(prompt, $"{AbstractTextIO.LINE_FEED}");
         }
     }
 }
