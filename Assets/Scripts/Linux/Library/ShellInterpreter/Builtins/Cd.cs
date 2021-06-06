@@ -27,7 +27,7 @@ namespace Linux.Library.ShellInterpreter.Builtins
                     return 1;
                 }
             } else {
-                dir = arguments[0];
+                dir = UserSpace.ResolvePath(arguments[0]);
             }
 
             string oldWd = Bash.Environment["PWD"];

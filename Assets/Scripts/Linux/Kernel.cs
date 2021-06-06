@@ -216,6 +216,7 @@ namespace Linux
             int ppid,
             User user,
             string[] cmdLine,
+            Dictionary<string, string> environ,
             int stdin,
             int stdout,
             int stderr
@@ -225,7 +226,8 @@ namespace Linux
             Process process = BuildProcess(
                 ppid,
                 user,
-                cmdLine
+                cmdLine,
+                environ
             );
 
             ProcTable.DuplicateFd(parent, stdin, process, 0);
@@ -238,7 +240,8 @@ namespace Linux
         Process BuildProcess(
             int ppid,
             User user,
-            string[] cmdLine
+            string[] cmdLine,
+            Dictionary<string, string> environ
         ) {
             Thread mainTask = new Thread(
                 new ThreadStart(CmdHandler.Handle)
@@ -249,6 +252,10 @@ namespace Linux
             defaultEnviron.Add("SHELL", user.Shell);
             defaultEnviron.Add("PWD", user.HomeDir);
             defaultEnviron.Add("HOME", user.HomeDir);
+
+            foreach (KeyValuePair<string, string> kvp in environ) {
+                defaultEnviron[kvp.Key] = kvp.Value;
+            }
 
             Process process = ProcTable.Create(
                 ppid,
@@ -270,7 +277,8 @@ namespace Linux
             InitProcess = BuildProcess(
                 0,
                 root,
-                new string[] { "/usr/sbin/init" }
+                new string[] { "/usr/sbin/init" },
+                new Dictionary<string, string>()
             );
 
             var devNull = "/dev/null";

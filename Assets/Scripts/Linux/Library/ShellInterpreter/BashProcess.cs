@@ -125,7 +125,7 @@ namespace Linux.Library.ShellInterpreter
         }
 
         protected string[] ParseCommandFile(string[] cmd) {
-            if (!cmd[0].StartsWith("/") && !IsBuiltin(cmd[0])) {
+            if (!PathUtils.IsAbsPath(cmd[0]) && !IsBuiltin(cmd[0])) {
                 string filePath = SearchFile(cmd[0]);
                 
                 if (filePath == null) {

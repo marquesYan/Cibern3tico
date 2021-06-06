@@ -220,7 +220,7 @@ namespace Linux.Sys.RunTime
         }
 
         public Dictionary<string, string> GetEnviron() {
-            return new Dictionary<string, string>(GetCurrentProc().Environ);
+            return GetCurrentProc().Environ;
         }
 
         public bool IsRootUser() {
@@ -378,6 +378,22 @@ namespace Linux.Sys.RunTime
             int stdoutFd,
             int stderrFd
         ) {
+            return CreateProcess(
+                cmdLine,
+                new Dictionary<string, string>(GetEnviron()),
+                stdinFd,
+                stdoutFd,
+                stderrFd
+            );
+        }
+
+        protected Process CreateProcess(
+            string[] cmdLine,
+            Dictionary<string, string> environ,
+            int stdinFd,
+            int stdoutFd,
+            int stderrFd
+        ) {
             if (cmdLine.Length == 0) {
                 throw new System.ArgumentException("No command line");
             }
@@ -406,6 +422,7 @@ namespace Linux.Sys.RunTime
                 proc.Pid,
                 user,
                 cmdLine,
+                environ,
                 stdinFd,
                 stdoutFd,
                 stderrFd

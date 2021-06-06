@@ -27,7 +27,9 @@ namespace Linux.Library.ShellInterpreter.Builtins {
                 path = arguments[0];
             }
 
-            List<ReadOnlyFile> files = UserSpace.Api.ListDirectory(path);
+            List<ReadOnlyFile> files = UserSpace.Api.ListDirectory(
+                UserSpace.ResolvePath(path)
+            );
 
             StringBuilder buffer = new StringBuilder();
 

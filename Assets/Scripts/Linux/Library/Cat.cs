@@ -28,10 +28,10 @@ namespace Linux.Library
                 return 1;
             }
 
-            string path = arguments[0];
+            string path = userSpace.ResolvePath(arguments[0]);
+
             ITextIO stream = userSpace.Open(path, AccessMode.O_RDONLY);
             userSpace.Print(stream.Read());
-            // }
 
             return 0;
         }

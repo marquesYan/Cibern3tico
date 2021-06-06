@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using Linux.PseudoTerminal;
 using Linux.FileSystem;
@@ -36,6 +37,16 @@ namespace Linux.Sys.RunTime
 
         public UserSpace(KernelSpace kernelSpace) {
             Api = kernelSpace;
+        }
+
+        public string ResolvePath(string path) {
+            if (PathUtils.IsAbsPath(path)) {
+                return path;
+            }
+
+            Dictionary<string, string> environment = Api.GetEnviron();
+
+            return PathUtils.Combine(environment["PWD"], path);
         }
 
         public void Exit(int exitCode) {
