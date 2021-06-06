@@ -264,7 +264,7 @@ namespace Linux
                 cmdLine,
                 defaultEnviron,
                 Fs.Root.Path,
-                user.HomeDir,
+                defaultEnviron["PWD"],
                 mainTask
             );
 

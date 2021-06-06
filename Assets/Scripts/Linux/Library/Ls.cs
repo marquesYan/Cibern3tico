@@ -3,33 +3,35 @@ using System.Text;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
-using Linux.Library.ArgumentParser;
-using Linux.Library.ShellInterpreter;
 
-namespace Linux.Library.ShellInterpreter.Builtins {
-    public class Ls : AbstractShellBuiltin {
-        public Ls(BashProcess bash) : base(bash) { }
+namespace Linux.Library {
+    public class Ls : CompiledBin {
+        public Ls(
+            string absolutePath,
+            int uid,
+            int gid,
+            int permission,
+            FileType type
+        ) : base(absolutePath, uid, gid, permission, type) { }
 
-        public override int Execute(string[] args) {
-            var parser = new GenericArgParser(
-                UserSpace,
+        public override int Execute(UserSpace userSpace) {
+            var parser = new ArgumentParser.GenericArgParser(
+                userSpace,
                 "Usage: {0} [OPTION]... [FILE]...", 
                 "List information about the FILEs"
             );
 
-            List<string> arguments = parser.Parse(args);
+            List<string> arguments = parser.Parse();
 
             string path;
 
             if (arguments.Count == 0) {
-                path = UserSpace.Api.GetCwd();
+                path = userSpace.Api.GetCwd();
             } else {
-                path = arguments[0];
+                path = userSpace.ResolvePath(arguments[0]);
             }
 
-            List<ReadOnlyFile> files = UserSpace.Api.ListDirectory(
-                UserSpace.ResolvePath(path)
-            );
+            List<ReadOnlyFile> files = userSpace.Api.ListDirectory(path);
 
             StringBuilder buffer = new StringBuilder();
 
@@ -37,7 +39,7 @@ namespace Linux.Library.ShellInterpreter.Builtins {
                 buffer.AppendFormat("{0}\t", file.Name);
             }
 
-            UserSpace.Print(buffer.ToString());
+            userSpace.Print(buffer.ToString());
 
             // File current_file;
             // current_file = current_dir;
