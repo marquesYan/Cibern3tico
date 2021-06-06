@@ -80,6 +80,7 @@ namespace Linux.Library.ShellInterpreter
 
         protected void RegisterBuiltins() {
             Builtins["cd"] = new Cd(this);
+            Builtins["ls"] = new Ls(this);
         }
 
         protected void SetupDefaultEnvironment() {

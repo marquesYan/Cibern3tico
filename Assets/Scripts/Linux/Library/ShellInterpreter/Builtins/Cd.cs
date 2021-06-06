@@ -20,7 +20,12 @@ namespace Linux.Library.ShellInterpreter.Builtins
             string dir;
 
             if (arguments.Count == 0) {
-                dir = Bash.Environment["HOME"];
+                if (Bash.Environment.ContainsKey("HOME")) {
+                    dir = Bash.Environment["HOME"];
+                } else {
+                    UserSpace.Print("cd: HOME not set");
+                    return 1;
+                }
             } else {
                 dir = arguments[0];
             }
