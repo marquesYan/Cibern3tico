@@ -21,6 +21,21 @@ namespace Linux.Library {
                 "List information about the FILEs"
             );
 
+            bool all = false;
+            bool detailed = false;
+
+            parser.AddArgument<string>(
+                "a|all",
+                "List all directories and hidden files",
+                (v) => all = true
+            );
+
+            parser.AddArgument<string>(
+                "l|list",
+                "List detailed information about files and directories",
+                (v) => detailed = true
+            );
+
             List<string> arguments = parser.Parse();
 
             string path;
@@ -35,91 +50,110 @@ namespace Linux.Library {
 
             StringBuilder buffer = new StringBuilder();
 
-            foreach (ReadOnlyFile file in files) {
-                buffer.AppendFormat("{0}\t", file.Name);
+            foreach(ReadOnlyFile file in files) {
+                if (!all && file.IsHidden) {
+                    continue;
+                }
+
+                if (detailed) {
+                    buffer.Append(BuildFileType(file.Type));
+
+                    buffer.Append(BuildPerm(file.Permission, 8));
+                    buffer.Append(BuildPerm(file.Permission, 4));
+                    buffer.Append(BuildPerm(file.Permission, 0));
+
+                    buffer.Append("  ");
+                    buffer.Append("2");
+                    buffer.Append("  ");
+
+                    string userName = userSpace.Api.LookupUserLogin(file.Uid);
+                    buffer.Append(userName ?? file.Uid.ToString());
+                    buffer.Append("  ");
+
+                    string groupName = userSpace.Api.LookupGroupName(file.Gid);
+                    buffer.Append(groupName ?? file.Gid.ToString());
+                    buffer.Append("  ");
+
+                    buffer.Append("4096");
+                    buffer.Append("  ");
+
+                    buffer.Append(file.UpdatedAt);
+                    buffer.Append("  ");
+
+                    buffer.Append(file.Name);
+
+                    buffer.AppendLine();
+                } else {
+                    buffer.Append(file.Name);
+                    buffer.Append("\t");
+                }
             }
 
             userSpace.Print(buffer.ToString());
 
-            // File current_file;
-            // current_file = current_dir;
-
-            // if (args.Length > 0) {
-            //     string last_argument = args[args.Length - 1].String;
-
-            //     if (! last_argument.StartsWith("-")) {
-            //         current_file = Terminal.Fs.Lookup(last_argument);
-            //         Debug.Log("directory: " + current_file);
-            //     }
-            // }
-
-            // List<File> files_to_display = new List<File>();
-
-            // if (all) {
-            //     files_to_display.Add(current_file.Parent);
-            //     files_to_display.Add(current_file.Parent.Parent);
-            // }
-            // Debug.Log(current_file.Name);
-            // if (current_file.IsDirectory()) {
-            //     foreach (File file in current_file.Childs) {
-            //         Debug.Log("adding file");
-            //         files_to_display.Add(file);
-            //     }
-            // } else {
-            //     Debug.Log("file is not a directory");
-            //     files_to_display.Add(current_file);
-            // }
-
-            // StringBuilder sb = new StringBuilder();
-
-            // foreach(File file in files_to_display) {
-            //     if (!all && file.IsHidden()) {
-            //         continue;
-            //     }
-            //     Debug.Log(file);
-            //     if (detailed) {
-            //         if (file.IsDirectory()) {
-            //             sb.Append('d');
-            //         } else {
-            //             sb.Append('-');
-            //         }
-
-            //         sb.Append(BuildPerm(file.Permissions[0]));
-            //         sb.Append(BuildPerm(file.Permissions[1]));
-            //         sb.Append(BuildPerm(file.Permissions[2]));
-
-            //         sb.Append(" 2 user user 4096 May 25 16:58 ");
-
-            //         sb.Append(file.Name);
-
-            //         sb.Append("\n");
-            //     } else {
-            //         sb.Append(file.Name);
-            //         sb.Append("\t");
-            //     }
-            // }
-
-            // // if (detailed) {
-            // //     sb.Remove(sb.Length - 1, 1);
-            // // }
-
-            // Terminal.Log(sb.ToString());
             return 0;
         }
 
-        // string BuildPerm(Perms permission) {
-        //     switch(permission) {
-        //         case Perms.NONE: return "---";
-        //         case Perms.ALL: return "rwx";
-        //         case Perms.R: return "r--";
-        //         case Perms.RX: return "r-x";
-        //         case Perms.RW: return "rw-";
-        //         case Perms.W | Perms.X: return "-wx";
-        //         case Perms.W: return "-w-";
-        //         case Perms.X: return "--x";
-        //     }
+        string BuildFileType(FileType type) {
+            switch (type) {
+                case FileType.F_MNT:
+                case FileType.F_DIR: return "d";
+                case FileType.F_REG: return "-";
+                case FileType.F_BLK: return "b";
+                case FileType.F_CHR: return "c";
+                case FileType.F_PIP: return "p";
+                case FileType.F_SYL: return "l";
+                case FileType.F_SCK: return "s";
+            }
 
-        //     return null;
-        // }
+            return "?";
+        }
+        string BuildPerm(int permission, int shift) {
+            // Apply mask to AND operation discard positions not cared
+            // E.g
+            // permission = 0b0111_0101_0101 (755)
+            // to compare permission on the owner side, use a shift of '8'
+            // and we got this mask: 0b1111_0000_0000
+            //
+            // aplying the AND operation with permission and mask we ignore
+            // everything but the most 4 significant bits:
+            //  0b0111_0101_0101 & 0b1111_0000_0000 = 0b0111_0000_0000
+
+            int basePermission = (permission & (0b1111 << shift));
+
+            if (basePermission == 0) {
+                return "---";
+            }
+
+            if ((basePermission - (7 << shift)) == 0) {
+                return "rwx";
+            }
+
+            if ((basePermission - (6 << shift)) == 0) {
+                return "rw-";
+            }
+
+            if ((basePermission - (5 << shift)) == 0) {
+                return "r-x";
+            }
+
+            if ((basePermission - (4 << shift)) == 0) {
+                return "r--";
+            }
+
+            if ((basePermission - (3 << shift)) == 0) {
+                return "-wx";
+            }
+
+            if ((basePermission - (2 << shift)) == 0) {
+                return "-w-";
+            }
+
+            if ((basePermission - (1 << shift)) == 0) {
+                return "--x";
+            }
+
+            return "?";
+        }
     }
 }

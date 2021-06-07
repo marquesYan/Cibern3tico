@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Globalization;
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.IO;
@@ -9,6 +10,8 @@ using UnityEngine;
 namespace Linux.Sys.RunTime
 {
     public class ReadOnlyFile {
+        public const string DateTimeFormat = "MMMM dd HH:mm"; 
+
         public readonly string Path;
 
         public readonly string Name;
@@ -29,6 +32,8 @@ namespace Linux.Sys.RunTime
 
         public readonly ReadOnlyFile SourceFile;
 
+        public readonly bool IsHidden;
+
         public ReadOnlyFile(
             string path,
             string name,
@@ -38,6 +43,7 @@ namespace Linux.Sys.RunTime
             int permission,
             int uid,
             int gid,
+            bool isHidden,
             ReadOnlyFile parent,
             ReadOnlyFile sourceFile
         ) {
@@ -49,8 +55,13 @@ namespace Linux.Sys.RunTime
             Permission = permission;
             Uid = uid;
             Gid = gid;
+            IsHidden = isHidden;
             Parent = parent;
             SourceFile = sourceFile;
+        }
+
+        public static string FormatDate(DateTime dt) {
+            return dt.ToString(DateTimeFormat);
         }
 
         public static ReadOnlyFile FromFile(File file) {
@@ -63,12 +74,13 @@ namespace Linux.Sys.RunTime
                     parent = new ReadOnlyFile(
                         file.Parent.Path,
                         file.Parent.Name,
-                        file.Parent.CreatedAt.ToString(),
-                        file.Parent.UpdatedAt.ToString(),
+                        FormatDate(file.Parent.CreatedAt),
+                        FormatDate(file.Parent.UpdatedAt),
                         file.Parent.Type,
                         file.Parent.Permission,
                         file.Parent.Uid,
                         file.Parent.Gid,
+                        file.Parent.IsHidden(),
                         null,
                         null
                     );
@@ -84,12 +96,13 @@ namespace Linux.Sys.RunTime
             return new ReadOnlyFile(
                 file.Path,
                 file.Name,
-                file.CreatedAt.ToString(),
-                file.UpdatedAt.ToString(),
+                FormatDate(file.CreatedAt),
+                FormatDate(file.UpdatedAt),
                 file.Type,
                 file.Permission,
                 file.Uid,
                 file.Gid,
+                file.IsHidden(),
                 parent,
                 sourceFile
             );
@@ -122,6 +135,26 @@ namespace Linux.Sys.RunTime
             return -1;
         }
 
+        public string LookupUserLogin(int uid) {
+            User user = Kernel.UsersDb.LookupUid(uid);
+            
+            if (user == null) {
+                return null;
+            }
+
+            return user.Login;
+        }
+
+        public string LookupGroupName(int gid) {
+            Group group = Kernel.GroupsDb.LookupGid(gid);
+            
+            if (group == null) {
+                return null;
+            }
+
+            return group.Name;
+        }
+
         public int RunAs(string login) {
             User user = Kernel.UsersDb.LookupLogin(login);
             
@@ -132,15 +165,15 @@ namespace Linux.Sys.RunTime
             }
 
             if (IsRootUser()) {
-                int pty = OpenPty();
+                // int pty = OpenPty();
 
                 Process process = CreateProcess(
                     user,
                     new string[] { user.Shell },
                     new Dictionary<string, string>(),
-                    pty,
-                    pty,
-                    pty
+                    0,
+                    1,
+                    2
                 );
 
                 process.MainTask.Start();
@@ -346,9 +379,7 @@ namespace Linux.Sys.RunTime
             return Kernel.ProcTable.LookupPid(pid);
         }
 
-        public List<Group> LookupUserGroups(User user) {
-            EnsureIsRoot();
-
+        protected List<Group> LookupUserGroups(User user) {
             return Kernel.GroupsDb.ToList().FindAll(
                 group => {
                     foreach (string login in group.Users) {
@@ -549,7 +580,7 @@ namespace Linux.Sys.RunTime
 
             int checkMode = FindRequiredEnterDirectoryPermission(directory);
 
-            return (checkMode | directory.Permission) != 0;
+            return (checkMode & directory.Permission) != 0;
         }
 
         protected bool CanListDirectory(File directory) {
@@ -559,7 +590,7 @@ namespace Linux.Sys.RunTime
 
             int checkMode = FindRequiredListDirectoryPermission(directory);
 
-            return (checkMode | directory.Permission) != 0;
+            return (checkMode & directory.Permission) != 0;
         }
 
         protected bool IsFileModePermitted(File file, int mode) {
@@ -571,7 +602,7 @@ namespace Linux.Sys.RunTime
 
             int checkMode = FindUserCheckMode(user, file, mode);
 
-            return (checkMode | file.Permission) != 0;
+            return (checkMode & file.Permission) != 0;
         }
 
         protected void EnsureIsRoot() {
@@ -604,21 +635,21 @@ namespace Linux.Sys.RunTime
             User user = GetCurrentUser();
 
             if (user.Uid == directory.Uid) {
-                return PermModes.S_IRUSR & PermModes.S_IXUSR;
+                return PermModes.S_IRUSR | PermModes.S_IXUSR;
             }
             
             if (IsUserMemberOf(user, directory.Gid)) {
-                return PermModes.S_IRGRP & PermModes.S_IXGRP;
+                return PermModes.S_IRGRP | PermModes.S_IXGRP;
             }
 
-            return PermModes.S_IROTH & PermModes.S_IXOTH;
+            return PermModes.S_IROTH | PermModes.S_IXOTH;
         }
 
         protected int FindUserCheckMode(User user, File file, int mode) {
             if (user.Uid == file.Uid) {
                 switch (mode) {
                     case AccessMode.O_RDONLY: return PermModes.S_IRUSR;
-                    case AccessMode.O_RDWR: return PermModes.S_IRUSR & PermModes.S_IWUSR;
+                    case AccessMode.O_RDWR: return PermModes.S_IRUSR | PermModes.S_IWUSR;
                     case AccessMode.O_APONLY:
                     case AccessMode.O_WRONLY: return PermModes.S_IWUSR;
                 }
@@ -626,14 +657,14 @@ namespace Linux.Sys.RunTime
                 if (IsUserMemberOf(user, file.Gid)) {
                     switch (mode) {
                         case AccessMode.O_RDONLY: return PermModes.S_IRGRP;
-                        case AccessMode.O_RDWR: return PermModes.S_IRGRP & PermModes.S_IWGRP;
+                        case AccessMode.O_RDWR: return PermModes.S_IRGRP | PermModes.S_IWGRP;
                         case AccessMode.O_APONLY:
                         case AccessMode.O_WRONLY: return PermModes.S_IWGRP;
                     }
                 } else {
                     switch (mode) {
                         case AccessMode.O_RDONLY: return PermModes.S_IROTH;
-                        case AccessMode.O_RDWR: return PermModes.S_IROTH & PermModes.S_IWOTH;
+                        case AccessMode.O_RDWR: return PermModes.S_IROTH | PermModes.S_IWOTH;
                         case AccessMode.O_APONLY:
                         case AccessMode.O_WRONLY: return PermModes.S_IWOTH;
                     }

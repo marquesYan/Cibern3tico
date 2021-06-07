@@ -191,6 +191,7 @@ namespace Linux.Library.ShellInterpreter
                         foundFile = FindFileByPath(path, fileName);
                     } catch (System.Exception e) {
                         Debug.Log("failed when searching file:" + path);
+                        Debug.Log(e.ToString());
                     }
 
                     if (foundFile != null) {
