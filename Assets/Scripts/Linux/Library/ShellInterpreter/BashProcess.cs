@@ -106,7 +106,7 @@ namespace Linux.Library.ShellInterpreter
                 }
             } catch (System.Exception exception) {
                 UserSpace.Stderr.WriteLine($"-bash: {exception.Message}");
-                UserSpace.Stderr.WriteLine(exception.ToString());
+                // UserSpace.Stderr.WriteLine(exception.ToString());
             }
 
             return true;

@@ -62,6 +62,20 @@ namespace Linux.Boot
                 "/usr/bin",
                 "/usr/sbin/nologin"
             ));
+
+            Kernel.UsersDb.Add(new User(
+                "user",
+                1000, 1000,
+                "",
+                "/home/user",
+                "/usr/bin/bash"
+            ));
+
+            Kernel.Fs.CreateDir(
+                "/home/user",
+                1000, 1000,
+                Perm.FromInt(7, 0, 0)
+            );
         }
 
         void MakeSystemGroups() {
@@ -75,6 +89,12 @@ namespace Linux.Boot
                 "bin",
                 1,
                 "bin"
+            ));
+
+            Kernel.GroupsDb.Add(new Group(
+                "user",
+                1000,
+                "user"
             ));
         }
 

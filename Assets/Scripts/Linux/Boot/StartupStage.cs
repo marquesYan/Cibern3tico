@@ -130,6 +130,16 @@ namespace Linux.Boot
 
             Kernel.Fs.AddFrom(
                 systemBinDir,
+                new Su(
+                    "/usr/sbin/su",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                systemBinDir,
                 new TtyCtl(
                     "/usr/sbin/ttyctl",
                     0, 0,

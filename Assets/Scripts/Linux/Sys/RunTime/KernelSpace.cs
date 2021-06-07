@@ -122,6 +122,36 @@ namespace Linux.Sys.RunTime
             return -1;
         }
 
+        public int RunAs(string login) {
+            User user = Kernel.UsersDb.LookupLogin(login);
+            
+            if (user == null) {
+                throw new ArgumentException(
+                    $"User does not exist: {login}"
+                );
+            }
+
+            if (IsRootUser()) {
+                int pty = OpenPty();
+
+                Process process = CreateProcess(
+                    user,
+                    new string[] { user.Shell },
+                    new Dictionary<string, string>(),
+                    pty,
+                    pty,
+                    pty
+                );
+
+                process.MainTask.Start();
+
+                return process.Pid;
+            }
+
+            ThrowPermissionDenied();
+            return -1;
+        }
+
         public void ChangeDirectory(string path) {
             File directory = LookupDirectoryOrFail(path);
 
@@ -387,8 +417,8 @@ namespace Linux.Sys.RunTime
             int stderrFd
         ) {
             return CreateProcess(
+                GetCurrentUser(),
                 cmdLine,
-                IsRootUser() ? Perm.FromInt(0, 0, 2) : Perm.FromInt(0, 2, 2),
                 new Dictionary<string, string>(GetEnviron()),
                 stdinFd,
                 stdoutFd,
@@ -397,12 +427,13 @@ namespace Linux.Sys.RunTime
         }
 
         protected Process CreateProcess(
+            User user,
             string[] cmdLine,
-            int umask,
             Dictionary<string, string> environ,
             int stdinFd,
             int stdoutFd,
-            int stderrFd
+            int stderrFd,
+            int umask
         ) {
             if (cmdLine.Length == 0) {
                 throw new System.ArgumentException("No command line");
@@ -426,8 +457,6 @@ namespace Linux.Sys.RunTime
 
             EnsureFdsExists(proc, fds);
 
-            User user = GetCurrentUser();
-
             return Kernel.CreateProcess(
                 proc.Pid,
                 user,
@@ -437,6 +466,25 @@ namespace Linux.Sys.RunTime
                 stdinFd,
                 stdoutFd,
                 stderrFd
+            );
+        }
+
+        protected Process CreateProcess(
+            User user,
+            string[] cmdLine,
+            Dictionary<string, string> environ,
+            int stdinFd,
+            int stdoutFd,
+            int stderrFd
+        ) {
+            return CreateProcess(
+                user,
+                cmdLine,
+                environ,
+                stdinFd,
+                stdoutFd,
+                stderrFd,
+                user.Uid == 0 ? Perm.FromInt(0, 0, 2) : Perm.FromInt(0, 0, 2)
             );
         }
 

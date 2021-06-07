@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
@@ -27,6 +28,7 @@ namespace Linux.Library
             }
 
             bool eventIsSet = true;
+            bool isPaused = false;
 
             userSpace.Api.Trap(
                 ProcessSignal.SIGTERM,
@@ -35,7 +37,12 @@ namespace Linux.Library
                 }
             );
 
-            Debug.Log("ttyctl running");
+            userSpace.Api.Trap(
+                ProcessSignal.SIGHUP,
+                (int[] args) => {
+                    isPaused = !isPaused;
+                }
+            );
 
             string inputQueue = args[2];
             string outputQueue = args[3];
@@ -59,9 +66,12 @@ namespace Linux.Library
             );
 
             while (eventIsSet) {
-                string key = rStream.Read(1);
-
-                lineDiscipline.Receive(key);
+                if (isPaused) {
+                    Thread.Sleep(500);
+                } else {
+                    string key = rStream.Read(1);
+                    lineDiscipline.Receive(key);
+                }
             }
 
             return 0;

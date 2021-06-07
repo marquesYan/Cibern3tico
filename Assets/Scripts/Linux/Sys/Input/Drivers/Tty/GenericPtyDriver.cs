@@ -1,4 +1,5 @@
 using System.Threading;
+using System.Collections.Generic;
 using Linux.Configuration;
 using Linux.PseudoTerminal;
 using Linux.IO;
@@ -14,6 +15,10 @@ namespace Linux.Sys.Input.Drivers.Tty
 
         protected delegate bool Predicate();
 
+        protected List<int> Pids;
+
+        protected int ActivePtyPid;
+
         protected KernelSpace KernelSpace;
 
         protected UEvent KbdEvent;
@@ -21,6 +26,9 @@ namespace Linux.Sys.Input.Drivers.Tty
 
         public GenericPtyDriver(Linux.Kernel kernel) {
             KernelSpace = new KernelSpace(kernel);
+
+            Pids = new List<int>();
+            ActivePtyPid = -1;
 
             KbdEvent = kernel.EventTable.LookupByType(DevType.KEYBOARD);
             DisplayEvent = kernel.EventTable.LookupByType(DevType.DISPLAY);
@@ -56,6 +64,10 @@ namespace Linux.Sys.Input.Drivers.Tty
         }
 
         public int UnlockPt(string ptsFile) {
+            if (ActivePtyPid != -1) {
+                KernelSpace.KillProcess(ActivePtyPid, ProcessSignal.SIGHUP);
+            }
+
             int ptsFd = KernelSpace.Open(ptsFile, AccessMode.O_RDWR);
 
             int pid = KernelSpace.StartProcess(
@@ -67,6 +79,9 @@ namespace Linux.Sys.Input.Drivers.Tty
                 },
                 ptsFd
             );
+
+            Pids.Add(pid);
+            ActivePtyPid = pid;
 
             Thread.Sleep(500);
 

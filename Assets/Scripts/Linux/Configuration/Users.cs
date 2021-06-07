@@ -47,6 +47,10 @@ namespace Linux.Configuration
             return LoadFromFs().Find(u => u.Uid == uid);
         }
 
+        public User LookupLogin(string login) {
+            return LoadFromFs().Find(u => u.Login == login);
+        }
+
         public override File DataSource() {
             return Fs.Lookup("/etc/passwd");
         }
