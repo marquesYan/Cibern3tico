@@ -55,7 +55,7 @@ namespace Linux.Sys.Input.Drivers
         }
 
         void HandleStringKey(string key) {
-            switch (TextUtils.ToByte(key)) {
+            switch (TextUtils.ToByte(key[0])) {
                 case 0x08: {
                     key = CharacterControl.C_DBACKSPACE;
                     break;
@@ -67,7 +67,7 @@ namespace Linux.Sys.Input.Drivers
                 }
 
                 case 0x0d: {
-                    key = "\n";
+                    key = $"{AbstractTextIO.LINE_FEED}";
                     break;
                 }
             }

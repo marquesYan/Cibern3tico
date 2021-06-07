@@ -27,7 +27,11 @@ namespace Linux.IO
         public static byte ToByte(string inputChar) {
             EnsureSingleCharacter(inputChar);
 
-            return Encoding.UTF8.GetBytes(inputChar)[0];
+            return ToByte(inputChar[0]);
+        }
+
+        public static byte ToByte(char input) {
+            return Encoding.UTF8.GetBytes(new char[] { input })[0];
         }
 
         public static void EnsureSingleCharacter(string input) {
