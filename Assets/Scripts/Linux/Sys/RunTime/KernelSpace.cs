@@ -195,6 +195,18 @@ namespace Linux.Sys.RunTime
             Kernel.ProcTable.ChangeDirectory(GetPid(), directory);
         }
 
+        public void ChangeFilePermission(string path, int newPermission) {
+            File file = LookupFileOrFail(path);
+
+            User user = GetCurrentUser();
+
+            if (!IsRootUser() && user.Uid != file.Uid) {
+                ThrowPermissionDenied();
+            }
+
+            file.Permission = newPermission;
+        }
+
         public string GetFdPath(int fd) {
             Process proc = GetCurrentProc();
 

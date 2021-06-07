@@ -34,10 +34,11 @@ namespace Linux.Sys.RunTime
         }
 
         protected int HandleCompiledBin(CompiledBin bin) {
+            var userSpace = new UserSpace(Api);
             int returnCode;
 
             try {
-                returnCode = bin.Execute(new UserSpace(Api));
+                returnCode = bin.Execute(userSpace);
             }
             
             catch (ExitProcessException exc) {
@@ -45,7 +46,7 @@ namespace Linux.Sys.RunTime
             }
             
             catch (System.Exception exception) {
-                Debug.Log($"{bin.Name}: {exception.Message}");
+                userSpace.Print($"{bin.Name}: {exception.Message}");
                 Debug.Log(exception.ToString());
                 returnCode = 255;
             }
