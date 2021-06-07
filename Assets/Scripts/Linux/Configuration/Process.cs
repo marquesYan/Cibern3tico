@@ -20,6 +20,7 @@ namespace Linux.Configuration
         public string Root { get; protected set; }
         public string Cwd;
         public int Umask;
+        public int ReturnCode = -1;
 
         public Process(
             int ppid,

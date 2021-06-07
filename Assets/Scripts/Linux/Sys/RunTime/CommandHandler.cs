@@ -28,9 +28,14 @@ namespace Linux.Sys.RunTime
 
             File execFile = Kernel.Fs.LookupOrFail(executable);
 
+            int returnCode = 255;
+
             if (execFile is CompiledBin) {
-                int returnCode = HandleCompiledBin((CompiledBin)execFile);
+                returnCode = HandleCompiledBin((CompiledBin)execFile);
             }
+
+            Process process = Api.LookupProcessByPid(Api.GetPid());
+            process.ReturnCode = returnCode;
         }
 
         protected int HandleCompiledBin(CompiledBin bin) {

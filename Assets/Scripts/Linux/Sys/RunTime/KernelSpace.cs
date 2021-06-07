@@ -250,10 +250,12 @@ namespace Linux.Sys.RunTime
             Kernel.ProcSigTable.Add(proc, signal, handler);
         }
 
-        public void WaitPid(int pid) {
+        public int WaitPid(int pid) {
             Process proc = AccessOtherProcess(pid);
 
             proc.MainTask.Join();
+
+            return proc.ReturnCode;
         }
 
         public int OpenPty() {

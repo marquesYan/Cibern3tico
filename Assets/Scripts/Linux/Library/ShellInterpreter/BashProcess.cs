@@ -112,6 +112,10 @@ namespace Linux.Library.ShellInterpreter
             return true;
         }
 
+        protected void SetReturnCode(int retCode) {
+            Environment["?"] = retCode.ToString();
+        }
+
         protected void ParseAndStartCommands(string cmd) {
             List<CommandBuilder> commands = SendCmdToParseChain(cmd);
 
@@ -119,11 +123,14 @@ namespace Linux.Library.ShellInterpreter
                 if (command.CmdLine != null) {
                     string[] cmdLine = command.CmdLine.ToArray();
                     if (cmdLine.Length > 0) {
+                        int retCode;
                         if (IsBuiltin(cmdLine[0])) {
-                            RunBuiltin(command);
+                            retCode = RunBuiltin(command);
                         } else {
-                            RunCommand(command);
+                            retCode = RunCommand(command);
                         }
+
+                        SetReturnCode(retCode);
                     }
                 }
             } 
@@ -139,7 +146,7 @@ namespace Linux.Library.ShellInterpreter
             }
         }
 
-        protected void RunCommand(CommandBuilder command) {
+        protected int RunCommand(CommandBuilder command) {
             string[] cmdLine = ParseCommandFile(command.CmdLine.ToArray());
 
             int stdin = 0;
@@ -160,7 +167,7 @@ namespace Linux.Library.ShellInterpreter
                 stderr
             );
 
-            UserSpace.Api.WaitPid(pid);
+            return UserSpace.Api.WaitPid(pid);
         }
 
         protected void RegisterBuiltins() {
@@ -180,6 +187,8 @@ namespace Linux.Library.ShellInterpreter
             Environment["OLDPWD"] = Environment["PWD"];
 
             Variables["$"] = UserSpace.Api.GetPid().ToString();
+
+            SetReturnCode(0);
         }
 
         protected string SearchFile(string fileName) {
@@ -331,7 +340,7 @@ namespace Linux.Library.ShellInterpreter
                                     type = TokenType.OUT_REDIR;
                                     stack.Pop();
 
-                                    if (stack.Peek() == Token.OUT_REDIR) {
+                                    if (stack.Count > 0 && stack.Peek() == Token.OUT_REDIR) {
                                         stack.Pop();
                                         type = TokenType.OUT_REDIR_APPEND;
                                     }
