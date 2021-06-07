@@ -106,6 +106,10 @@ namespace Linux.Sys.RunTime
         // Public Calls
 
         public int Open(string filePath, int mode) {
+            if ((mode & (AccessMode.O_WRONLY | AccessMode.O_APONLY)) != 0) {
+                CreateFileIfMissing(filePath, false);
+            }
+
             File file = LookupFileOrFail(filePath);
 
             if (IsFileModePermitted(file, mode)) {
@@ -183,6 +187,10 @@ namespace Linux.Sys.RunTime
 
         public int GetPid() {
             return GetCurrentProc().Pid;
+        }
+
+        public int GetUmask() {
+            return GetCurrentProc().Umask;
         }
 
         public int GetPPid() {
@@ -380,6 +388,7 @@ namespace Linux.Sys.RunTime
         ) {
             return CreateProcess(
                 cmdLine,
+                IsRootUser() ? Perm.FromInt(0, 0, 2) : Perm.FromInt(0, 2, 2),
                 new Dictionary<string, string>(GetEnviron()),
                 stdinFd,
                 stdoutFd,
@@ -389,6 +398,7 @@ namespace Linux.Sys.RunTime
 
         protected Process CreateProcess(
             string[] cmdLine,
+            int umask,
             Dictionary<string, string> environ,
             int stdinFd,
             int stdoutFd,
@@ -422,6 +432,7 @@ namespace Linux.Sys.RunTime
                 proc.Pid,
                 user,
                 cmdLine,
+                umask,
                 environ,
                 stdinFd,
                 stdoutFd,
@@ -437,6 +448,34 @@ namespace Linux.Sys.RunTime
 
         protected Process GetCurrentProc() {
             return Kernel.ProcTable.LookupThread(Thread.CurrentThread);
+        }
+
+        protected void CreateFileIfMissing(string path, bool asDirectory) {
+            if (FileExists(path)) {
+                return;
+            }
+
+            int basePermission;
+
+            if (asDirectory) {
+                basePermission = Perm.FromInt(7, 7, 7);
+            } else {
+                basePermission = Perm.FromInt(6, 6, 6);
+            }
+
+            int permission = basePermission - GetUmask();
+
+            FileType type = asDirectory ? FileType.F_DIR : FileType.F_REG;
+
+            User user = GetCurrentUser();
+
+            Kernel.Fs.Create(
+                path,
+                user.Uid,
+                user.Gid,
+                permission,
+                type
+            );
         }
 
         protected void EnsureFdsExists(Process process, int[] fds) {

@@ -216,6 +216,7 @@ namespace Linux
             int ppid,
             User user,
             string[] cmdLine,
+            int umask,
             Dictionary<string, string> environ,
             int stdin,
             int stdout,
@@ -227,6 +228,7 @@ namespace Linux
                 ppid,
                 user,
                 cmdLine,
+                umask,
                 environ
             );
 
@@ -241,6 +243,7 @@ namespace Linux
             int ppid,
             User user,
             string[] cmdLine,
+            int umask,
             Dictionary<string, string> environ
         ) {
             Thread mainTask = new Thread(
@@ -261,6 +264,7 @@ namespace Linux
                 ppid,
                 user.Uid,
                 user.Gid,
+                umask,
                 cmdLine,
                 defaultEnviron,
                 Fs.Root.Path,
@@ -278,6 +282,7 @@ namespace Linux
                 0,
                 root,
                 new string[] { "/usr/sbin/init" },
+                Perm.FromInt(0, 2, 2),
                 new Dictionary<string, string>()
             );
 

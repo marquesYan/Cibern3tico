@@ -39,7 +39,7 @@ namespace Linux.Library {
                 buffer.AppendFormat("{0}\t", file.Name);
             }
 
-            userSpace.Print(buffer.ToString(), "");
+            userSpace.Print(buffer.ToString());
 
             // File current_file;
             // current_file = current_dir;

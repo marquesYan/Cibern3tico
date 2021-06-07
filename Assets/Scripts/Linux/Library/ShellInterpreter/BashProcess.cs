@@ -5,6 +5,7 @@ using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
 using Linux.Library.ShellInterpreter.Builtins;
+using Linux.IO;
 using Linux;
 using UnityEngine;
 
@@ -16,9 +17,22 @@ namespace Linux.Library.ShellInterpreter
         DOUBLE_QUOTED,
         FREE_FORM,
         END_OF_COMMAND,
+        OUT_REDIR,
+        OUT_REDIR_APPEND,
+        IN_REDIR,
     }
 
     public class Token {
+        public const char SEMICOLON = ';';
+        public const char S_QUOTE = '\'';
+        public const char D_QUOTE = '"';
+        public const char OUT_REDIR = '>';
+        public const char IN_REDIR = '<';
+
+        public static bool IsQuotes(char input) {
+            return input == S_QUOTE || input == D_QUOTE;
+        }
+
         public readonly TokenType Type;
 
         public readonly string Value;
@@ -26,6 +40,20 @@ namespace Linux.Library.ShellInterpreter
         public Token(TokenType type, string value) {
             Type = type;
             Value = value;
+        }
+    }
+
+    public class CommandBuilder {
+        public List<string> CmdLine;
+
+        public bool AppendStdout = false;
+
+        public string Stdout;
+        public string Stdin;
+        public string Stderr;
+
+        public CommandBuilder() {
+            CmdLine = new List<string>();
         }
     }
 
@@ -78,39 +106,60 @@ namespace Linux.Library.ShellInterpreter
                 }
             } catch (System.Exception exception) {
                 UserSpace.Stderr.WriteLine($"-bash: {exception.Message}");
+                UserSpace.Stderr.WriteLine(exception.ToString());
             }
 
             return true;
         }
 
         protected void ParseAndStartCommands(string cmd) {
-            List<string[]> commands = SendCmdToParseChain(cmd);
+            List<CommandBuilder> commands = SendCmdToParseChain(cmd);
 
-            foreach (string[] cmdLine in commands) {
-                if (cmdLine.Length > 0) {
-                    if (IsBuiltin(cmdLine[0])) {
-                        RunBuiltin(cmdLine);
-                    } else {
-                        RunCommand(cmdLine);
+            foreach (CommandBuilder command in commands) {
+                if (command.CmdLine != null) {
+                    string[] cmdLine = command.CmdLine.ToArray();
+                    if (cmdLine.Length > 0) {
+                        if (IsBuiltin(cmdLine[0])) {
+                            RunBuiltin(command);
+                        } else {
+                            RunCommand(command);
+                        }
                     }
                 }
             } 
         }
 
-        protected int RunBuiltin(string[] cmdLine) {
-            AbstractShellBuiltin builtin = Builtins[cmdLine[0]];
+        protected int RunBuiltin(CommandBuilder command) {
+            AbstractShellBuiltin builtin = Builtins[command.CmdLine[0]];
 
             try {
-                return builtin.Execute(cmdLine);
+                return builtin.Execute(command.CmdLine.ToArray());
             } catch (ExitProcessException e) {
                 return e.ExitCode;
             }
         }
 
-        protected void RunCommand(string[] cmdLine) {
-            cmdLine = ParseCommandFile(cmdLine);
+        protected void RunCommand(CommandBuilder command) {
+            string[] cmdLine = ParseCommandFile(command.CmdLine.ToArray());
 
-            int pid = UserSpace.Api.StartProcess(cmdLine);
+            int stdin = 0;
+            int stdout = 1;
+            int stderr = 2;
+
+            if (command.Stdout != null) {
+                stdout = UserSpace.Api.Open(
+                    command.Stdout,
+                    command.AppendStdout ? AccessMode.O_APONLY : AccessMode.O_WRONLY
+                );
+            }
+
+            int pid = UserSpace.Api.StartProcess(
+                cmdLine,
+                stdin,
+                stdout,
+                stderr
+            );
+
             UserSpace.Api.WaitPid(pid);
         }
 
@@ -159,24 +208,36 @@ namespace Linux.Library.ShellInterpreter
             return files.Find(roFile => roFile.Name == fileName).Path;
         }
 
-        protected List<string[]> SendCmdToParseChain(string cmd) {
+        protected List<CommandBuilder> SendCmdToParseChain(string cmd) {
             List<Token> tokens = ParseToTokens(cmd);
 
-            var finalTokens = new List<string[]>();
-            var currentCmdLine = new List<string>();
+            var commands = new List<CommandBuilder>();
+            var currentCmd = new CommandBuilder();
 
             foreach (Token token in tokens) {
                 switch(token.Type) {
                     case TokenType.SINGLE_QUOTED: {
                         // Add command line token directly
-                        currentCmdLine.Add(token.Value);
+                        currentCmd.CmdLine.Add(token.Value);
                         break;
                     }
 
                     case TokenType.END_OF_COMMAND: {
                         // Add command line and clear to start new one
-                        finalTokens.Add(currentCmdLine.ToArray());
-                        currentCmdLine.Clear();
+                        commands.Add(currentCmd);
+                        currentCmd = new CommandBuilder();
+                        break;
+                    }
+
+                    case TokenType.OUT_REDIR_APPEND:
+                    case TokenType.OUT_REDIR: {
+                        // Add command line and clear to start new one
+                        currentCmd.Stdout = UserSpace.ResolvePath(token.Value);
+
+                        currentCmd.AppendStdout = token.Type == TokenType.OUT_REDIR_APPEND;
+                        commands.Add(currentCmd);
+
+                        currentCmd = new CommandBuilder();
                         break;
                     }
 
@@ -184,18 +245,18 @@ namespace Linux.Library.ShellInterpreter
                     case TokenType.DOUBLE_QUOTED: {
                         // Replace variables 
                         string replaced = ReplaceShellVariables(token.Value);
-                        currentCmdLine.Add(replaced);
+                        currentCmd.CmdLine.Add(replaced);
                         break;
                     }
                 }
             }
 
-            if (currentCmdLine.Count > 0) {
+            if (currentCmd.CmdLine != null) {
                 // Add any remaining command
-                finalTokens.Add(currentCmdLine.ToArray());
+                commands.Add(currentCmd);
             }
 
-            return finalTokens;
+            return commands;
         }
 
         protected bool IsBuiltin(string cmd) {
@@ -211,8 +272,30 @@ namespace Linux.Library.ShellInterpreter
             var builtToken = new StringBuilder();
 
             foreach(char token in cmd) {
-                if (token == '\'' || token == '"') {
-                    if (stack.Count == 0) {
+                bool isStackEmpty = stack.Count == 0;
+
+                if (token == Token.OUT_REDIR) {
+                    if (isStackEmpty) {
+                        // Redirect token
+                        stack.Push(token);
+                    } else if (stack.Peek() == Token.OUT_REDIR) {
+                        stack.Pop();
+
+                        // Sanity check
+                        if (stack.Peek() == Token.OUT_REDIR) {
+                            throw new System.ArgumentException(
+                                "syntax error: unknow redirection symbol '>>>'"
+                            );
+                        }
+
+                        // Put back on stack
+                        stack.Push(token);
+                    } else if (Token.IsQuotes(token)) {
+                        // Translate as literal '>'
+                        builtToken.Append(token);
+                    }
+                } else if (Token.IsQuotes(token)) {
+                    if (isStackEmpty) {
                         // Opening quotes
                         stack.Push(token);
                     } else if (stack.Peek() == token) {
@@ -221,7 +304,7 @@ namespace Linux.Library.ShellInterpreter
 
                         TokenType type;
 
-                        if (token == '\'') {
+                        if (token == Token.S_QUOTE) {
                             type = TokenType.SINGLE_QUOTED;
                         } else  {
                             type = TokenType.DOUBLE_QUOTED;
@@ -238,30 +321,35 @@ namespace Linux.Library.ShellInterpreter
                     }
                 } else {
                     switch(token) {
+                        case Token.SEMICOLON:
                         case ' ': {
                             if (builtToken.Length > 0) {
+                                TokenType type = TokenType.FREE_FORM;
+
+                                if (!isStackEmpty && stack.Peek() == Token.OUT_REDIR) {
+                                    type = TokenType.OUT_REDIR;
+                                    stack.Pop();
+
+                                    if (stack.Peek() == Token.OUT_REDIR) {
+                                        stack.Pop();
+                                        type = TokenType.OUT_REDIR_APPEND;
+                                    }
+                                }
+
                                 // Add built token without colon
                                 tokens.Add(
-                                    new Token(TokenType.FREE_FORM, builtToken.ToString())
+                                    new Token(type, builtToken.ToString())
                                 );
                                 builtToken.Clear();
                             }
-                            break;
-                        }
 
-                        case ';': {
-                            if (builtToken.Length > 0) {
-                                // Add built token without colon
+                            if (token == Token.SEMICOLON) {
+                                // Now add colon separately
                                 tokens.Add(
-                                    new Token(TokenType.FREE_FORM, builtToken.ToString())
+                                    new Token(TokenType.END_OF_COMMAND, "")
                                 );
-                                builtToken.Clear();
                             }
 
-                            // Now add colon separately
-                            tokens.Add(
-                                new Token(TokenType.END_OF_COMMAND, ";")
-                            );
                             break;
                         }
 
@@ -273,16 +361,22 @@ namespace Linux.Library.ShellInterpreter
                 }
             }
 
-            if (stack.Count > 0) {
+            if (stack.Count > 0 && Token.IsQuotes(stack.Peek())) {
                 throw new System.ArgumentException(
                     "syntax error: ensure quotes are properly closed"
                 );
             }
 
             if (builtToken.Length > 0) {
+                TokenType type = TokenType.FREE_FORM;
+
+                if (stack.Count > 0 && stack.Peek() == Token.OUT_REDIR) {
+                    type = TokenType.OUT_REDIR;
+                }
+
                 // Add remaning token data
                 tokens.Add(
-                    new Token(TokenType.FREE_FORM, builtToken.ToString())
+                    new Token(type, builtToken.ToString())
                 );
             }
 

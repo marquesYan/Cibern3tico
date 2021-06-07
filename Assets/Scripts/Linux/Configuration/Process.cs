@@ -19,12 +19,14 @@ namespace Linux.Configuration
         public List<int> Fds { get; protected set; }
         public string Root { get; protected set; }
         public string Cwd;
+        public int Umask;
 
         public Process(
             int ppid,
             int pid,
             int uid,
             int gid,
+            int umask,
             string[] cmdLine,
             Dictionary<string, string> environ,
             string root,
@@ -35,6 +37,7 @@ namespace Linux.Configuration
             Pid = pid;
             Uid = uid;
             Gid = gid;
+            Umask = umask;
             Executable = cmdLine[0];
             CmdLine = cmdLine;
             Environ = environ;
@@ -51,23 +54,23 @@ namespace Linux.Configuration
             Fds = new List<int>();
         }
 
-        public Process CreateThread(Thread childTask) {
-            Process task = new Process(
-                PPid,
-                Pid,
-                Uid,
-                Gid,
-                CmdLine,
-                Environ,
-                Root,
-                Cwd,
-                MainTask
-            );
+        // public Process CreateThread(Thread childTask) {
+        //     Process task = new Process(
+        //         PPid,
+        //         Pid,
+        //         Uid,
+        //         Gid,
+        //         CmdLine,
+        //         Environ,
+        //         Root,
+        //         Cwd,
+        //         MainTask
+        //     );
 
-            task.BackgroundTasks.Add(childTask);
+        //     task.BackgroundTasks.Add(childTask);
 
-            return task;
-        }
+        //     return task;
+        // }
     }
 
     public class ProcessesTable {
@@ -138,6 +141,7 @@ namespace Linux.Configuration
             int ppid,
             int uid,
             int gid,
+            int umask,
             string[] cmdLine,
             Dictionary<string, string> environ,
             string root,
@@ -152,6 +156,7 @@ namespace Linux.Configuration
                     pid,
                     uid,
                     gid,
+                    umask,
                     cmdLine,
                     environ,
                     root,
