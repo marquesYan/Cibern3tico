@@ -70,15 +70,6 @@ namespace Linux
             return new Vector(vector.x, vector.y);
         }
 
-        void FocusTextField()
-        {
-            GUI.FocusControl("command_text_field");
-        }
-
-        public void ClearInput() {
-            InputBuffer = null;
-        }
-
         void Initialize() {
             if (ConsoleFont == null) {
                 ConsoleFont = Font.CreateDynamicFontFromOSFont("Courier New", 16);
@@ -88,8 +79,6 @@ namespace Linux
             SetupWindow();
             SetupInput();
             SetupLabels();
-
-            SubscribeFirstDraw(FocusTextField);
 
             RealWindowSize = Screen.height * MaxHeight;
             _openTarget = RealWindowSize;
@@ -106,13 +95,14 @@ namespace Linux
 
             WindowStyle = new GUIStyle();
             WindowStyle.normal.background = backgroundTexture;
-            WindowStyle.padding = new RectOffset(4, 4, 4, 4);
+            WindowStyle.padding = new RectOffset(10, 10, 10, 10);
             WindowStyle.normal.textColor = ForegroundColor;
             WindowStyle.font = ConsoleFont;
         }
 
         void SetupLabels() {
             LabelStyle = new GUIStyle();
+            LabelStyle.padding = new RectOffset(0, 0, 0, 4);
             LabelStyle.font = ConsoleFont;
             LabelStyle.normal.textColor = ForegroundColor;
             LabelStyle.wordWrap = true;
@@ -120,7 +110,7 @@ namespace Linux
 
         void SetupInput() {
             InputStyle = new GUIStyle();
-            InputStyle.padding = new RectOffset(4, 4, 4, 4);
+            InputStyle.padding = new RectOffset(20, 20, 20, 20);
             InputStyle.font = ConsoleFont;
             InputStyle.fixedHeight = ConsoleFont.fontSize * 1.6f;
             InputStyle.normal.textColor = InputColor;
@@ -135,38 +125,21 @@ namespace Linux
             inputBackgroundTexture.SetPixel(0, 0, darkBackground);
             inputBackgroundTexture.Apply();
             InputStyle.normal.background = inputBackgroundTexture;
-
-            // Cursor
-            // CursorStyle = new GUIStyle();
-            // CursorStyle.padding = new RectOffset(0, 0, 4, 0);
-            // CursorStyle.font = ConsoleFont;
-            // CursorStyle.fixedHeight = ConsoleFont.fontSize * 1.6f;
-            // CursorStyle.normal.textColor = InputColor;
-            // CursorStyle.wordWrap = true;
-
-            // CursorStyle.normal.background = inputBackgroundTexture;
         }
 
         void DrawConsole(int windowID) {
-            // MoveCursorToEnd();
-
             _lastEvent = Event.current;
-
-            GUILayout.BeginHorizontal();
-
-            if (InputBuffer != null) {
-                GUILayout.Label(InputBuffer, InputStyle, GUILayout.Width(50f));
-            }
-
-            // characters "appears" to be 8 pixel width
-            // GUILayout.Label(CursorManager.DrawText(), InputStyle);
-
-            GUILayout.EndHorizontal();
 
             GUILayout.BeginVertical();
 
-            _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, false, false, GUIStyle.none, GUIStyle.none);
-            // GUILayout.FlexibleSpace();
+            _scrollPosition = GUILayout.BeginScrollView(
+                _scrollPosition, 
+                false, 
+                false,
+                GUIStyle.none,
+                GUIStyle.none
+            );
+
             DrawTerm();
 
             if (CursorSize != null) {
