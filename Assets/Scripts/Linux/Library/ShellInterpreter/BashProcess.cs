@@ -117,11 +117,18 @@ namespace Linux.Library.ShellInterpreter
         protected void RegisterBuiltins() {
             Builtins["cd"] = new Cd(this);
             Builtins["env"] = new Env(this);
+            Builtins["export"] = new Export(this);
         }
 
         protected void SetupDefaultEnvironment() {
-            Environment.Add("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin");
-            Environment.Add("OLDPWD", Environment["PWD"]);
+            if (!Environment.ContainsKey("PATH")) {
+                Environment.Add(
+                    "PATH",
+                    "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+                );
+            }
+
+            Environment["OLDPWD"] = Environment["PWD"];
 
             Variables["$"] = UserSpace.Api.GetPid().ToString();
         }
@@ -329,6 +336,8 @@ namespace Linux.Library.ShellInterpreter
 
                 if (Variables.ContainsKey(key)) {
                     value = Variables[key];
+                } else if (Environment.ContainsKey(key)) {
+                    value = Environment[key];
                 } else {
                     value = "";
                 }
