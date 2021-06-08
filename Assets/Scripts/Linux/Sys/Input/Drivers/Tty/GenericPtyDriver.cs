@@ -1,34 +1,24 @@
-using System.Threading;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using Linux.Configuration;
 using Linux.PseudoTerminal;
 using Linux.IO;
 using Linux.Sys.IO;
 using Linux.Sys.RunTime;
-using UnityEngine;
 
 namespace Linux.Sys.Input.Drivers.Tty
 {
     public class GenericPtyDriver : ITtyDriver
     {
-        readonly object _ptyLock = new object();
+        protected UserSpace UserSpace;
 
-        protected delegate bool Predicate();
-
-        protected List<int> Pids;
-
-        protected int ActivePtyPid;
-
-        protected KernelSpace KernelSpace;
+        protected Kernel Kernel;
 
         protected UEvent KbdEvent;
         protected UEvent DisplayEvent;
 
         public GenericPtyDriver(Linux.Kernel kernel) {
-            KernelSpace = new KernelSpace(kernel);
-
-            Pids = new List<int>();
-            ActivePtyPid = -1;
+            Kernel = kernel;
+            UserSpace = new UserSpace(new KernelSpace(kernel));
 
             KbdEvent = kernel.EventTable.LookupByType(DevType.KEYBOARD);
             DisplayEvent = kernel.EventTable.LookupByType(DevType.DISPLAY);
@@ -48,12 +38,10 @@ namespace Linux.Sys.Input.Drivers.Tty
             if (DisplayEvent == null) {
                 secondaryPty = new SecondaryPty(_ => { });
             } else {
-                int displayFd = KernelSpace.Open(
+                ITextIO wStream = UserSpace.Open(
                     DisplayEvent.FilePath,
                     AccessMode.O_WRONLY
                 );
-
-                ITextIO wStream = KernelSpace.LookupByFD(displayFd);
 
                 secondaryPty = new SecondaryPty(data => {
                     wStream.Write(data);
@@ -64,75 +52,60 @@ namespace Linux.Sys.Input.Drivers.Tty
         }
 
         public int UnlockPt(string ptsFile) {
-            if (ActivePtyPid != -1) {
-                KernelSpace.KillProcess(ActivePtyPid, ProcessSignal.SIGHUP);
+            string postHooKey = BuildHooKey(ptsFile);
+            
+            int ptsFd = UserSpace.Api.Open(ptsFile, AccessMode.O_RDWR);
+
+            if (Kernel.PostInterruptHooks.ContainsKey(postHooKey)) {
+                throw new System.ArgumentException(
+                    $"Pseudo-terminal '{ptsFile}' already unlocked"
+                );
             }
 
-            int ptsFd = KernelSpace.Open(ptsFile, AccessMode.O_RDWR);
+            IoctlDevice ptStream = (IoctlDevice)UserSpace.Api.LookupByFD(ptsFd);
 
-            int pid = KernelSpace.StartProcess(
-                new string[] {
-                    "/usr/sbin/ttyctl",
-                    ptsFd.ToString(),
+            IoctlDevice wStream;
+
+            if (DisplayEvent == null) {
+                wStream = new CharacterDevice(AccessMode.O_WRONLY);
+            } else {
+                wStream = (IoctlDevice)UserSpace.Open(
+                    DisplayEvent.FilePath,
+                    AccessMode.O_WRONLY
+                );
+            }
+
+            IoctlDevice rStream;
+
+            if (KbdEvent == null) {
+                rStream = new CharacterDevice(AccessMode.O_RDONLY);
+            } else {
+                rStream = (IoctlDevice)UserSpace.Open(
                     KbdEvent.FilePath,
-                    DisplayEvent.FilePath
-                },
-                ptsFd
-            );
+                    AccessMode.O_RDONLY
+                );
+            }
 
-            Pids.Add(pid);
-            ActivePtyPid = pid;
+            var lineDiscipline = new PtyLineDiscipline(ptStream, wStream);
 
-            Thread.Sleep(500);
+            System.Action<UEvent> hookAction = (UEvent evt) => {
+                if (KbdEvent == evt && rStream.GetLength() > 0) {
+                    string data = rStream.Read(1);
+                    lineDiscipline.Receive(data);
+                }
+            };
+
+            if (!Kernel.PostInterruptHooks.TryAdd(postHooKey, hookAction)) {
+                throw new System.InvalidOperationException(
+                    "Failed to register kernel interrup hook for PTY"
+                );
+            }
 
             return ptsFd;
         }
 
-        // protected void StartWorker(Predicate action) {
-        //     Thread worker = new Thread(new ThreadStart(
-        //         () => {
-        //             bool predicate = true;
-        //             while (!Kernel.IsShutdown && predicate) {
-        //                 predicate = action();
-
-        //                 Thread.Sleep(200);
-        //             }
-        //         }
-        //     ));
-
-        //     worker.Start();
-        // }
-
-        // protected void StartOutputListener() {
-        //     ITextIO writer = Kernel.Fs.Open(
-        //         DisplayEvent.FilePath,
-        //         AccessMode.O_WRONLY
-        //     );
-
-        //     StartWorker(
-        //         () => {
-        //             string key;
-
-        //             if (OutputQueue.TryDequeue(out key)) {
-        //                 Debug.Log("recv output: " + key);
-        //                 writer.Write(key);
-        //             }
-                    
-        //             return true;
-        //         }
-        //     );
-        // }
-
-        // protected void ProcessInput(string key) {
-        //     lock(_ptyLock) {
-        //         Ptys.ForEach(ptyCtl => {
-        //             string output = ptyCtl.Receive(key);
-
-        //             if (output != null) {
-        //                 OutputQueue.Enqueue(output);
-        //             }
-        //         });
-        //     }
-        // }
+        protected string BuildHooKey(string ptsFile) {
+            return $"keyboard-pts-{ptsFile}";
+        }
     }
 }

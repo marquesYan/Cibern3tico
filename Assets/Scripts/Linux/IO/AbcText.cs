@@ -45,6 +45,10 @@ namespace Linux.IO
             }
         }
 
+        public virtual int GetLength() {
+            return Length;
+        }
+
         public int GetMode() {
             return Mode;
         }

@@ -22,5 +22,7 @@ namespace Linux.IO
         void Close();
 
         int GetMode();
+
+        int GetLength();
     }
 }

@@ -12,6 +12,10 @@ namespace Linux.Sys.IO
 
         public CharacterDevice(int mode) : base(mode) { }
 
+        public override int GetLength() {
+            return Buffer.Count;
+        }
+
         public virtual void Ioctl(ushort signal, ref ushort[] args) {
             //
         }

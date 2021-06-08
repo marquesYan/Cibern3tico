@@ -1,5 +1,7 @@
+using System;
 using System.Threading;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using UnityEngine;
 using Linux.Boot;
 using Linux.Configuration;
@@ -32,7 +34,9 @@ namespace Linux
         public PeripheralsTable PciTable;
         public UdevTable EventTable;
         public CommandHandler CmdHandler;
-        
+
+        public ConcurrentDictionary<string, Action<UEvent>> PostInterruptHooks;
+
         public PseudoTerminalTable PtyTable;
 
         public ProcessSignalsTable ProcSigTable;
@@ -46,6 +50,7 @@ namespace Linux
         public Kernel(VirtualMachine machine) {
             Machine = machine;
             IsRunning = true;
+            PostInterruptHooks = new ConcurrentDictionary<string, Action<UEvent>>();
             new DecompressStage(this);
         }
 
@@ -104,6 +109,10 @@ namespace Linux
 
             if (uEvent != null) {
                 uEvent.Driver.Handle(code);
+
+                foreach (Action<UEvent> hook in PostInterruptHooks.Values) {
+                    hook(uEvent);
+                }
             }
         }
 
