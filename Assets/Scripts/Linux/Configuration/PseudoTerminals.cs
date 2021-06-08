@@ -34,19 +34,13 @@ namespace Linux.Configuration
         }
 
         public int Add(User user) {
-            CharacterDevice pts = TtyDriver.GetPt();
-
-            File ptsFile = Fs.Create(
+            int ptsFd = TtyDriver.UnlockPt(
                 $"/dev/pts/{Count}",
                 user.Uid, 0,
-                Perm.FromInt(6, 2, 0),
-                FileType.F_CHR,
-                pts
+                Perm.FromInt(6, 2, 0)
             );
 
             Count++;
-
-            int ptsFd = TtyDriver.UnlockPt(ptsFile.Path);
 
             return ptsFd;
         }

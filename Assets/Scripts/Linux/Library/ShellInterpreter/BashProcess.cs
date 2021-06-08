@@ -96,7 +96,9 @@ namespace Linux.Library.ShellInterpreter
 
             string prompt = $"[{Login}@hacking01 {cwdName}]$";
 
-            UserSpace.Print(prompt, " ");
+            if (!History.IsHistoryOn()) {
+                UserSpace.Print(prompt, " ");
+            }
 
             string originalCmd = UserSpace.Stdin.ReadUntil(
                 $"{AbstractTextIO.LINE_FEED}",
@@ -114,11 +116,17 @@ namespace Linux.Library.ShellInterpreter
             }
 
             if (cmd.Contains(CharacterControl.C_DUP_ARROW)) {
-                Debug.Log("received up arrow");
-                string lastCommand = History.Last(1);
-                Debug.Log($"cmd: {lastCommand}");
+                string lastCommand = History.Last();
+
                 if (lastCommand != null) {
-                    UserSpace.Print(lastCommand);
+                    UserSpace.Print("\r", "");
+                    UserSpace.Print(prompt, " ");
+                    
+                    var cmdArray = new string[] { lastCommand };
+                    ((IoctlDevice)UserSpace.Stdin).Ioctl(
+                        PtyIoctl.TIO_SEND_KEY,
+                        ref cmdArray
+                    );
                 }
 
                 return true;
@@ -170,6 +178,12 @@ namespace Linux.Library.ShellInterpreter
                 var upArrowArray = new string[] { CharacterControl.C_DUP_ARROW };
                 pts.Ioctl(
                     PtyIoctl.TIO_DEL_SPECIAL_CHARS,
+                    ref upArrowArray
+                );
+
+                // Enable unbuffered operations on UpArrow character
+                pts.Ioctl(
+                    PtyIoctl.TIO_ADD_UNBUFFERED_CHARS,
                     ref upArrowArray
                 );
 

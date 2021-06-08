@@ -4,8 +4,11 @@ namespace Linux.Sys.Input
 {
     public interface ITtyDriver : IDeviceDriver
     {
-        CharacterDevice GetPt();
-
-        int UnlockPt(string ptsFile);
+        int UnlockPt(
+            string ptsFile,
+            int uid,
+            int gid,
+            int permission
+        );
     }
 }

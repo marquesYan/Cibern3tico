@@ -66,13 +66,42 @@ namespace Linux.PseudoTerminal
         }
 
         public void Add(string text) {
-            Buffer.Write(text);
-            UpdateLinesCache();
+            if (text.Contains("\r")) {
+                Debug.Log("cursor received: "+TextUtils.ToByte(text));
+                Debug.Log("got carriage return: ");
+                int cursor = GetCursorIndex();
+                int pointer = Buffer.Length - cursor;
+                int diff = Pointer - pointer;
 
-            // Always move Cursor after UpdateLinesCache()
-            MoveCursor(text.Length);
+                Debug.Log("new pointer: " + pointer);
+                Debug.Log("diff: " + diff);
 
-            Block();
+                Debug.Log("current pointer: " + Pointer);
+                Debug.Log("current length: " + Buffer.Length);
+                Debug.Log("current line: " + CurrentLine);
+
+                int oldBlockedIndex = BlockedIndex;
+                BlockedIndex = -1;
+
+                for (var i = 0; i < diff; i++) {
+                    MovePointer(-1);
+                    Buffer.Remove();
+                }
+
+                BlockedIndex = oldBlockedIndex;
+
+                UpdateLinesCache();
+
+                // CurrentLine = "";
+            } else {
+                Buffer.Write(text);
+                UpdateLinesCache();
+
+                // Always move Cursor after UpdateLinesCache()
+                MoveCursor(text.Length);
+
+                Block();
+            }
         }
 
         public void AddKey(string text) {

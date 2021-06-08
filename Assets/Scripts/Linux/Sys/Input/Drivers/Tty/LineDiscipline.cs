@@ -18,6 +18,8 @@ namespace Linux.Sys.Input.Drivers.Tty {
 
         protected string[] SpecialChars;
 
+        protected string[] UnbufferedChars;
+
         protected IoctlDevice Pts;
 
         protected IoctlDevice Output;
@@ -32,6 +34,8 @@ namespace Linux.Sys.Input.Drivers.Tty {
             Output = output;
             SpecialChars = CharacterControl.GetConstants().ToArray();
 
+            UnbufferedChars = new string[32];
+
             Pts.Ioctl(
                 PtyIoctl.TIO_SET_DRIVER_FLAGS,
                 ref Flags
@@ -40,6 +44,11 @@ namespace Linux.Sys.Input.Drivers.Tty {
             Pts.Ioctl(
                 PtyIoctl.TIO_SET_SPECIAL_CHARS,
                 ref SpecialChars
+            );
+
+            Pts.Ioctl(
+                PtyIoctl.TIO_SET_UNBUFFERED_CHARS,
+                ref UnbufferedChars
             );
 
             Buffer = new StringBuilder();
@@ -59,23 +68,19 @@ namespace Linux.Sys.Input.Drivers.Tty {
             string output = input;
 
             if ((Flags[0] & PtyFlags.ECHO) == 0) {
-                Debug.Log("echo disabled");
                 output = null;
             }
-            Debug.Log($"flags: {Flags[0]}");
+
             if (((Flags[0] & PtyFlags.AUTO_CONTROL) != 0) 
                     && IsSpecialChar(input)) {
-                Debug.Log("auto control enabled");
-
                 HandleCharControl(input);
                 output = null;
             }
 
-            if ((Flags[0] & PtyFlags.BUFFERED) == 0) {
-                Debug.Log("unbuffered line enabled");
-                if (!IsSpecialChar(input)) {
-                    WritePts(input);
-                }
+            if ((Flags[0] & PtyFlags.BUFFERED) == 0
+                    && IsUnbufferedChar(input)) {
+                // send through
+                WritePts(input);
             } else {
                 if (IsSpecialChar(input)) {
                     output = null;
@@ -123,6 +128,10 @@ namespace Linux.Sys.Input.Drivers.Tty {
         
         protected bool IsSpecialChar(string key) {
             return SpecialChars.Contains(key);
+        }
+
+        protected bool IsUnbufferedChar(string key) {
+            return UnbufferedChars.Contains(key);
         }
 
         protected void HandleCharControl(string key) {

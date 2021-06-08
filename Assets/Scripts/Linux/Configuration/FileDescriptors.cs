@@ -91,13 +91,6 @@ namespace Linux.Configuration
                 );
             }
 
-            Debug.Log("adding stream to PID: " + process.Pid);
-
-            foreach(KeyValuePair<int, ITextIO> kvp in Descriptors[process]) {
-                Debug.Log("existing fd: " + kvp.Key);           
-                Debug.Log("existing stream: " + kvp.Value);           
-            }
-
             Descriptors[process].Add(fd, stream);
             Counters[process.Pid].Add(fd);
         }

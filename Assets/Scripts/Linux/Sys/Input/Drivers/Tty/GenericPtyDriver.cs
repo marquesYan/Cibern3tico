@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Linux.Configuration;
 using Linux.PseudoTerminal;
+using Linux.FileSystem;
 using Linux.IO;
 using Linux.Sys.IO;
 using Linux.Sys.RunTime;
@@ -32,29 +33,41 @@ namespace Linux.Sys.Input.Drivers.Tty
             //
         }
 
-        public CharacterDevice GetPt() {
+        protected CharacterDevice GetPt() {
             SecondaryPty secondaryPty;
 
             if (DisplayEvent == null) {
-                secondaryPty = new SecondaryPty(_ => { });
+                secondaryPty = new SecondaryPty(_ => { }, _ => { });
             } else {
-                ITextIO wStream = UserSpace.Open(
+                IoctlDevice wStream = (IoctlDevice)UserSpace.Open(
                     DisplayEvent.FilePath,
                     AccessMode.O_WRONLY
                 );
 
-                secondaryPty = new SecondaryPty(data => {
-                    wStream.Write(data);
-                });
+                secondaryPty = new SecondaryPty(
+                    data => {
+                        wStream.Write(data);
+                    },
+                    data => {
+                        var dataArray = new string[] { data };
+                        wStream.Ioctl(
+                            PtyIoctl.TIO_SEND_KEY,
+                            ref dataArray
+                        );
+                    }
+                );
             }
 
             return (CharacterDevice)secondaryPty;
         }
 
-        public int UnlockPt(string ptsFile) {
+        public int UnlockPt(
+            string ptsFile,
+            int uid,
+            int gid,
+            int permission
+        ) {
             string postHooKey = BuildHooKey(ptsFile);
-            
-            int ptsFd = UserSpace.Api.Open(ptsFile, AccessMode.O_RDWR);
 
             if (Kernel.PostInterruptHooks.ContainsKey(postHooKey)) {
                 throw new System.ArgumentException(
@@ -62,31 +75,55 @@ namespace Linux.Sys.Input.Drivers.Tty
                 );
             }
 
-            IoctlDevice ptStream = (IoctlDevice)UserSpace.Api.LookupByFD(ptsFd);
+            IoctlDevice rStream;
 
+            if (KbdEvent == null) {
+                rStream = new CharacterDevice(AccessMode.O_RDWR);
+            } else {
+                rStream = (IoctlDevice)UserSpace.Open(
+                    KbdEvent.FilePath,
+                    AccessMode.O_RDWR
+                );
+            }
+
+            SecondaryPty secondaryPty;
             IoctlDevice wStream;
 
             if (DisplayEvent == null) {
                 wStream = new CharacterDevice(AccessMode.O_WRONLY);
+                secondaryPty = new SecondaryPty(_ => { }, _ => { });
             } else {
                 wStream = (IoctlDevice)UserSpace.Open(
                     DisplayEvent.FilePath,
                     AccessMode.O_WRONLY
                 );
-            }
 
-            IoctlDevice rStream;
+                secondaryPty = new SecondaryPty(
+                    data => {
+                        wStream.Write(data);
+                    },
+                    data => {
+                        // Send fake keyboard input
+                        rStream.Write(data);
 
-            if (KbdEvent == null) {
-                rStream = new CharacterDevice(AccessMode.O_RDONLY);
-            } else {
-                rStream = (IoctlDevice)UserSpace.Open(
-                    KbdEvent.FilePath,
-                    AccessMode.O_RDONLY
+                        // Inform kernel LineDiscipline about data
+                        Kernel.PostInterruptHooks[postHooKey](KbdEvent);
+                    }
                 );
             }
 
-            var lineDiscipline = new PtyLineDiscipline(ptStream, wStream);
+            Kernel.Fs.Create(
+                ptsFile,
+                uid,
+                gid,
+                permission,
+                FileType.F_CHR,
+                secondaryPty
+            );
+            
+            int ptsFd = UserSpace.Api.Open(ptsFile, AccessMode.O_RDWR);
+
+            var lineDiscipline = new PtyLineDiscipline(secondaryPty, wStream);
 
             System.Action<UEvent> hookAction = (UEvent evt) => {
                 if (KbdEvent == evt && rStream.GetLength() > 0) {

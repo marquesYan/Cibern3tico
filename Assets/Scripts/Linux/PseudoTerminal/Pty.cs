@@ -10,11 +10,17 @@ namespace Linux.PseudoTerminal
     public class SecondaryPty : CharacterDevice {
         protected int[] Flags;
         protected string[] SpecialChars;
+        protected string[] UnbufferedChars;
 
         protected Action<string> OnWrite;
+        protected Action<string> OnKeyboard;
 
-        public SecondaryPty(Action<string> onWrite) : base(AccessMode.O_RDWR) {
+        public SecondaryPty(
+            Action<string> onWrite,
+            Action<string> onKeyboard
+        ) : base(AccessMode.O_RDWR) {
             OnWrite = onWrite;
+            OnKeyboard = onKeyboard;
         }
 
         public override void Ioctl(ushort signal, ref int[] args) {
@@ -56,7 +62,36 @@ namespace Linux.PseudoTerminal
                 }
 
                 case PtyIoctl.TIO_SET_SPECIAL_CHARS: {
-                    SpecialChars = data;
+                    if (SpecialChars == null) {
+                        SpecialChars = data;
+                    } else {
+                        throw new System.ArgumentException(
+                            "Pty special chars already set"
+                        );
+                    }
+                    break;
+                }
+
+                case PtyIoctl.TIO_SET_UNBUFFERED_CHARS: {
+                    if (UnbufferedChars == null) {
+                        UnbufferedChars = data;
+                    } else {
+                        throw new System.ArgumentException(
+                            "Pty unbuffered chars already set"
+                        );
+                    }
+                    break;
+                }
+
+                case PtyIoctl.TIO_ADD_UNBUFFERED_CHARS: {
+                    int lastIndex = Array.LastIndexOf(UnbufferedChars, null);
+                    if (lastIndex > (UnbufferedChars.Length)) {
+                        throw new System.InvalidOperationException(
+                            "Reached maximum of unbuffered chars"
+                        );
+                    }
+
+                    UnbufferedChars[lastIndex] = data[0];
                     break;
                 }
 
@@ -69,6 +104,11 @@ namespace Linux.PseudoTerminal
                     );
 
                     SpecialChars[index] = null;
+                    break;
+                }
+
+                case PtyIoctl.TIO_SEND_KEY: {
+                    OnKeyboard(data[0]);
                     break;
                 }
 

@@ -25,5 +25,8 @@ namespace Linux.Sys.Input.Drivers.Tty
         public const ushort TIO_DEL_SPECIAL_CHARS   = 0x11;
 
         public const ushort TIO_UNSET_FLAG = 0x12;
+
+        public const ushort TIO_SET_UNBUFFERED_CHARS   = 0x13;
+        public const ushort TIO_ADD_UNBUFFERED_CHARS   = 0x14;
     }
 }
