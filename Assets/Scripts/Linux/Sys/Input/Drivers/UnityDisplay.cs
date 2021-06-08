@@ -16,7 +16,7 @@ namespace Linux.Sys.Input.Drivers
             BackendTerminal = backendTerminal;
         }
 
-        public void Ioctl(ushort signal, ref ushort[] args) {
+        public void Ioctl(ushort signal, ref int[] args) {
             switch (signal) {
                 case PtyIoctl.TIO_LEFT_ARROW: {
                     BackendTerminal.MoveCursorLeft();
@@ -39,17 +39,16 @@ namespace Linux.Sys.Input.Drivers
                 }
 
                 case PtyIoctl.TIO_CLEAR: {
-                    Debug.Log("clearning buffer");
                     BackendTerminal.ClearBuffer();
                     break;
                 }
             }
         }
 
-        public void Ioctl(ushort signal, string arg) {
+        public void Ioctl(ushort signal, ref string[] args) {
             switch (signal) {
                 case PtyIoctl.TIO_SEND_KEY: {
-                    BackendTerminal.ReceiveKey(arg);
+                    BackendTerminal.ReceiveKey(args[0]);
                     break;
                 }
 

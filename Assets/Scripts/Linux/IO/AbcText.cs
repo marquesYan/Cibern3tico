@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using Linux;
@@ -86,21 +87,30 @@ namespace Linux.IO
         }
 
         public virtual string ReadLine() {
-            var content = new StringBuilder();
-
-            bool missingLineFeed = true;
-
             string lineFeed = $"{LINE_FEED}";
 
-            string buffer;
+            return ReadUntil(lineFeed).Replace(lineFeed, "");
+        }
 
-            while (Kernel.IsRunning && missingLineFeed) {
+        public virtual string ReadUntil(params string[] input) {
+            var content = new StringBuilder();
+
+            bool missing = true;
+
+            string buffer, compareBuf;
+
+            while (Kernel.IsRunning && missing) {
                 if (Length > 0) {
                     buffer = Read(1);
-                    if (buffer == lineFeed) {
-                        missingLineFeed = false;
-                    } else {
-                        content.Append(buffer);
+                    content.Append(buffer);
+
+                    compareBuf = content.ToString();
+                    
+                    foreach (string inputChar in input) {
+                        if (compareBuf.Contains(inputChar)) {
+                            missing = false;
+                            break;
+                        }
                     }
                 }
             }

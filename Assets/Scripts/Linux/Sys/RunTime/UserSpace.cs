@@ -49,6 +49,14 @@ namespace Linux.Sys.RunTime
             return PathUtils.Combine(environment["PWD"], path);
         }
 
+        public string ExpandUser(string path) {
+            if (path.StartsWith("~")) {
+                return path.Replace("~", Api.GetHomeDir());
+            }
+            
+            return path;
+        }
+
         public void Exit(int exitCode) {
             throw new ExitProcessException(exitCode);
         }

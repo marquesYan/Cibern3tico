@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 using Linux.PseudoTerminal;
 using Linux.Sys.IO;
 using Linux.IO;
@@ -7,15 +8,15 @@ using UnityEngine;
 
 namespace Linux.Sys.Input.Drivers.Tty {
     public class PtyLineDiscipline {
-        ushort[] _nullArg = new ushort[0];
+        int[] _nullArg = new int[0];
 
-        protected ushort[] Flags = { 0 };
+        protected int[] Flags = { 0 };
 
         protected StringBuilder Buffer;
 
         protected int Pointer;
 
-        protected List<string> SpecialChars;
+        protected string[] SpecialChars;
 
         protected IoctlDevice Pts;
 
@@ -29,11 +30,16 @@ namespace Linux.Sys.Input.Drivers.Tty {
         ) {
             Pts = pts;
             Output = output;
-            SpecialChars = CharacterControl.GetConstants();
+            SpecialChars = CharacterControl.GetConstants().ToArray();
 
             Pts.Ioctl(
                 PtyIoctl.TIO_SET_DRIVER_FLAGS,
                 ref Flags
+            );
+
+            Pts.Ioctl(
+                PtyIoctl.TIO_SET_SPECIAL_CHARS,
+                ref SpecialChars
             );
 
             Buffer = new StringBuilder();
@@ -53,17 +59,23 @@ namespace Linux.Sys.Input.Drivers.Tty {
             string output = input;
 
             if ((Flags[0] & PtyFlags.ECHO) == 0) {
+                Debug.Log("echo disabled");
                 output = null;
             }
-
+            Debug.Log($"flags: {Flags[0]}");
             if (((Flags[0] & PtyFlags.AUTO_CONTROL) != 0) 
                     && IsSpecialChar(input)) {
+                Debug.Log("auto control enabled");
+
                 HandleCharControl(input);
                 output = null;
             }
 
             if ((Flags[0] & PtyFlags.BUFFERED) == 0) {
-                WritePts(input);                
+                Debug.Log("unbuffered line enabled");
+                if (!IsSpecialChar(input)) {
+                    WritePts(input);
+                }
             } else {
                 if (IsSpecialChar(input)) {
                     output = null;
@@ -85,9 +97,10 @@ namespace Linux.Sys.Input.Drivers.Tty {
                     Output.Ioctl(PtyIoctl.TIO_CLEAR, ref _nullArg);
                     RemoveAtBack();
                 } else {
+                    var outputArray = new string[] { output };
                     Output.Ioctl(
                         PtyIoctl.TIO_SEND_KEY,
-                        output
+                        ref outputArray
                     );
                 }
             }
@@ -103,7 +116,8 @@ namespace Linux.Sys.Input.Drivers.Tty {
             }
 
             if (shouldWrite) {
-                Pts.Ioctl(PtyIoctl.TIO_RCV_INPUT, key);
+                var keyArray = new string[] { key };
+                Pts.Ioctl(PtyIoctl.TIO_RCV_INPUT, ref keyArray);
             }
         }
         

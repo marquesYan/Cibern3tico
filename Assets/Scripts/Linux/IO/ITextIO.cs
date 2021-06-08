@@ -11,6 +11,8 @@ namespace Linux.IO
         string[] ReadLines();
         string ReadLine();
 
+        string ReadUntil(params string[] input);
+
         int Write(string data);
 
         string Read();

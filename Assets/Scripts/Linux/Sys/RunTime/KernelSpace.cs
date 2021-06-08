@@ -294,6 +294,10 @@ namespace Linux.Sys.RunTime
             return GetCurrentProc().Executable;
         }
 
+        public string GetHomeDir() {
+            return GetCurrentUser().HomeDir;
+        }
+
         public void KillProcess(int pid) {
             KillProcess(pid, ProcessSignal.SIGTERM);
         }

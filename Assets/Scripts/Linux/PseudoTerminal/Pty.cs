@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Linux.IO;
 using Linux.Sys.IO;
 using Linux.Sys.Input.Drivers.Tty;
@@ -7,7 +8,8 @@ using UnityEngine;
 namespace Linux.PseudoTerminal
 {
     public class SecondaryPty : CharacterDevice {
-        protected ushort[] Flags;
+        protected int[] Flags;
+        protected string[] SpecialChars;
 
         protected Action<string> OnWrite;
 
@@ -15,7 +17,7 @@ namespace Linux.PseudoTerminal
             OnWrite = onWrite;
         }
 
-        public override void Ioctl(ushort signal, ref ushort[] args) {
+        public override void Ioctl(ushort signal, ref int[] args) {
             switch (signal) {
                 case PtyIoctl.TIO_SET_DRIVER_FLAGS: {
                     if (Flags == null) {
@@ -28,8 +30,13 @@ namespace Linux.PseudoTerminal
                     break;
                 }
 
-                case PtyIoctl.TIO_SET_ATTR: {
+                case PtyIoctl.TIO_SET_FLAG: {
                     Flags[0] |= args[0];
+                    break;
+                }
+
+                case PtyIoctl.TIO_UNSET_FLAG: {
+                    Flags[0] &= (~args[0]) & 0b1111_1111_1111;
                     break;
                 }
 
@@ -41,10 +48,27 @@ namespace Linux.PseudoTerminal
             }
         }
 
-        public override void Ioctl(ushort signal, string data) {
+        public override void Ioctl(ushort signal, ref string[] data) {
             switch (signal) {
                 case PtyIoctl.TIO_RCV_INPUT: {
-                    DigestInput(data);
+                    DigestInput(data[0]);
+                    break;
+                }
+
+                case PtyIoctl.TIO_SET_SPECIAL_CHARS: {
+                    SpecialChars = data;
+                    break;
+                }
+
+                case PtyIoctl.TIO_DEL_SPECIAL_CHARS: {
+                    string key = data[0];
+                    
+                    int index = Array.FindIndex(
+                        SpecialChars,
+                        s => s == key
+                    );
+
+                    SpecialChars[index] = null;
                     break;
                 }
 
@@ -77,7 +101,7 @@ namespace Linux.PseudoTerminal
     {
         public PrimaryPty() : base(AccessMode.O_RDWR) { }
 
-        public override void Ioctl(ushort signal, ref ushort[] args) {
+        public override void Ioctl(ushort signal, ref int[] args) {
             //
         }
     }

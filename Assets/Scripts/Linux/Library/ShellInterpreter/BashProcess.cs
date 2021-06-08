@@ -4,8 +4,11 @@ using System.Text.RegularExpressions;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
+using Linux.PseudoTerminal;
 using Linux.Library.ShellInterpreter.Builtins;
 using Linux.IO;
+using Linux.Sys.IO;
+using Linux.Sys.Input.Drivers.Tty;
 using Linux;
 using UnityEngine;
 
@@ -68,6 +71,8 @@ namespace Linux.Library.ShellInterpreter
 
         protected string Login;
 
+        protected BashHistory History;
+
         public UserSpace UserSpace { get; protected set; }
 
         public Dictionary<string, string> Environment { get; protected set; }
@@ -76,34 +81,55 @@ namespace Linux.Library.ShellInterpreter
             UserSpace = userSpace;
             Environment = userSpace.Api.GetEnviron();
             Login = userSpace.Api.GetLogin();
+            History = new BashHistory(userSpace);
 
             Variables = new Dictionary<string, string>();
             Builtins = new Dictionary<string, AbstractShellBuiltin>();
 
             SetupDefaultEnvironment();
             RegisterBuiltins();
+            CookPty();
         }
 
         public bool Run() {
             string cwdName = PathUtils.BaseName(UserSpace.Api.GetCwd());
 
-            string cmd = UserSpace.Input(
-                $"[{Login}@hacking01 {cwdName}]$",
-                " "
+            string prompt = $"[{Login}@hacking01 {cwdName}]$";
+
+            UserSpace.Print(prompt, " ");
+
+            string originalCmd = UserSpace.Stdin.ReadUntil(
+                $"{AbstractTextIO.LINE_FEED}",
+                CharacterControl.C_DUP_ARROW
             );
 
-            if (string.IsNullOrEmpty(cmd)) {
+            if (string.IsNullOrEmpty(originalCmd)) {
                 return true;
             }
 
+            string cmd = originalCmd.Trim();
+
             if (cmd == "exit") {
                 return false;
+            }
+
+            if (cmd.Contains(CharacterControl.C_DUP_ARROW)) {
+                Debug.Log("received up arrow");
+                string lastCommand = History.Last(1);
+                Debug.Log($"cmd: {lastCommand}");
+                if (lastCommand != null) {
+                    UserSpace.Print(lastCommand);
+                }
+
+                return true;
             }
 
             try {
                 if (!ParseSetVariables(cmd)) {
                     ParseAndStartCommands(cmd);  
                 }
+
+                History.Add(cmd);
             } catch (System.Exception exception) {
                 UserSpace.Stderr.WriteLine($"-bash: {exception.Message}");
                 // UserSpace.Stderr.WriteLine(exception.ToString());
@@ -134,6 +160,27 @@ namespace Linux.Library.ShellInterpreter
                     }
                 }
             } 
+        }
+
+        protected void CookPty() {
+            if (UserSpace.Stdin is IoctlDevice) {
+                var pts = (IoctlDevice)UserSpace.Stdin;
+
+                // Disable auto control of UpArrow character
+                var upArrowArray = new string[] { CharacterControl.C_DUP_ARROW };
+                pts.Ioctl(
+                    PtyIoctl.TIO_DEL_SPECIAL_CHARS,
+                    ref upArrowArray
+                );
+
+                // Disable buffering, so we can receive the UpArrow
+                // just when pressed by user
+                var flagArray = new int[] { PtyFlags.BUFFERED };
+                pts.Ioctl(
+                    PtyIoctl.TIO_UNSET_FLAG,
+                    ref flagArray
+                );
+            }
         }
 
         protected int RunBuiltin(CommandBuilder command) {

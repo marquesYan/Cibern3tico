@@ -16,11 +16,11 @@ namespace Linux.Sys.IO
             return Buffer.Count;
         }
 
-        public virtual void Ioctl(ushort signal, ref ushort[] args) {
+        public virtual void Ioctl(ushort signal, ref int[] args) {
             //
         }
 
-        public virtual void Ioctl(ushort signal, string arg) {
+        public virtual void Ioctl(ushort signal, ref string[] arg) {
             //
         }
 
