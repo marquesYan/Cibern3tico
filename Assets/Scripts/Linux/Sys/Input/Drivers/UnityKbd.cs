@@ -47,6 +47,14 @@ namespace Linux.Sys.Input.Drivers
                 WriteKeyboard(CharacterControl.C_DUP_ARROW);
             } else if (UnityEngine.Input.GetKeyDown(KeyCode.DownArrow)) {
                 WriteKeyboard(CharacterControl.C_DDOWN_ARROW);
+            } else if (UnityEngine.Input.GetKeyDown(KeyCode.RightControl)
+                        || UnityEngine.Input.GetKeyDown(KeyCode.LeftControl)) {
+                WriteKeyboard(CharacterControl.C_DCTRL);
+            } else if (UnityEngine.Input.GetKeyUp(KeyCode.RightControl)
+                        || UnityEngine.Input.GetKeyUp(KeyCode.LeftControl)) {
+                WriteKeyboard(CharacterControl.C_UCTRL);
+            } else if (UnityEngine.Input.GetKeyDown(KeyCode.L)) {
+                WriteKeyboard("l");
             }
         }
 

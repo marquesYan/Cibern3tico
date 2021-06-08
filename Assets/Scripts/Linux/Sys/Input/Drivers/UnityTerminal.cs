@@ -52,7 +52,7 @@ namespace Linux
             GUILayout.Label(message, LabelStyle);
         }
 
-        public override void MoveCursorToEnd() {
+        public void MoveCursorToEnd() {
             if (_textEditor == null) {
                 _textEditor = (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
             }

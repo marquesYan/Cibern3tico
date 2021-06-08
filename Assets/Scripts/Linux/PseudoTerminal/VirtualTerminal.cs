@@ -17,14 +17,6 @@ namespace Linux.PseudoTerminal
 
     public abstract class VirtualTerminal
     {
-        event System.Action OnFirstDraw;
-        bool _moveCursorToEnd = false;
-        int _moveYAxis = -1;
-        int _moveXAxis = -1;
-        int _typedKeysCount;
-
-        protected bool IsFirstDraw = true;
-
         protected CursorLines CursorLinesMngr;
 
         protected Vector CursorSize;
@@ -43,27 +35,19 @@ namespace Linux.PseudoTerminal
         }
 
         public void ClearBuffer() {
-            CursorLinesMngr.Truncate();
-        }
-
-        public void RequestYAxis(int position) {
-            _moveYAxis = position;
-        }
-
-        public void RequestXAxis(int position) {
-            _moveXAxis = position;
+            CursorLinesMngr.ClearUntilLastLine();
         }
 
         public void RequestHighXAxis() {
-            RequestXAxis(int.MaxValue);
+            MoveXAxis(int.MaxValue);
         }
 
         public void RequestHighYAxis() {
-            RequestYAxis(int.MaxValue);
+            MoveYAxis(int.MaxValue);
         }
 
-        public void RequestCursorToEnd() {
-            _moveCursorToEnd = true;
+        public void RequestLowYAxis() {
+            MoveYAxis(int.MinValue);
         }
 
         public void RemoveCharAtFront() {
@@ -93,15 +77,11 @@ namespace Linux.PseudoTerminal
         public int WriteToScreen(string message) {
             CursorLinesMngr.Add(message);
             RequestHighYAxis();
+
             return message.Length;
         }
-
         public void ReceiveKey(string key) {
             CursorLinesMngr.AddKey(key);
-        }
-
-        public void SubscribeFirstDraw(System.Action onFirstDraw) {
-            OnFirstDraw += onFirstDraw;
         }
 
         public void DrawGUI() {
@@ -117,30 +97,8 @@ namespace Linux.PseudoTerminal
 
         protected abstract Vector CalcSize(string message);
 
-        public abstract void MoveCursorToEnd();
-
         protected void DrawTerm() {
             FlushBuffer();
-
-            if (_moveCursorToEnd) {
-                _moveCursorToEnd = false;
-                MoveCursorToEnd();
-            }
-
-            if (_moveYAxis != -1) {
-                MoveYAxis(_moveYAxis);
-                _moveYAxis = -1;
-            }
-
-            if (_moveXAxis != -1) {
-                MoveXAxis(_moveXAxis);
-                _moveXAxis = -1;
-            }
-
-            if (IsFirstDraw) {
-                IsFirstDraw = false;
-                OnFirstDraw();
-            }
         }
 
         protected void FlushBuffer() {

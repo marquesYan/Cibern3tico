@@ -29,6 +29,7 @@ namespace Linux.IO
 
         protected override void InternalTruncate() {
             Buffer.Clear();
+            Length = Pointer = 0;
         }
 
         protected override bool CanMovePointer(int newPosition) {

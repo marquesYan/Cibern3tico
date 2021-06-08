@@ -37,6 +37,12 @@ namespace Linux.Sys.Input.Drivers
                     BackendTerminal.RemoveCharAtFront();
                     break;
                 }
+
+                case PtyIoctl.TIO_CLEAR: {
+                    Debug.Log("clearning buffer");
+                    BackendTerminal.ClearBuffer();
+                    break;
+                }
             }
         }
 

@@ -20,5 +20,7 @@ namespace Linux.Sys.Input.Drivers.Tty
         public const ushort TIO_DOWN_ARROW          = 0xA;
         public const ushort TIO_LEFT_ARROW          = 0xB;
         public const ushort TIO_RIGHT_ARROW         = 0xC;
+        public const ushort TIO_CLEAR               = 0xD;
+
     }
 }

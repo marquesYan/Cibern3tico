@@ -91,7 +91,7 @@ namespace Linux.Library.ShellInterpreter
                 $"[{Login}@hacking01 {cwdName}]$",
                 " "
             );
-            Debug.Log("recv cmd: " + cmd);
+
             if (string.IsNullOrEmpty(cmd)) {
                 return true;
             }

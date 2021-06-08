@@ -14,7 +14,8 @@ namespace Linux.PseudoTerminal {
         public const string C_DESCAPE = "^[";
         // public const string C_DLEFT_SHIFT = "^LSH";
         // public const string C_DRIGHT_SHIFT = "^RSH";
-        // public const string C_DCTRL = "^CTR";
+        public const string C_DCTRL = "^[[4~";
+        public const string C_UCTRL = "^[[4";
         public const string C_DUP_ARROW = "^[[A";
         public const string C_DDOWN_ARROW = "^[[B";
         public const string C_DLEFT_ARROW = "^[[D";

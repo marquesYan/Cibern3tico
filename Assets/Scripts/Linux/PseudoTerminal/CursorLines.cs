@@ -12,8 +12,6 @@ namespace Linux.PseudoTerminal
         protected LimitedStream Buffer;
         protected Dictionary<int, int> CursorIndexes;
 
-        protected int BlockedIndex = -1;
-
         public int Pointer {
             get {
                 return Buffer.Pointer;
@@ -28,6 +26,7 @@ namespace Linux.PseudoTerminal
 
         public int LineIndex { get; protected set; }
         public string CurrentLine { get; protected set; }
+        public int BlockedIndex { get; protected set; }
 
 
         public CursorLines(int bufferSize) {
@@ -36,10 +35,26 @@ namespace Linux.PseudoTerminal
 
             LineIndex = 0;
             CurrentLine = "";
+            BlockedIndex = -1;
         }
 
         public void Truncate() {
             Buffer.Truncate();
+            _linesCache = null;
+            BlockedIndex = -1;
+            LineIndex = 0;
+            CurrentLine = "";
+            CursorIndexes.Clear();
+        }
+
+        public void ClearUntilLastLine() {
+            string line = CurrentLine;
+            int blockedIndex = BlockedIndex;
+
+            Truncate();
+
+            AddKey(line);
+            BlockedIndex = blockedIndex;
         }
 
         public void Close() {
@@ -61,6 +76,11 @@ namespace Linux.PseudoTerminal
         }
 
         public void AddKey(string text) {
+            if (text == "\n") {
+                text = " " + text;
+                Buffer.Seek(Buffer.Length);
+            }
+
             Buffer.Write(text);
             UpdateLinesCache();
 

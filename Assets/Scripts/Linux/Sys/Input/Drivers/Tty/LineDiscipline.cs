@@ -21,6 +21,8 @@ namespace Linux.Sys.Input.Drivers.Tty {
 
         protected IoctlDevice Output;
 
+        protected bool ControlPressed = false;
+
         public PtyLineDiscipline(
             IoctlDevice pts,
             IoctlDevice output
@@ -65,24 +67,29 @@ namespace Linux.Sys.Input.Drivers.Tty {
             } else {
                 if (IsSpecialChar(input)) {
                     output = null;
-                } else {
-                    WriteBuffer(input);
-                }
-
-                if (input == $"{AbstractTextIO.LINE_FEED}") {
+                } else if (input == $"{AbstractTextIO.LINE_FEED}") {
                     Pointer = 0;
+
+                    Buffer.Append(AbstractTextIO.LINE_FEED);
 
                     string data = Buffer.ToString();
                     Buffer.Clear();
                     WritePts(data);
+                } else {
+                    WriteBuffer(input);
                 }
             }
 
             if (output != null) {
-                Output.Ioctl(
-                    PtyIoctl.TIO_SEND_KEY,
-                    output
-                );
+                if (ControlPressed && output == "l") {
+                    Output.Ioctl(PtyIoctl.TIO_CLEAR, ref _nullArg);
+                    RemoveAtBack();
+                } else {
+                    Output.Ioctl(
+                        PtyIoctl.TIO_SEND_KEY,
+                        output
+                    );
+                }
             }
         }
 
@@ -105,6 +112,18 @@ namespace Linux.Sys.Input.Drivers.Tty {
         }
 
         protected void HandleCharControl(string key) {
+            switch(key) {
+                case CharacterControl.C_DCTRL: {
+                    ControlPressed = true;
+                    return;
+                }
+
+                case CharacterControl.C_UCTRL: {
+                    ControlPressed = false;
+                    return;
+                }
+            }
+
             ushort signal = GetIoctlFromControl(key);
 
             Output.Ioctl(signal, ref _nullArg);
