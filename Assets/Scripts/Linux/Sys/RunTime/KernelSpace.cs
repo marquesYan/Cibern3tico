@@ -165,6 +165,34 @@ namespace Linux.Sys.RunTime
             Kernel.Fs.Delete(path);
         }
 
+        public void CreateDir(string path) {
+            string[] parts = PathUtils.Split(
+                PathUtils.PathName(path)
+            );
+
+            string absPath = "/";
+
+            foreach (string file in parts) {
+                absPath = PathUtils.Combine(absPath, file);
+                File dir = LookupDirectoryOrFail(absPath);
+
+                if (!CanEnterDirectory(dir)) {
+                    ThrowPermissionDenied();
+                }
+            }
+
+            User user = GetCurrentUser();
+
+            int umask = BuildUmask(user);
+
+            Kernel.Fs.CreateDir(
+                path,
+                user.Uid,
+                user.Gid,
+                BuildPermissionFromUmask(true, umask)
+            );
+        }
+
         public ReadOnlyFile FindFile(string path) {
             File file = LookupFileOrFail(path);
 
@@ -534,6 +562,10 @@ namespace Linux.Sys.RunTime
             );
         }
 
+        protected int BuildUmask(User user) {
+            return user.Uid == 0 ? Perm.FromInt(0, 2, 2) : Perm.FromInt(0, 0, 2);
+        }
+
         protected Process CreateProcess(
             User user,
             string[] cmdLine,
@@ -549,7 +581,7 @@ namespace Linux.Sys.RunTime
                 stdinFd,
                 stdoutFd,
                 stderrFd,
-                user.Uid == 0 ? Perm.FromInt(0, 0, 2) : Perm.FromInt(0, 0, 2)
+                BuildUmask(user)
             );
         }
 
@@ -563,11 +595,7 @@ namespace Linux.Sys.RunTime
             return Kernel.ProcTable.LookupThread(Thread.CurrentThread);
         }
 
-        protected void CreateFileIfMissing(string path, bool asDirectory) {
-            if (FileExists(path)) {
-                return;
-            }
-
+        protected int BuildPermissionFromUmask(bool asDirectory, int umask) {
             int basePermission;
 
             if (asDirectory) {
@@ -576,7 +604,15 @@ namespace Linux.Sys.RunTime
                 basePermission = Perm.FromInt(6, 6, 6);
             }
 
-            int permission = basePermission - GetUmask();
+            return basePermission - umask;
+        }
+
+        protected void CreateFileIfMissing(string path, bool asDirectory) {
+            if (FileExists(path)) {
+                return;
+            }
+
+            int permission = BuildPermissionFromUmask(asDirectory, GetUmask());
 
             FileType type = asDirectory ? FileType.F_DIR : FileType.F_REG;
 

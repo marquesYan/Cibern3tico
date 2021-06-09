@@ -90,6 +90,16 @@ namespace Linux.Boot
 
             Kernel.Fs.AddFrom(
                 binDir,
+                new Mkdir(
+                    "/usr/bin/mkdir",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                binDir,
                 new Bash(
                     "/usr/bin/bash",
                     0, 0,
