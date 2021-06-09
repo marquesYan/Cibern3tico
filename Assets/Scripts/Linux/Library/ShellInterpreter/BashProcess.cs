@@ -65,8 +65,6 @@ namespace Linux.Library.ShellInterpreter
 
         protected Regex ReplaceVariablesRegex = new Regex(@"\\?\$([a-zA-Z_]+|\$|\?|\!)");
 
-        protected Dictionary<string, string> Variables;
-
         protected Dictionary<string, AbstractShellBuiltin> Builtins;
 
         protected string Login;
@@ -78,6 +76,8 @@ namespace Linux.Library.ShellInterpreter
         public UserSpace UserSpace { get; protected set; }
 
         public Dictionary<string, string> Environment { get; protected set; }
+
+        public Dictionary<string, string> Variables { get; protected set; }
 
         public BashProcess(UserSpace userSpace, bool autoCookPty) {
             UserSpace = userSpace;
@@ -298,6 +298,7 @@ namespace Linux.Library.ShellInterpreter
             Builtins["cd"] = new Cd(this);
             Builtins["env"] = new Env(this);
             Builtins["export"] = new Export(this);
+            Builtins["read"] = new Read(this);
         }
 
         protected void SetupDefaultEnvironment() {

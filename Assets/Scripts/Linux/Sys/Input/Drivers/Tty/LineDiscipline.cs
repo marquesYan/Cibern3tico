@@ -197,7 +197,6 @@ namespace Linux.Sys.Input.Drivers.Tty {
         }
 
         protected void WriteBuffer(string data) {
-            Debug.Log("line discipline pointer: " + Pointer);
             Buffer.Insert(Pointer, data);
             Pointer += data.Length;
         }
