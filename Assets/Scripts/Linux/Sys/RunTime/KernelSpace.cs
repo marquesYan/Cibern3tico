@@ -155,6 +155,22 @@ namespace Linux.Sys.RunTime
             return group.Name;
         }
 
+        public void RemoveFile(string path) {
+            File file = LookupFileOrFail(path);
+
+            if (!IsFileModePermitted(file, AccessMode.O_WRONLY)) {
+                ThrowPermissionDenied();
+            }
+
+            Kernel.Fs.Delete(path);
+        }
+
+        public ReadOnlyFile FindFile(string path) {
+            File file = LookupFileOrFail(path);
+
+            return ReadOnlyFile.FromFile(file);
+        }
+
         public int RunAs(string login) {
             User user = Kernel.UsersDb.LookupLogin(login);
             

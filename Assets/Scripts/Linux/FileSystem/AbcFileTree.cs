@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Linux.IO;
+using UnityEngine;
 
 namespace Linux.FileSystem
 {
@@ -119,7 +120,7 @@ namespace Linux.FileSystem
         }
 
         public void RemoveFrom(File parent, File file) {
-            LookupOrFail(parent, file.Path);
+            LookupOrFail(file.Path);
 
             string absPath;
             FsMountPoint fsMountPoint = TryMountFs(
@@ -129,12 +130,27 @@ namespace Linux.FileSystem
             );
 
             if (fsMountPoint == null) {
+                if (file.Type == FileType.F_DIR
+                    && file.ChildsCount() > 0) {
+                    throw new System.InvalidOperationException(
+                        "Directory is not empty"
+                    );
+                }
+
                 parent.RemoveChild(file.Name);
                 file.Parent = null;
                 OnRemoveFile(file);
             } else {
                 fsMountPoint.Fs.Remove(file);
             }
+        }
+
+        public void Delete(string path) {
+            File file = LookupOrFail(path);
+
+            File baseDirectory = ParseBaseDirectory(path);
+
+            RemoveFrom(baseDirectory, file);
         }
 
         public File Create(
@@ -145,6 +161,10 @@ namespace Linux.FileSystem
             FileType type,
             ITextIO stream
         ) {
+            if (Lookup(file) != null) {
+                throw new FileExistsException(file);
+            }
+
             File baseDirectory = ParseBaseDirectory(file);
 
             var destFile = new File(
@@ -166,6 +186,10 @@ namespace Linux.FileSystem
             int permission,
             ITextIO stream
         ) {
+            if (Lookup(symLinkPath) != null) {
+                throw new FileExistsException(symLinkPath);
+            }
+
             File baseDirectory = ParseBaseDirectory(symLinkPath);
 
             var destFile = new File(
@@ -216,10 +240,6 @@ namespace Linux.FileSystem
         }
 
         protected File ParseBaseDirectory(string file) {
-            if (Lookup(file) != null) {
-                throw new FileExistsException(file);
-            }
-
             string fileName = PathUtils.BaseName(file);
             
             if (fileName == "") {
