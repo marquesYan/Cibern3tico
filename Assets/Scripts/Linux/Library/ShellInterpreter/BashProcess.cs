@@ -116,6 +116,7 @@ namespace Linux.Library.ShellInterpreter
             );
 
             if (string.IsNullOrEmpty(originalCmd)) {
+                ShowPrompt = true;
                 return true;
             }
 
