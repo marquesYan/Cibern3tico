@@ -1,7 +1,7 @@
+using System.Collections.Generic;
 using Linux.Configuration;
 using Linux.FileSystem;
-using Linux.Library;
-using Linux.Library.ShellInterpreter;
+using Linux.Library.RunTime;
 using UnityEngine;
 
 namespace Linux.Sys.RunTime
@@ -19,9 +19,14 @@ namespace Linux.Sys.RunTime
         protected KernelSpace Api;
         protected Linux.Kernel Kernel;
 
+        protected List<AbstractRunTimeHandler> RunTimeHandlers;
+
         public CommandHandler(Linux.Kernel kernel) {
             Kernel = kernel;
             Api = new KernelSpace(Kernel);
+            RunTimeHandlers = new List<AbstractRunTimeHandler>();
+
+            AddDefaultHandlers();
         }
 
         public void Handle() {
@@ -31,37 +36,28 @@ namespace Linux.Sys.RunTime
 
             int returnCode = 255;
 
-            var bashHandler = new BashCommandHandler(Api);
+            AbstractRunTimeHandler handler = FindAvailableHandler(execFile);
+            var userSpace = new UserSpace(Api);
 
-            if (execFile is CompiledBin) {
-                returnCode = HandleCompiledBin((CompiledBin)execFile);
-            } else if (bashHandler.IsFileSupported(execFile)) {
-                returnCode = bashHandler.Execute(execFile);
+            if (handler == null) {
+                userSpace.Stderr.WriteLine($"{executable}: invalid command");
+            } else {
+                returnCode = handler.Execute(execFile);
             }
 
             Process process = Api.LookupProcessByPid(Api.GetPid());
             process.ReturnCode = returnCode;
         }
 
-        protected int HandleCompiledBin(CompiledBin bin) {
-            var userSpace = new UserSpace(Api);
-            int returnCode;
+        protected AbstractRunTimeHandler FindAvailableHandler(File file) {
+            return RunTimeHandlers.Find(
+                h => h.IsFileSupported(file)
+            );
+        }
 
-            try {
-                returnCode = bin.Execute(userSpace);
-            }
-            
-            catch (ExitProcessException exc) {
-                returnCode = exc.ExitCode;
-            }
-            
-            catch (System.Exception exception) {
-                userSpace.Print($"{bin.Name}: {exception.Message}");
-                Debug.Log(exception.ToString());
-                returnCode = 255;
-            }
-
-            return returnCode;
+        protected void AddDefaultHandlers() {
+            RunTimeHandlers.Add(new CompiledBinHandler(Api));
+            RunTimeHandlers.Add(new BashCommandHandler(Api));
         }
     }
 }

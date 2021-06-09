@@ -1,17 +1,15 @@
 using Linux.IO;
+using Linux.Library.ShellInterpreter;
 using Linux.FileSystem;
 using Linux.Sys.RunTime;
 
-namespace Linux.Library.ShellInterpreter
+namespace Linux.Library.RunTime
 {
-    public class BashCommandHandler {
-        protected UserSpace UserSpace;
+    public class BashCommandHandler : AbstractRunTimeHandler {
 
-        public BashCommandHandler(KernelSpace api) {
-            UserSpace = new UserSpace(api);
-        }
+        public BashCommandHandler(KernelSpace api) : base(api) {}
 
-        public bool IsFileSupported(File executable) {
+        public override bool IsFileSupported(File executable) {
             using (ITextIO stream = UserSpace.Open(executable.Path, AccessMode.O_RDONLY)) {
                 string[] lines = stream.ReadLines();
 
@@ -23,7 +21,7 @@ namespace Linux.Library.ShellInterpreter
             }
         }
 
-        public int Execute(File executable) {
+        public override int Execute(File executable) {
             var bash = new BashProcess(UserSpace, false);
 
             using (ITextIO stream = UserSpace.Open(executable.Path, AccessMode.O_RDONLY)) {
