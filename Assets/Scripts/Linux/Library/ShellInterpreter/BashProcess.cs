@@ -71,6 +71,8 @@ namespace Linux.Library.ShellInterpreter
 
         protected string Login;
 
+        protected bool ShowPrompt;
+
         protected BashHistory History;
 
         public UserSpace UserSpace { get; protected set; }
@@ -82,6 +84,8 @@ namespace Linux.Library.ShellInterpreter
             Environment = userSpace.Api.GetEnviron();
             Login = userSpace.Api.GetLogin();
             History = new BashHistory(userSpace);
+
+            ShowPrompt = true;
 
             Variables = new Dictionary<string, string>();
             Builtins = new Dictionary<string, AbstractShellBuiltin>();
@@ -101,7 +105,7 @@ namespace Linux.Library.ShellInterpreter
 
             string prompt = $"[{Login}@hacking01 {cwdName}]$";
 
-            if (!History.IsHistoryOn()) {
+            if (ShowPrompt) {
                 UserSpace.Print(prompt, " ");
             }
 
@@ -152,6 +156,8 @@ namespace Linux.Library.ShellInterpreter
                     ref cmdArray
                 );
 
+                ShowPrompt = false;
+
                 return true;
             }
 
@@ -159,6 +165,8 @@ namespace Linux.Library.ShellInterpreter
                 if (!ParseSetVariables(cmd)) {
                     ParseAndStartCommands(cmd);  
                 }
+
+                ShowPrompt = true;
 
                 History.Add(cmd);
             } catch (System.Exception exception) {

@@ -11,11 +11,12 @@ namespace Linux.Library.ShellInterpreter
         protected string FilePath;
 
         protected int Index;
+        protected int Length;
 
         public BashHistory(UserSpace userSpace) {
             UserSpace = userSpace;
             FilePath = userSpace.ExpandUser("~/.bash_history");
-            Index = 1;
+            Index = Length = 0;
 
             // Create history file
             using (ITextIO stream = UserSpace.Open(FilePath, AccessMode.O_APONLY)) {
@@ -23,15 +24,12 @@ namespace Linux.Library.ShellInterpreter
             }
         }
 
-        public bool IsHistoryOn() {
-            return Index != 1;
-        }
-
         public void Add(string command) {
-            Index = 1;
             using (ITextIO stream = UserSpace.Open(FilePath, AccessMode.O_APONLY)) {
                 stream.WriteLine(command);
             }
+            Index = 0;
+            Length++;
         }
 
         public string Last() {
@@ -49,8 +47,10 @@ namespace Linux.Library.ShellInterpreter
         protected void UpdateIndex(int step) {
             int index = Index + step;
 
-            if (index < 1) {
-                index = 1;
+            if (index < 0) {
+                index = 0;
+            } else if (index > Length) {
+                index = Length;
             }
 
             Index = index;
@@ -61,7 +61,7 @@ namespace Linux.Library.ShellInterpreter
                 string[] lines = stream.ReadLines();
 
                 try {
-                    return lines[lines.Length - Index];
+                    return lines[lines.Length - (Index + 1)];
                 } catch (System.IndexOutOfRangeException) {
                     return null;
                 }
