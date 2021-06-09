@@ -73,6 +73,19 @@ namespace Linux
 
             ProcSigTable = new ProcessSignalsTable();
 
+            Fs.Create(
+                "/root/myprog.sh",
+                0, 0,
+                Perm.FromInt(7, 5, 5)
+            );
+
+            using (ITextIO stream = Fs.Open("/root/myprog.sh", AccessMode.O_APONLY)) {
+                stream.WriteLine("#!/usr/bin/bash");
+                stream.WriteLine("");
+                stream.WriteLine("echo it works");
+                stream.WriteLine("cat /etc/passwd");
+            }
+
             TriggerStartup();
         }
 

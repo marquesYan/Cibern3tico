@@ -16,7 +16,7 @@ namespace Linux.Library
         public override int Execute(UserSpace userSpace) {
             string[] args = userSpace.Api.GetArgs();
             args[0] = "";
-            userSpace.Print(string.Join("", args));
+            userSpace.Print(string.Join(" ", args));
             return 0;
         }
     }

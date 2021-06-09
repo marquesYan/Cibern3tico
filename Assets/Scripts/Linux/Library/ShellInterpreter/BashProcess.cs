@@ -77,7 +77,7 @@ namespace Linux.Library.ShellInterpreter
 
         public Dictionary<string, string> Environment { get; protected set; }
 
-        public BashProcess(UserSpace userSpace) {
+        public BashProcess(UserSpace userSpace, bool autoCookPty) {
             UserSpace = userSpace;
             Environment = userSpace.Api.GetEnviron();
             Login = userSpace.Api.GetLogin();
@@ -88,8 +88,13 @@ namespace Linux.Library.ShellInterpreter
 
             SetupDefaultEnvironment();
             RegisterBuiltins();
-            CookPty();
+
+            if (autoCookPty) {
+                CookPty();
+            }
         }
+
+        public BashProcess(UserSpace userSpace) : this(userSpace, true) {}
 
         public bool Run() {
             string cwdName = PathUtils.BaseName(UserSpace.Api.GetCwd());
@@ -168,7 +173,7 @@ namespace Linux.Library.ShellInterpreter
             Environment["?"] = retCode.ToString();
         }
 
-        protected void ParseAndStartCommands(string cmd) {
+        public void ParseAndStartCommands(string cmd) {
             List<CommandBuilder> commands = SendCmdToParseChain(cmd);
 
             foreach (CommandBuilder command in commands) {
@@ -186,6 +191,21 @@ namespace Linux.Library.ShellInterpreter
                     }
                 }
             } 
+        }
+
+        public bool ParseSetVariables(string cmd) {
+            MatchCollection matches = SetVariablesRegex.Matches(cmd);
+
+            if (matches.Count == 0) {
+                return false;
+            }
+
+            foreach (Match match in matches) {
+                GroupCollection groups = match.Groups;
+                Variables[groups[1].Value] = groups[2].Value;
+            }
+
+            return true;
         }
 
         protected void CookPty() {
@@ -428,6 +448,13 @@ namespace Linux.Library.ShellInterpreter
                     switch(token) {
                         case Token.SEMICOLON:
                         case ' ': {
+                            if (!isStackEmpty 
+                                && Token.IsQuotes(stack.Peek()))
+                            {
+                                builtToken.Append(token);
+                                break;
+                            }
+
                             if (builtToken.Length > 0) {
                                 TokenType type = TokenType.FREE_FORM;
 
@@ -502,21 +529,6 @@ namespace Linux.Library.ShellInterpreter
             }
             
             return cmd;
-        }
-
-        protected bool ParseSetVariables(string cmd) {
-            MatchCollection matches = SetVariablesRegex.Matches(cmd);
-
-            if (matches.Count == 0) {
-                return false;
-            }
-
-            foreach (Match match in matches) {
-                GroupCollection groups = match.Groups;
-                Variables[groups[1].Value] = groups[2].Value;
-            }
-
-            return true;
         }
 
         protected string ReplaceShellVariables(string cmd) {

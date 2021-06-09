@@ -1,6 +1,7 @@
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.Library;
+using Linux.Library.ShellInterpreter;
 using UnityEngine;
 
 namespace Linux.Sys.RunTime
@@ -30,8 +31,12 @@ namespace Linux.Sys.RunTime
 
             int returnCode = 255;
 
+            var bashHandler = new BashCommandHandler(Api);
+
             if (execFile is CompiledBin) {
                 returnCode = HandleCompiledBin((CompiledBin)execFile);
+            } else if (bashHandler.IsFileSupported(execFile)) {
+                returnCode = bashHandler.Execute(execFile);
             }
 
             Process process = Api.LookupProcessByPid(Api.GetPid());
