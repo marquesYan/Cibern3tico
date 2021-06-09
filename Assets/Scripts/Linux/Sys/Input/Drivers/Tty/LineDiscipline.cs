@@ -145,6 +145,12 @@ namespace Linux.Sys.Input.Drivers.Tty {
                     ControlPressed = false;
                     return;
                 }
+
+                case CharacterControl.C_CLEAR_BUFFER: {
+                    Buffer.Clear();
+                    Pointer = 0;
+                    return;
+                }
             }
 
             ushort signal = GetIoctlFromControl(key);
@@ -191,8 +197,9 @@ namespace Linux.Sys.Input.Drivers.Tty {
         }
 
         protected void WriteBuffer(string data) {
+            Debug.Log("line discipline pointer: " + Pointer);
             Buffer.Insert(Pointer, data);
-            Pointer++;
+            Pointer += data.Length;
         }
 
         protected void RemoveAtFront() {

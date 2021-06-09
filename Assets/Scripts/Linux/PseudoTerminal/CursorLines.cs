@@ -67,32 +67,21 @@ namespace Linux.PseudoTerminal
 
         public void Add(string text) {
             if (text.Contains("\r")) {
-                Debug.Log("cursor received: "+TextUtils.ToByte(text));
-                Debug.Log("got carriage return: ");
                 int cursor = GetCursorIndex();
                 int pointer = Buffer.Length - cursor;
                 int diff = Pointer - pointer;
-
-                Debug.Log("new pointer: " + pointer);
-                Debug.Log("diff: " + diff);
-
-                Debug.Log("current pointer: " + Pointer);
-                Debug.Log("current length: " + Buffer.Length);
-                Debug.Log("current line: " + CurrentLine);
 
                 int oldBlockedIndex = BlockedIndex;
                 BlockedIndex = -1;
 
                 for (var i = 0; i < diff; i++) {
-                    MovePointer(-1);
+                    MoveCursor(-1);
                     Buffer.Remove();
                 }
 
                 BlockedIndex = oldBlockedIndex;
 
                 UpdateLinesCache();
-
-                // CurrentLine = "";
             } else {
                 Buffer.Write(text);
                 UpdateLinesCache();

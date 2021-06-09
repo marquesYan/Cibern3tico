@@ -20,6 +20,8 @@ namespace Linux.PseudoTerminal {
         public const string C_DDOWN_ARROW = "^[[B";
         public const string C_DLEFT_ARROW = "^[[D";
         public const string C_DRIGHT_ARROW = "^[[C";
+
+        public const string C_CLEAR_BUFFER = "^[[T~C";
         // public const string C_UBACKSPACE = "BKS^";
         // public const string C_UDELETE = "DEL^";
         // public const string C_UTAB = "TAB^";

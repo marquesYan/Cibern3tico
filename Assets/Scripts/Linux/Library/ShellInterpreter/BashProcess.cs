@@ -102,7 +102,8 @@ namespace Linux.Library.ShellInterpreter
 
             string originalCmd = UserSpace.Stdin.ReadUntil(
                 $"{AbstractTextIO.LINE_FEED}",
-                CharacterControl.C_DUP_ARROW
+                CharacterControl.C_DUP_ARROW,
+                CharacterControl.C_DDOWN_ARROW
             );
 
             if (string.IsNullOrEmpty(originalCmd)) {
@@ -115,19 +116,36 @@ namespace Linux.Library.ShellInterpreter
                 return false;
             }
 
-            if (cmd.Contains(CharacterControl.C_DUP_ARROW)) {
-                string lastCommand = History.Last();
-
-                if (lastCommand != null) {
-                    UserSpace.Print("\r", "");
-                    UserSpace.Print(prompt, " ");
-                    
-                    var cmdArray = new string[] { lastCommand };
-                    ((IoctlDevice)UserSpace.Stdin).Ioctl(
-                        PtyIoctl.TIO_SEND_KEY,
-                        ref cmdArray
-                    );
+            if (cmd == CharacterControl.C_DUP_ARROW
+                || cmd == CharacterControl.C_DDOWN_ARROW) {
+                string lastCommand;
+                
+                if (cmd == CharacterControl.C_DUP_ARROW) {
+                    lastCommand = History.Last();
+                } else {
+                    lastCommand = History.Next();
                 }
+
+                if (lastCommand == null) {
+                    lastCommand = "";
+                }
+
+                UserSpace.Print("\r", "");
+                UserSpace.Print(prompt, " ");
+
+                var bufClearArray = new string[] {
+                    CharacterControl.C_CLEAR_BUFFER
+                };
+                ((IoctlDevice)UserSpace.Stdin).Ioctl(
+                    PtyIoctl.TIO_SEND_KEY,
+                    ref bufClearArray
+                );
+                
+                var cmdArray = new string[] { lastCommand };
+                ((IoctlDevice)UserSpace.Stdin).Ioctl(
+                    PtyIoctl.TIO_SEND_KEY,
+                    ref cmdArray
+                );
 
                 return true;
             }
@@ -174,8 +192,19 @@ namespace Linux.Library.ShellInterpreter
             if (UserSpace.Stdin is IoctlDevice) {
                 var pts = (IoctlDevice)UserSpace.Stdin;
 
+                // Disable auto control of DownArrow character
+                var downArrowArray = new string[] {
+                    CharacterControl.C_DDOWN_ARROW
+                };
+                pts.Ioctl(
+                    PtyIoctl.TIO_DEL_SPECIAL_CHARS,
+                    ref downArrowArray
+                );
+
                 // Disable auto control of UpArrow character
-                var upArrowArray = new string[] { CharacterControl.C_DUP_ARROW };
+                var upArrowArray = new string[] {
+                    CharacterControl.C_DUP_ARROW
+                };
                 pts.Ioctl(
                     PtyIoctl.TIO_DEL_SPECIAL_CHARS,
                     ref upArrowArray
@@ -185,6 +214,11 @@ namespace Linux.Library.ShellInterpreter
                 pts.Ioctl(
                     PtyIoctl.TIO_ADD_UNBUFFERED_CHARS,
                     ref upArrowArray
+                );
+
+                pts.Ioctl(
+                    PtyIoctl.TIO_ADD_UNBUFFERED_CHARS,
+                    ref downArrowArray
                 );
 
                 // Disable buffering, so we can receive the UpArrow

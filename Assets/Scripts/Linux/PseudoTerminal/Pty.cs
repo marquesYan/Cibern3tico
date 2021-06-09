@@ -84,14 +84,15 @@ namespace Linux.PseudoTerminal
                 }
 
                 case PtyIoctl.TIO_ADD_UNBUFFERED_CHARS: {
-                    int lastIndex = Array.LastIndexOf(UnbufferedChars, null);
-                    if (lastIndex > (UnbufferedChars.Length)) {
+                    int index = Array.IndexOf(UnbufferedChars, null);
+
+                    if (index > (UnbufferedChars.Length - 1)) {
                         throw new System.InvalidOperationException(
                             "Reached maximum of unbuffered chars"
                         );
                     }
 
-                    UnbufferedChars[lastIndex] = data[0];
+                    UnbufferedChars[index] = data[0];
                     break;
                 }
 

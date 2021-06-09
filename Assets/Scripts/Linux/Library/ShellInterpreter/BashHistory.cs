@@ -35,8 +35,28 @@ namespace Linux.Library.ShellInterpreter
         }
 
         public string Last() {
-            Index++;
+            UpdateIndex(1);
 
+            return ReadHistoryLine();
+        }
+
+        public string Next() {
+            UpdateIndex(-1);
+            
+            return ReadHistoryLine();
+        }
+
+        protected void UpdateIndex(int step) {
+            int index = Index + step;
+
+            if (index < 1) {
+                index = 1;
+            }
+
+            Index = index;
+        }
+
+        protected string ReadHistoryLine() {
             using (ITextIO stream = UserSpace.Open(FilePath, AccessMode.O_RDONLY)) {
                 string[] lines = stream.ReadLines();
 
