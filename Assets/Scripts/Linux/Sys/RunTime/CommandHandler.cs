@@ -45,7 +45,7 @@ namespace Linux.Sys.RunTime
                 returnCode = handler.Execute(execFile);
             }
 
-            Process process = Api.LookupProcessByPid(Api.GetPid());
+            Process process = Kernel.ProcTable.LookupPid(Api.GetPid());
             process.ReturnCode = returnCode;
         }
 

@@ -84,6 +84,10 @@ namespace Linux.PseudoTerminal
                 }
 
                 case PtyIoctl.TIO_ADD_UNBUFFERED_CHARS: {
+                    if (UnbufferedChars.Contains(data[0])) {
+                        break;
+                    }
+
                     int index = Array.IndexOf(UnbufferedChars, null);
 
                     if (index > (UnbufferedChars.Length - 1)) {
@@ -104,7 +108,10 @@ namespace Linux.PseudoTerminal
                         s => s == key
                     );
 
-                    SpecialChars[index] = null;
+                    if (index  != -1) {
+                        SpecialChars[index] = null;
+                    }
+
                     break;
                 }
 

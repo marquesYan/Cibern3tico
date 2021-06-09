@@ -22,6 +22,8 @@ namespace Linux.Library.ShellInterpreter
             using (ITextIO stream = UserSpace.Open(FilePath, AccessMode.O_APONLY)) {
                 //
             }
+
+            ReadHistoryLine();
         }
 
         public void Add(string command) {
@@ -60,8 +62,10 @@ namespace Linux.Library.ShellInterpreter
             using (ITextIO stream = UserSpace.Open(FilePath, AccessMode.O_RDONLY)) {
                 string[] lines = stream.ReadLines();
 
+                Length = lines.Length;
+
                 try {
-                    return lines[lines.Length - (Index + 1)];
+                    return lines[Length - (Index + 1)];
                 } catch (System.IndexOutOfRangeException) {
                     return null;
                 }
