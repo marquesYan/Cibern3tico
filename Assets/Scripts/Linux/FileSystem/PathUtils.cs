@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Linux.FileSystem
 {
     public static class PathUtils {
-        const char SEPARATOR = '/';
+        public const char SEPARATOR = '/';
 
         public static string[] Split(string path) {
             return path.Split(SEPARATOR);
@@ -14,7 +14,11 @@ namespace Linux.FileSystem
         }
 
         public static string ToAbsPath(string path) {
-            return $"{SEPARATOR}{path.TrimStart(SEPARATOR)}";
+            return $"{SEPARATOR}{ToRelPath(path)}";
+        }
+
+        public static string ToRelPath(string path) {
+            return path.TrimStart(SEPARATOR);
         }
 
         public static bool IsAbsPath(string path) {
