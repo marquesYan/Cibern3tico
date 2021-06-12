@@ -78,13 +78,18 @@ namespace Linux.FileSystem
 
             string absPath;
             FsMountPoint fsMountPoint = TryMountFs(
-                Root.Path, 
+                Root.Path,
                 file.Path,
                 out absPath
             );
 
             if (fsMountPoint != null) {
-                return fsMountPoint.Fs.Open(filePath, mode);
+                string mntPath = MaskMountedFile(
+                    file.Path,
+                    fsMountPoint.MountPoint
+                );
+
+                return fsMountPoint.Fs.Open(mntPath, mode);
             }
 
             if (file.Type == FileType.F_SYL) {
