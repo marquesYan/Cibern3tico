@@ -42,6 +42,10 @@ namespace Linux.Configuration
             return LoadFromFs().Find(g => g.Gid == gid);
         }
 
+        public Group LookupName(string name) {
+            return LoadFromFs().Find(g => g.Name == name);
+        }
+
         protected override Group ItemFromTokens(string[] tokens) {
             if (tokens.Length != 4) {
                 return null;

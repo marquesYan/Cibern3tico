@@ -145,6 +145,30 @@ namespace Linux.Sys.RunTime
             return user.Login;
         }
 
+        public int LookupUserUid(string login) {
+            User user = Kernel.UsersDb.LookupLogin(login);
+            
+            if (user == null) {
+                throw new System.InvalidOperationException(
+                    "user not found: " + login
+                );
+            }
+
+            return user.Uid;
+        }
+
+        public int LookupGroupGid(string name) {
+            Group group = Kernel.GroupsDb.LookupName(name);
+            
+            if (group == null) {
+                throw new System.InvalidOperationException(
+                    "group not found: " + name
+                );
+            }
+
+            return group.Gid;
+        }
+
         public string LookupGroupName(int gid) {
             Group group = Kernel.GroupsDb.LookupGid(gid);
             
@@ -249,6 +273,30 @@ namespace Linux.Sys.RunTime
             }
 
             file.Permission = newPermission;
+        }
+
+        public void ChangeFileOwner(string path, int newUid) {
+            File file = LookupFileOrFail(path);
+
+            User user = GetCurrentUser();
+
+            if (!IsRootUser() && user.Uid != file.Uid) {
+                ThrowPermissionDenied();
+            }
+
+            file.Uid = newUid;
+        }
+
+        public void ChangeFileGroup(string path, int newGid) {
+            File file = LookupFileOrFail(path);
+
+            User user = GetCurrentUser();
+
+            if (!IsRootUser() && user.Uid != file.Uid) {
+                ThrowPermissionDenied();
+            }
+
+            file.Gid = newGid;
         }
 
         public string GetFdPath(int fd) {
