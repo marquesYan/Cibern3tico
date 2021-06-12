@@ -20,6 +20,8 @@ using Linux.Sys.RunTime;
 namespace Linux
 {
     public class Kernel {
+        readonly object _lock = new object();
+
         public const string Version = "0.0.1.x86_64"; 
 
         public UnityTerminal Terminal { get; protected set; }
@@ -44,6 +46,10 @@ namespace Linux
 
         protected Process InitProcess;
 
+        protected bool IsShutdown;
+
+        protected bool ShutdownScheduled;
+
         float _bootDelay = 0.0001f;
 
         public static bool IsRunning { get; protected set; }
@@ -51,7 +57,11 @@ namespace Linux
         public Kernel(string persistentPath, VirtualMachine machine) {
             PersistentPath = persistentPath;
             Machine = machine;
+
             IsRunning = true;
+            IsShutdown = false;
+            ShutdownScheduled = false;
+
             PostInterruptHooks = new ConcurrentDictionary<string, Action<UEvent>>();
             new DecompressStage(this);
         }
@@ -91,35 +101,31 @@ namespace Linux
             TriggerStartup();
         }
 
+        public void ScheduleShutdown() {
+            ShutdownScheduled = true;
+        }
+
         public void Shutdown() {
-            Debug.Log("Shutting down");
-            IsRunning = false;
-
-            EventTable.Close();
-
-            Debug.Log("childs: " +string.Join(",", InitProcess.ChildPids));
-
-            ProcSigTable.Dispatch(InitProcess, ProcessSignal.SIGHUP);
-
-            while (InitProcess.ChildPids.Count > 0) {
-                Debug.Log("waiting shutdown on kernel processes");
-                Thread.Sleep(1000);
+            lock(_lock) {
+                if (!IsShutdown) {
+                    InternalShutdown();
+                    IsShutdown = true;
+                }
             }
-
-            // Try gracefully
-            KillProcess(InitProcess);
-
-            if (!WaitProcessUntil(InitProcess, 60)) {
-                // Go hard
-                KillProcess(InitProcess, ProcessSignal.SIGKILL);
-            }
-
-            Thread.Sleep(1000);
-
-            ProcTable.Close();
+            
         }
 
         public void Interrupt(Pci pci, IRQCode code) {
+            lock(_lock) {
+                if (ShutdownScheduled) {
+                    Shutdown();
+                }
+
+                if (IsShutdown) {
+                    return;
+                }
+            }
+
             UEvent uEvent = EventTable.LookupByPci(pci);
 
             if (uEvent != null) {
@@ -173,6 +179,34 @@ namespace Linux
             }
 
             ProcTable.Remove(process);
+        }
+
+        void InternalShutdown() {
+            Debug.Log("Shutting down");
+            IsRunning = false;
+
+            EventTable.Close();
+
+            Debug.Log("childs: " +string.Join(",", InitProcess.ChildPids));
+
+            ProcSigTable.Dispatch(InitProcess, ProcessSignal.SIGHUP);
+
+            while (InitProcess.ChildPids.Count > 0) {
+                Debug.Log("waiting shutdown on kernel processes");
+                Thread.Sleep(1000);
+            }
+
+            // Try gracefully
+            KillProcess(InitProcess);
+
+            if (!WaitProcessUntil(InitProcess, 15)) {
+                // Go hard
+                KillProcess(InitProcess, ProcessSignal.SIGKILL);
+            }
+
+            Thread.Sleep(1000);
+
+            ProcTable.Close();
         }
 
         bool WaitProcessUntil(Process process, int seconds) {

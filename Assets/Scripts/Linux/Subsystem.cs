@@ -49,6 +49,10 @@ namespace Linux
         }
 
         void Update() {
+            if (!Kernel.IsRunning) {
+                Application.Quit();
+            }
+
             Kernel.Interrupt(KeyboardPci, IRQCode.READ);
         }
 
