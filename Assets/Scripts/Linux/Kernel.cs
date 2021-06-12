@@ -40,6 +40,7 @@ namespace Linux
         public PseudoTerminalTable PtyTable;
 
         public ProcessSignalsTable ProcSigTable;
+        public string PersistentPath { get; protected set; }
 
         protected Process InitProcess;
 
@@ -47,7 +48,8 @@ namespace Linux
 
         public static bool IsRunning { get; protected set; }
 
-        public Kernel(VirtualMachine machine) {
+        public Kernel(string persistentPath, VirtualMachine machine) {
+            PersistentPath = persistentPath;
             Machine = machine;
             IsRunning = true;
             PostInterruptHooks = new ConcurrentDictionary<string, Action<UEvent>>();

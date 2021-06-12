@@ -33,7 +33,7 @@ namespace Linux
                 "0000:00:05.0"
             );
 
-            Kernel = new Linux.Kernel(machine);
+            Kernel = new Linux.Kernel(Application.persistentDataPath, machine);
             Kernel.Bootstrap();
         }
 

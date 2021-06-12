@@ -21,9 +21,11 @@ namespace Linux.FileSystem
     public abstract class AbstractFileTree {
         protected List<FsMountPoint> Mounts;
 
+        protected File MountPoint;
+
         public File Root { get; protected set; }
 
-        public AbstractFileTree(File root) {
+        public AbstractFileTree(File root, File mountPoint) {
             EnsureIsDirectory(root);
 
             Root = root;
@@ -31,7 +33,11 @@ namespace Linux.FileSystem
             Root.Parent = Root;
 
             Mounts = new List<FsMountPoint>();
+
+            MountPoint = mountPoint;
         }
+
+        public AbstractFileTree(File root) : this(root, null) { }
 
         protected abstract ITextIO OpenFileHandler(File file, int mode);
         protected abstract void OnAddedFile(File file, ITextIO stream);
@@ -68,6 +74,17 @@ namespace Linux.FileSystem
                 throw new System.ArgumentException(
                     "File is a directory"
                 );
+            }
+
+            string absPath;
+            FsMountPoint fsMountPoint = TryMountFs(
+                Root.Path, 
+                file.Path,
+                out absPath
+            );
+
+            if (fsMountPoint != null) {
+                return fsMountPoint.Fs.Open(filePath, mode);
             }
 
             if (file.Type == FileType.F_SYL) {
@@ -108,7 +125,7 @@ namespace Linux.FileSystem
             if (fsMountPoint == null) {
                 InternalAdd(parent, file, stream);                
             } else {
-                fsMountPoint.Fs.Add(file);
+                fsMountPoint.Fs.AddFrom(parent, file, stream);
             }
         }
 
@@ -271,6 +288,14 @@ namespace Linux.FileSystem
             }
 
             return null;
+        }
+
+        protected string ResolvePathIfMounted(File file) {
+            if (MountPoint == null) {
+                return file.Path;
+            }
+
+            return MaskMountedFile(file.Path, MountPoint);
         }
 
         protected string MaskMountedFile(string path, File mountPoint) {

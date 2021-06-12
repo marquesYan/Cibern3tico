@@ -1,3 +1,4 @@
+using SysPath = System.IO.Path;
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.Sys;
@@ -18,6 +19,8 @@ namespace Linux.Boot
             MakeLinuxDefaultDirectories();
 
             MakeLinuxConfigurations();
+
+            MountHomeFileSystem();
 
             Kernel.UsersDb = new UsersDatabase(Kernel.Fs);
             // Print("users database: created");
@@ -46,6 +49,35 @@ namespace Linux.Boot
             );
         }
 
+        void MountHomeFileSystem() {
+            var mountPoint = new File(
+                "/home",
+                0,
+                0,
+                Perm.FromInt(7, 5, 5),
+                FileType.F_MNT
+            );
+
+            string path = SysPath.Combine(
+                Kernel.PersistentPath,
+                "squashfs"
+            );
+
+            var homeFs = new LocalFileTree(
+                path,
+                new File(
+                    "/",
+                    0,
+                    0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_DIR
+                ),
+                mountPoint
+            );
+
+            Kernel.Fs.Mount(mountPoint, homeFs);
+        }
+
         void MakeSystemUsers() {
             Kernel.UsersDb.Add(new User(
                 "root",
@@ -71,11 +103,11 @@ namespace Linux.Boot
                 "/usr/bin/bash"
             ));
 
-            Kernel.Fs.CreateDir(
-                "/home/user",
-                1000, 1000,
-                Perm.FromInt(7, 0, 0)
-            );
+            // Kernel.Fs.CreateDir(
+            //     "/home/user",
+            //     1000, 1000,
+            //     Perm.FromInt(7, 0, 0)
+            // );
         }
 
         void MakeSystemGroups() {
@@ -100,7 +132,6 @@ namespace Linux.Boot
 
         void MakeLinuxDefaultDirectories() {
             string[] dir755 = new string[]{
-                "/home",
                 "/mnt",
                 "/usr",
                 "/etc",

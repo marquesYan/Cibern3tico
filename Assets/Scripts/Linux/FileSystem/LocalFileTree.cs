@@ -13,46 +13,76 @@ namespace Linux.FileSystem
 
         public LocalFileTree(
             string localPath,
-            File root
-        ) : base(root) {
+            File root,
+            File MountPoint
+        ) : base(root, MountPoint) {
             LocalPath = localPath;
+
+            if (!SysDir.Exists(LocalPath)) {
+                SysDir.CreateDirectory(LocalPath);
+            }
+
             MapLocalToVirtualTree();
         }
+
+        public LocalFileTree(
+            string localPath,
+            File root
+        ) : this(localPath, root, null) {}
 
         protected void MapLocalToVirtualTree() {
             MapRootTree(Root);
         }
 
         protected void MapRootTree(File root) {
-            string rootFile = GetLocalPath(root);
+            string localRootFile = GetLocalPath(root);
+            string rootPath = PathUtils.ToAbsPath(root.Path);
 
-            foreach (string path in SysDir.GetFiles(rootFile)) {
+            if (MountPoint != null) {
+                rootPath = PathUtils.Combine(
+                    MountPoint.Path,
+                    rootPath
+                );
+            }
+
+            int filePerm = Perm.FromInt(6, 6, 4);
+            int dirPerm = Perm.FromInt(7, 5, 5);
+
+            foreach (string path in SysDir.GetFiles(localRootFile)) {
                 string relPath = SysPath.GetFileName(path);
 
-                bool isDir = SysDir.Exists(path);
-
-                FileType type = isDir ? FileType.F_DIR : FileType.F_REG;
-
-                int permission = isDir ? Perm.FromInt(7, 5, 5) : Perm.FromInt(6, 6, 4);
-
                 File file = new File(
-                    PathUtils.Combine(root.Name, relPath),
+                    PathUtils.Combine(rootPath, relPath),
                     Root.Uid,
                     Root.Gid,
-                    permission,
-                    type
+                    filePerm,
+                    FileType.F_REG
+                );
+
+                AddFrom(root, file);
+            }
+
+            foreach (string dir in SysDir.GetDirectories(localRootFile)) {
+                string relPath = SysPath.GetFileName(dir);
+
+                File file = new File(
+                    PathUtils.Combine(rootPath, relPath),
+                    Root.Uid,
+                    Root.Gid,
+                    dirPerm,
+                    FileType.F_DIR
                 );
 
                 AddFrom(root, file);
 
-                if (isDir) {
-                    MapRootTree(file);
-                }
+                MapRootTree(file);
             }
         }
 
         protected string GetLocalPath(File file) {
-            string normalizedPath = file.Path.Replace(
+            string virtualPath = ResolvePathIfMounted(file);
+
+            string normalizedPath = virtualPath.Replace(
                 PathUtils.SEPARATOR,
                 SysPath.DirectorySeparatorChar
             );
@@ -78,6 +108,7 @@ namespace Linux.FileSystem
                 }
 
                 default: {
+                    Debug.Log("creating file at: " + localPath);
                     if (!SysFile.Exists(localPath)) {
                         using (SysFile.Create(localPath)) {
                             //
