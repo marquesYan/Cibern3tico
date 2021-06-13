@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Linux.Sys;
+using UnityEngine;
 
 namespace Linux.Net {
     // public class ConnectedDevice {
@@ -22,6 +23,9 @@ namespace Linux.Net {
         }
 
         public void Broadcast(Pci pci, string message) {
+            Debug.Log("HUB: broadcasting message: " + message);
+            Debug.Log("HUB: message length: " + message.Length);
+
             foreach (KeyValuePair<Pci, VirtualCable> kvp in Devices) {
                 Pci neighbourPci = kvp.Key;
                 VirtualCable neighbourVtCable = kvp.Value;

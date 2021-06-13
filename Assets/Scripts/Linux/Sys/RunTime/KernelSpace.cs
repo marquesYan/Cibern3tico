@@ -5,6 +5,8 @@ using System.Globalization;
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.IO;
+using Linux.Net;
+using Linux.Sys.Input.Drivers;
 using UnityEngine;
 
 namespace Linux.Sys.RunTime
@@ -133,6 +135,20 @@ namespace Linux.Sys.RunTime
 
             ThrowPermissionDenied();
             return -1;
+        }
+
+        public UdpSocket UdpSocket(string ipAddress, int port) {
+            UEvent netEvent = Kernel.EventTable.LookupByType(DevType.NETWORK);
+
+            if (netEvent == null) {
+                throw new InvalidOperationException(
+                    "network driver not available"
+                );
+            }
+
+            VirtualNetDriver netDriver = (VirtualNetDriver)netEvent.Driver;
+
+            return new UdpSocket(netDriver.GetNetInterface(), ipAddress, port);
         }
 
         public string LookupUserLogin(int uid) {

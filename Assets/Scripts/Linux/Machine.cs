@@ -21,19 +21,8 @@ namespace Linux
             BiosDrivers = new List<IPciDriver>();
         }
 
-        public Pci AttachUSB(
-            string product,
-            byte vendorId,
-            DevType type,
-            string slot
-        ) {
+        public Pci AttachUSB(string slot, GenericDevice usb) {
             usbCount++;
-
-            var usb = new GenericDevice(
-                product,
-                vendorId,
-                type
-            );
 
             var usbPci = new Pci(
                 "xHCI Host Controller",
