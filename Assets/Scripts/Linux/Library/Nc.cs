@@ -23,11 +23,32 @@ namespace Linux.Library
                 "Connect remote socket to standard input and output."
             );
 
+            string srcAddress = null;
+            parser.AddArgument<string>(
+                "s|souce-addr=",
+                "specify source address to use",
+                (string addr) => srcAddress = addr
+            );
+
+            string srcPortStr = "666";
+            parser.AddArgument<string>(
+                "p|souce-port=",
+                "specify source port to use",
+                (string port) => srcPortStr = port
+            );
+
             List<string> arguments = parser.Parse();
 
             if (arguments.Count < 2) {
                 parser.ShowHelpInfo();
                 return 1;
+            }
+
+            int srcPort;
+
+            if (!int.TryParse(srcPortStr, out srcPort)) {
+                userSpace.Stderr.WriteLine("Source port must be a number: " + srcPortStr);
+                return 2;
             }
 
             string ipAddress = arguments[0];
@@ -36,11 +57,11 @@ namespace Linux.Library
             int port;
 
             if (!int.TryParse(portStr, out port)) {
-                userSpace.Stderr.WriteLine("Port must be a number");
-                return 2;
+                userSpace.Stderr.WriteLine("Port must be a number: " + portStr);
+                return 3;
             }
 
-            UdpSocket socket = userSpace.Api.UdpSocket("10.0.0.1", 8888);
+            UdpSocket socket = userSpace.Api.UdpSocket(srcAddress, srcPort);
 
             string message = "";
 

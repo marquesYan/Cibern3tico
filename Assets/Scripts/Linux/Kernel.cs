@@ -7,6 +7,7 @@ using Linux.Boot;
 using Linux.Configuration;
 using Linux.IO;
 using Linux.Sys;
+using Linux.Sys.Net;
 using Linux.Sys.Drivers;
 using Linux.Sys.Input;
 using Linux.Sys.Input.Drivers.Tty;
@@ -35,6 +36,9 @@ namespace Linux
         public GroupsDatabase GroupsDb;
         public PeripheralsTable PciTable;
         public UdevTable EventTable;
+
+        public NetworkTable NetTable;
+
         public CommandHandler CmdHandler;
 
         public ConcurrentDictionary<string, Action<UEvent>> PostInterruptHooks;
@@ -67,6 +71,8 @@ namespace Linux
         }
 
         public void Bootstrap() {
+            NetTable = new NetworkTable(Fs);
+
             PciTable = new PeripheralsTable(Fs);
             // Print("pci table: created");
 
@@ -254,8 +260,12 @@ namespace Linux
                     if (driver.IsSupported(pci)) {
                         IDeviceDriver devDriver = driver.FindDevDriver(device);
                         
-                        if (devDriver != null && devDriver is IUdevDriver) {
-                            EventTable.Add(pci, device, (IUdevDriver)devDriver);
+                        if (devDriver != null) {
+                            if (devDriver is IUdevDriver) {
+                                EventTable.Add(pci, device, (IUdevDriver)devDriver);
+                            } else if (devDriver is INetDriver) {
+                                NetTable.Add((INetDriver)devDriver);
+                            }
                         }
                     }
                 }

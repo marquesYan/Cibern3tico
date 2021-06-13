@@ -16,6 +16,8 @@ namespace Linux
         protected Pci DisplayPci;
         protected Pci KeyboardPci;
 
+        public UnityNetwork UnityNetwork;
+
         void Start() {
             var machine = new VirtualMachine("I4440FX", 4);
 
@@ -39,10 +41,10 @@ namespace Linux
                 )
             );
 
-            Pci netCard = machine.AttachUSB(
+            Pci netCard = machine.AttachNetworkCard(
                 "0000:00:06.0",
                 new GenericDevice(
-                    "Unity Virtual Network Card",
+                    "Unity Virtual Network",
                     UnityVendorId,
                     DevType.NETWORK,
                     new Dictionary<string, string>() {
@@ -50,16 +52,13 @@ namespace Linux
                     }
                 )
             );
-
-            UnityNetwork unityNetwork = GameObject.FindObjectsOfType<UnityNetwork>()[0];
-            VirtualCable vtCable = unityNetwork.Hub.Connect(netCard);
-
-            var usbDriver = new UsbControllerDriver();
-            usbDriver.Register(new VirtualNetDriver(vtCable));
-            machine.BiosDrivers.Add(usbDriver);
+            
+            machine.BiosDrivers.Add(GetUnityNetworkDriver(netCard));
 
             Kernel = new Linux.Kernel(Application.persistentDataPath, machine);
             Kernel.Bootstrap();
+
+            Kernel.NetTable.LookupName("vt0").IpAddresses.Add("10.0.0.1");
         }
 
         IPciDriver GetUnityDriver() {
@@ -67,6 +66,12 @@ namespace Linux
             usbDriver.Register(new UnityKbdDriver());
             usbDriver.Register(new UnityDisplayDriver(1024 ^ 2));
             return usbDriver;
+        }
+
+        IPciDriver GetUnityNetworkDriver(Pci netCard) {
+            VirtualCable vtCable = UnityNetwork.Hub.Connect(netCard);
+
+            return new NetworkControllerDriver(vtCable);
         }
 
         void OnApplicationQuit() {

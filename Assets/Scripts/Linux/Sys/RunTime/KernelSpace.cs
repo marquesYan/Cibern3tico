@@ -138,17 +138,15 @@ namespace Linux.Sys.RunTime
         }
 
         public UdpSocket UdpSocket(string ipAddress, int port) {
-            UEvent netEvent = Kernel.EventTable.LookupByType(DevType.NETWORK);
+            NetInterface netInterface = Kernel.NetTable.LookupIpAddress(ipAddress);
 
-            if (netEvent == null) {
+            if (netInterface == null) {
                 throw new InvalidOperationException(
-                    "network driver not available"
+                    $"can not bind address {ipAddress}"
                 );
             }
 
-            VirtualNetDriver netDriver = (VirtualNetDriver)netEvent.Driver;
-
-            return new UdpSocket(netDriver.GetNetInterface(), ipAddress, port);
+            return new UdpSocket(netInterface, ipAddress, port);
         }
 
         public string LookupUserLogin(int uid) {

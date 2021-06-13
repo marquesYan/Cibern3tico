@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Linux.Net
@@ -8,9 +9,12 @@ namespace Linux.Net
 
         protected VirtualCable Cable;
 
+        public List<string> IpAddresses { get; protected set; }
+
         public NetInterface(VirtualCable cable, string macAddress) {
             MacAddress = macAddress;
             Cable = cable;
+            IpAddresses = new List<string>();
         }
 
         public void Send(string message) {

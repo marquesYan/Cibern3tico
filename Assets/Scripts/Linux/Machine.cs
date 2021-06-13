@@ -6,7 +6,7 @@ using Linux.Sys.Drivers;
 namespace Linux
 {    
     public class VirtualMachine {
-        protected int usbCount = 0;
+        protected int pciCount = 0;
 
         public Dictionary<Pci, GenericDevice> Chassis { get; protected set; }
 
@@ -22,20 +22,37 @@ namespace Linux
         }
 
         public Pci AttachUSB(string slot, GenericDevice usb) {
-            usbCount++;
+            pciCount++;
 
             var usbPci = new Pci(
                 "xHCI Host Controller",
                 "SAD",
                 slot,
                 189,
-                usbCount * 16,
+                pciCount * 16,
                 PciClass.INPUT
             );
 
             Chassis.Add(usbPci, usb);
 
             return usbPci;
+        }
+
+        public Pci AttachNetworkCard(string slot, GenericDevice connector) {
+            pciCount++;
+
+            var netPci = new Pci(
+                "Gigabit Ethernet Controller",
+                "SAD",
+                slot,
+                8086,
+                pciCount * 16,
+                PciClass.NET
+            );
+
+            Chassis.Add(netPci, connector);
+
+            return netPci;
         }
     }
 }
