@@ -58,7 +58,9 @@ namespace Linux
             Kernel = new Linux.Kernel(Application.persistentDataPath, machine);
             Kernel.Bootstrap();
 
-            Kernel.NetTable.LookupName("vt0").IpAddresses.Add("10.0.0.1");
+            Kernel.NetTable.LookupName("vt0").IPAddresses.Add(
+                NetworkAddress.FromString("10.0.0.1/24")
+            );
         }
 
         IPciDriver GetUnityDriver() {

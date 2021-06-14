@@ -1,17 +1,18 @@
 using System;
+using System.Net;
 using UnityEngine;
 
 namespace Linux.Net
 {
     public class IpPacket {
-        public readonly string IpAddress;
+        public readonly IPAddress IpAddress;
 
         public readonly string Port;
 
         public readonly string Message;
 
         public IpPacket(string ipAddress, string port, string message) {
-            IpAddress = ipAddress;
+            IpAddress = IPAddress.Parse(ipAddress);
             Port = port;
             Message = message;
         }
@@ -21,13 +22,13 @@ namespace Linux.Net
     {
         protected NetInterface Interface;
 
-        protected string IpAddress;
+        protected IPAddress IpAddress;
 
         protected int Port;
 
         public BaseSocket(NetInterface interface_, string ipAddress, int port) {
             Interface = interface_;
-            IpAddress = ipAddress;
+            IpAddress = IPAddress.Parse(ipAddress);
             Port = port;
         }
 
@@ -37,6 +38,8 @@ namespace Linux.Net
             int port,
             string message
         ) {
+            IPAddress.Parse(ipAddress);
+
             string mask = "{0}:{1}{2}{3}:{4}{5}{6}";
 
             return string.Format(
@@ -80,7 +83,7 @@ namespace Linux.Net
                 return false;
             }
 
-            if (dstAddress[0] != IpAddress && dstAddress[1] != Port.ToString()) {
+            if (dstAddress[0] != IpAddress.ToString() && dstAddress[1] != Port.ToString()) {
                 // Message not ours
                 return false;
             }
@@ -114,7 +117,7 @@ namespace Linux.Net
 
             do {
                 packet = Recv();
-            } while (packet.IpAddress != ipAddress && packet.Port != portStr);
+            } while (packet.IpAddress.ToString() != ipAddress && packet.Port != portStr);
 
             return packet;
         }

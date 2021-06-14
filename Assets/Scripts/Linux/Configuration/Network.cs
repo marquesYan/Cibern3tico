@@ -45,7 +45,7 @@ namespace Linux.Configuration
             foreach (KeyValuePair<string, NetInterface> kvp in Interfaces) {
                 NetInterface netInterface = kvp.Value;
 
-                if (netInterface.IpAddresses.Contains(ipAddress)) {
+                if (netInterface.HasIPAddress(ipAddress)) {
                     return netInterface;
                 }
             }
