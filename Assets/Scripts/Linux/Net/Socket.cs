@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Net;
 using Linux.Configuration;
 using UnityEngine;
@@ -16,8 +15,6 @@ namespace Linux.Net
 
         protected int Port;
 
-        protected ConcurrentQueue<Packet> InputQueue;
-
         public BaseSocket(
             ArpTable arpTable,
             NetInterface interface_,
@@ -28,31 +25,6 @@ namespace Linux.Net
             Interface = interface_;
             IpAddress = ipAddress;
             Port = port;
-            InputQueue = new ConcurrentQueue<Packet>();
-
-            Interface.Transport.ListenInput(HandleInputPacket);
-        }
-
-        protected void HandleInputPacket(Packet packet) {
-            if (packet is LinkLayerPacket) {
-                if (packet is ArpPacket) {
-                    HandleInputArpPacket((ArpPacket) packet);
-                    return;
-                }
-            } else {
-                // unknow packet
-                return;
-            }
-
-            InputQueue.Enqueue(packet);
-        }
-
-        protected void HandleInputArpPacket(ArpPacket packet) {
-            Debug.Log("arp packet: " + packet.PeerAddress);
-            if (Interface.HasIPAddress(packet.PeerAddress)) {
-                Debug.Log("arp packet for me");
-                packet.PeerMacAddress = Interface.MacAddress;
-            }
         }
 
         protected void SendPacket(string peerAddress, Packet packet) {
@@ -62,11 +34,12 @@ namespace Linux.Net
                 macAddress = AddressResolution(peerAddress);
 
                 if (macAddress == null) {
-                    throw new System.ArgumentException(
+                    throw new ArgumentException(
                         "host not found: " + peerAddress
                     );
                 }
 
+                Debug.Log($"mac address of ip '{peerAddress}': {macAddress}");
                 ArpTable.Add(peerAddress, macAddress);
             }
 
@@ -95,102 +68,6 @@ namespace Linux.Net
 
             return macAddress;
         }
-
-        // protected string BuildPacket(string message) {
-        //     string mask = "{0}{1}{2}";
-
-        //     return string.Format(
-        //         mask,
-        //         MacAddress,
-        //         NetIO.SEPARATOR,
-        //         message
-        //     );
-        // }
-
-        // protected bool ParsePacket(string packet, out string message) {
-        //     message = null;
-
-        //     string[] tokens = packet.Split(new char[] { NetIO.SEPARATOR }, 1);
-
-        //     if (tokens.Length < 2) {
-        //         // Malformed packet
-        //         return false;
-        //     }
-
-        //     if (tokens[0] != MacAddress) {
-        //         // Message not ours
-        //         return false;
-        //     }
-
-        //     message = tokens[1];
-
-        //     return true;
-        // }
-
-
-        protected string BuildPacket(
-            string ipAddress,
-            int port,
-            string message
-        ) {
-            IPAddress.Parse(ipAddress);
-
-            string mask = "{0}:{1}{2}{3}:{4}{5}{6}";
-
-            return string.Format(
-                mask,
-                ipAddress,
-                port,
-                NetIO.SEPARATOR,
-                IpAddress,
-                Port,
-                NetIO.SEPARATOR,
-                message
-            );
-        }
-
-        // protected IpPacket Recv() {
-        //     IpPacket ipPacket;
-        //     string packet;
-
-        //     do {
-        //         packet = Interface.Recv();
-        //     } while (!ParsePacket(packet, out ipPacket));
-
-        //     return ipPacket;
-        // }
-
-        // protected bool ParsePacket(string packet, out IpPacket ipPacket) {
-        //     ipPacket = null;
-
-        //     string[] tokens = packet.Split(new char[] { NetIO.SEPARATOR }, 2);
-
-        //     if (tokens.Length < 3) {
-        //         // Malformed packet
-        //         return false;
-        //     }
-
-        //     string[] dstAddress = tokens[0].Split(':');
-        //     string[] srcAddress = tokens[1].Split(':');
-
-        //     if (dstAddress.Length != 2 || srcAddress.Length != 2) {
-        //         // Malformed destination/source address
-        //         return false;
-        //     }
-
-        //     if (dstAddress[0] != IpAddress.ToString() && dstAddress[1] != Port.ToString()) {
-        //         // Message not ours
-        //         return false;
-        //     }
-
-        //     ipPacket = new IpPacket(
-        //         srcAddress[0],
-        //         srcAddress[1],
-        //         tokens[2]
-        //     );
-
-        //     return true;
-        // }
     }
 
     public class UdpSocket : BaseSocket {

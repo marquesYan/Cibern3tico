@@ -27,6 +27,8 @@ namespace Linux.Net {
 
             foreach (ConnectedDevice device in Devices) {
                 if (device.Pci != pci) {
+                    Debug.Log("sending packet through: " + packet);
+                    Debug.Log("sending packet through: " + pci);
                     device.Transport.Process(packet);
                 }
             }

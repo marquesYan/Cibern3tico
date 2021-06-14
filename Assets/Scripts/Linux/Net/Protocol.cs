@@ -1,12 +1,12 @@
 namespace Linux.Net {
     public class ProtocolIdentifier {
-        public const int LINK = 0x1;
+        public const int LINK = 1;
 
-        public const int ARP = 0xa;
+        public const int ARP = 2;
 
-        public const int IP = 0xb;
+        public const int IP = 3;
 
-        public const int UDP = 0xc;
+        public const int UDP = 4;
     }
 
     public class Packet {
@@ -17,10 +17,6 @@ namespace Linux.Net {
 
     public class LinkLayerPacket : Packet {
         public const string EMPTY_MAC_ADDRESS = "00:00:00:00:00:00";
-
-        public int ProtocolID = ProtocolIdentifier.LINK;
-
-        public Packet NextLayer;
 
         public string SrcMacAddress;
 
@@ -34,6 +30,8 @@ namespace Linux.Net {
             SrcMacAddress = srcMacAddress;
             DstMacAddress = dstMacAddress;
             NextLayer = nextLayer;
+
+            ProtocolID = ProtocolIdentifier.LINK;
         }
 
         public LinkLayerPacket(
@@ -43,13 +41,9 @@ namespace Linux.Net {
     }
 
     public class IpPacket : Packet {
-        public int ProtocolID = ProtocolIdentifier.IP;
-
         public string SrcAddress;
 
         public string DstAddress;
-
-        public Packet NextLayer;
 
         public IpPacket(
             string srcAddress,
@@ -59,12 +53,12 @@ namespace Linux.Net {
             SrcAddress = srcAddress;
             DstAddress = dstAddress;
             NextLayer = nextLayer;
+
+            ProtocolID = ProtocolIdentifier.IP;
         }
     }
 
     public class ArpPacket : Packet {
-        public int ProtocolID = ProtocolIdentifier.ARP;
-
         public string PeerAddress;
 
         public string PeerMacAddress;
@@ -72,14 +66,14 @@ namespace Linux.Net {
         public ArpPacket(string peerAddress, string peerMacAddress) {
             PeerAddress = peerAddress;
             PeerMacAddress = peerMacAddress;
+
+            ProtocolID = ProtocolIdentifier.ARP;
         }
 
         public ArpPacket(string peerAddress) : this(peerAddress, LinkLayerPacket.EMPTY_MAC_ADDRESS) {}
     }
 
     public class UdpPacket : Packet {
-        public int ProtocolID = ProtocolIdentifier.UDP;
-
         public int PeerPort;
 
         public int LocalPort;
@@ -90,6 +84,8 @@ namespace Linux.Net {
             PeerPort = peerPort;
             LocalPort = localPort;
             Message = message;
+
+            ProtocolID = ProtocolIdentifier.UDP;
         }
     }
 }

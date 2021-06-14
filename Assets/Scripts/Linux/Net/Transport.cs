@@ -1,32 +1,37 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Concurrent;
 using Linux.IO;
 using Linux.Sys.IO;
 
 namespace Linux.Net {
     public class VirtualEthernetTransport {
-        protected Action<Packet> InputListeners;
-        protected Action<Packet> OutputListeners;
+        protected List<Action<Packet>> InputListeners;
+        protected List<Action<Packet>> OutputListeners;
 
-        // public VirtualEthernetTransport() {
-        //     InputListeners = new Action<Packet>();
-        //     OutputListeners = new Action<Packet>();
-        // }
+        public VirtualEthernetTransport() {
+            InputListeners = new List<Action<Packet>>();
+            OutputListeners = new List<Action<Packet>>();
+        }
 
         public void Broadcast(Packet packet) {
-            OutputListeners(packet);
+            foreach (Action<Packet> listener in OutputListeners) {
+                listener(packet);
+            }
         }
 
         public void Process(Packet packet) {
-            InputListeners(packet);
+            foreach (Action<Packet> listener in InputListeners) {
+                listener(packet);
+            }
         }
 
         public void ListenOutput(Action<Packet> listener) {
-            OutputListeners += listener;
+            OutputListeners.Add(listener);
         }
 
         public void ListenInput(Action<Packet> listener) {
-            InputListeners += listener;
+            InputListeners.Add(listener);
         }
     }
 }

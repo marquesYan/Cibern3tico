@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Net;
 using UnityEngine;
 
@@ -46,6 +47,8 @@ namespace Linux.Net
 
     public class NetInterface
     {
+        public ConcurrentQueue<Packet> InputQueue { get; protected set; }
+
         public string MacAddress { get; protected set; }
 
         public List<NetworkAddress> IPAddresses { get; protected set; }
@@ -55,10 +58,33 @@ namespace Linux.Net
             MacAddress = macAddress;
             Transport = transport;
             IPAddresses = new List<NetworkAddress>();
+            InputQueue = new ConcurrentQueue<Packet>();
+
+            Transport.ListenInput(HandleInputPacket);
         }
 
         public bool HasIPAddress(string ipAddress) {
             return IPAddresses.Find(netAddr => netAddr.IPAddress.ToString() == ipAddress) != null;
+        }
+
+        protected void HandleInputPacket(Packet packet) {
+            if (packet.ProtocolID == ProtocolIdentifier.LINK) {
+                if (packet.NextLayer.ProtocolID == ProtocolIdentifier.ARP) {
+                    HandleInputArpPacket((ArpPacket) packet.NextLayer);
+                    return;
+                }
+            } else {
+                // unknow packet
+                return;
+            }
+
+            InputQueue.Enqueue(packet);
+        }
+
+        protected void HandleInputArpPacket(ArpPacket packet) {
+            if (HasIPAddress(packet.PeerAddress)) {
+                packet.PeerMacAddress = MacAddress;
+            }
         }
     }
 }
