@@ -53,4 +53,26 @@ namespace Linux.Configuration
             return null;
         }
     }
+
+    public class ArpTable {
+        protected Dictionary<string, string> Addresses;
+
+        public ArpTable() {
+            Addresses = new Dictionary<string, string>();
+        }
+
+        public void Add(string ipAddress, string macAddress) {
+            Addresses.Add(ipAddress, macAddress);
+        }
+
+        public string LookupIpAddress(string ipAddress) {
+            string macAddress;
+
+            if (Addresses.TryGetValue(ipAddress, out macAddress)) {
+                return macAddress;
+            }
+
+            return null;
+        }
+    }
 }

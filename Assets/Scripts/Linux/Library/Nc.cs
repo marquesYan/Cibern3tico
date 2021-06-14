@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Net;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
 using Linux.IO;
@@ -51,7 +52,7 @@ namespace Linux.Library
                 return 2;
             }
 
-            string ipAddress = arguments[0];
+            string peerAddress = arguments[0];
             string portStr = arguments[1];
 
             int port;
@@ -61,13 +62,16 @@ namespace Linux.Library
                 return 3;
             }
 
-            UdpSocket socket = userSpace.Api.UdpSocket(srcAddress, srcPort);
+            UdpSocket socket = userSpace.Api.UdpSocket(
+                IPAddress.Parse(srcAddress), 
+                srcPort
+            );
 
             string message = "";
 
             while (message != "exit") {
                 message = userSpace.Stdin.ReadLine();
-                socket.SendTo(ipAddress, port, message);
+                socket.SendTo(IPAddress.Parse(peerAddress), port, message);
             }
 
             return 0;

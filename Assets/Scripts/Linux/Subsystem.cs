@@ -71,9 +71,9 @@ namespace Linux
         }
 
         IPciDriver GetUnityNetworkDriver(Pci netCard) {
-            VirtualCable vtCable = UnityNetwork.Hub.Connect(netCard);
+            VirtualEthernetTransport transport = UnityNetwork.Hub.Connect(netCard);
 
-            return new NetworkControllerDriver(vtCable);
+            return new NetworkControllerDriver(transport);
         }
 
         void OnApplicationQuit() {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Globalization;
+using System.Net;
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.IO;
@@ -137,16 +138,23 @@ namespace Linux.Sys.RunTime
             return -1;
         }
 
-        public UdpSocket UdpSocket(string ipAddress, int port) {
-            NetInterface netInterface = Kernel.NetTable.LookupIpAddress(ipAddress);
+        public UdpSocket UdpSocket(IPAddress peerAddress, int port) {
+            NetInterface netInterface = Kernel.NetTable.LookupIpAddress(
+                peerAddress.ToString()
+            );
 
             if (netInterface == null) {
                 throw new InvalidOperationException(
-                    $"can not bind address {ipAddress}"
+                    $"can not bind address {peerAddress.ToString()}"
                 );
             }
 
-            return new UdpSocket(netInterface, ipAddress, port);
+            return new UdpSocket(
+                Kernel.ArpTable,
+                netInterface,
+                peerAddress,
+                port
+            );
         }
 
         public string LookupUserLogin(int uid) {

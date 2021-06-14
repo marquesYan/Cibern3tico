@@ -6,10 +6,10 @@ namespace Linux.Sys.Drivers
 {
     public class NetworkControllerDriver : IPciDriver
     {
-        protected VirtualCable VtCable;
+        protected VirtualEthernetTransport Transport;
 
-        public NetworkControllerDriver(VirtualCable vtCable) {
-            VtCable = vtCable;
+        public NetworkControllerDriver(VirtualEthernetTransport transport) {
+            Transport = transport;
         }
 
         public bool IsSupported(Pci pci) {
@@ -19,7 +19,7 @@ namespace Linux.Sys.Drivers
 
         public IDeviceDriver FindDevDriver(GenericDevice input) {
             return new VirtualNetDriver(
-                new NetInterface(VtCable, input.Options["hwAddress"])
+                new NetInterface(Transport, input.Options["hwAddress"])
             );
         }
     }

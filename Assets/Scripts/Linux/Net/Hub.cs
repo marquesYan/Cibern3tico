@@ -3,49 +3,49 @@ using Linux.Sys;
 using UnityEngine;
 
 namespace Linux.Net {
-    // public class ConnectedDevice {
-    //     public readonly Pci Pci;
+    public class ConnectedDevice {
+        public readonly Pci Pci;
 
-    //     public readonly Kernel Kernel;
+        public readonly VirtualEthernetTransport Transport;
 
-    //     public ConnectedDevice(Kernel kernel, Pci pci) {
-    //         Kernel = kernel;
-    //         Pci = pci;
-    //     }
-    // }
+        public ConnectedDevice(Pci pci, VirtualEthernetTransport transport) {
+            Pci = pci;
+            Transport = transport;
+        }
+    }
 
     public class Hub
     {
-        protected Dictionary<Pci, VirtualCable> Devices;
+        protected List<ConnectedDevice> Devices;
 
         public Hub() {
-            Devices = new Dictionary<Pci, VirtualCable>();
+            Devices = new List<ConnectedDevice>();
         }
 
-        public void Broadcast(Pci pci, string message) {
-            Debug.Log("HUB: broadcasting message: " + message);
-            Debug.Log("HUB: message length: " + message.Length);
+        protected void Broadcast(Pci pci, Packet packet) {
+            Debug.Log("received packet: " + ((LinkLayerPacket)packet).DstMacAddress);
 
-            foreach (KeyValuePair<Pci, VirtualCable> kvp in Devices) {
-                Pci neighbourPci = kvp.Key;
-                VirtualCable neighbourVtCable = kvp.Value;
-
-
-                if (pci != neighbourPci) {
-                    neighbourVtCable.Write(message);
+            foreach (ConnectedDevice device in Devices) {
+                if (device.Pci != pci) {
+                    device.Transport.Process(packet);
                 }
             }
         }
 
-        public VirtualCable Connect(Pci pci) {
-            var vtCable = new VirtualCable(
-                (string message) => {
-                    Broadcast(pci, message);
+        public VirtualEthernetTransport Connect(Pci pci) {
+            var transport = new VirtualEthernetTransport();
+
+            transport.ListenOutput(
+                (Packet packet) => {
+                    Broadcast(pci, packet);
                 }
             );
 
-            Devices.Add(pci, vtCable);
-            return vtCable;
+            Devices.Add(
+                new ConnectedDevice(pci, transport)
+            );
+
+            return transport;
         }
     }
 }

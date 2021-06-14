@@ -39,6 +39,8 @@ namespace Linux
 
         public NetworkTable NetTable;
 
+        public ArpTable ArpTable;
+
         public CommandHandler CmdHandler;
 
         public ConcurrentDictionary<string, Action<UEvent>> PostInterruptHooks;
@@ -72,6 +74,7 @@ namespace Linux
 
         public void Bootstrap() {
             NetTable = new NetworkTable(Fs);
+            ArpTable = new ArpTable();
 
             PciTable = new PeripheralsTable(Fs);
             // Print("pci table: created");
