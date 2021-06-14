@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using Linux.Configuration;
 using UnityEngine;
@@ -15,16 +16,43 @@ namespace Linux.Net
 
         protected int Port;
 
+        protected ConcurrentQueue<Packet> InputQueue;
+
         public BaseSocket(
             ArpTable arpTable,
-            NetInterface interface_, 
-            IPAddress ipAddress, 
+            NetInterface interface_,
+            IPAddress ipAddress,
             int port
         ) {
             ArpTable = arpTable;
             Interface = interface_;
             IpAddress = ipAddress;
             Port = port;
+            InputQueue = new ConcurrentQueue<Packet>();
+
+            Interface.Transport.ListenInput(HandleInputPacket);
+        }
+
+        protected void HandleInputPacket(Packet packet) {
+            if (packet is LinkLayerPacket) {
+                if (packet is ArpPacket) {
+                    HandleInputArpPacket((ArpPacket) packet);
+                    return;
+                }
+            } else {
+                // unknow packet
+                return;
+            }
+
+            InputQueue.Enqueue(packet);
+        }
+
+        protected void HandleInputArpPacket(ArpPacket packet) {
+            Debug.Log("arp packet: " + packet.PeerAddress);
+            if (Interface.HasIPAddress(packet.PeerAddress)) {
+                Debug.Log("arp packet for me");
+                packet.PeerMacAddress = Interface.MacAddress;
+            }
         }
 
         protected void SendPacket(string peerAddress, Packet packet) {
