@@ -39,11 +39,17 @@ namespace Linux.Library
             int pty = userSpace.Api.OpenPty();
 
             int shPid = userSpace.Api.StartProcess(
-                new string[] { "/usr/bin/bash" },
+                new string[] { "/usr/sbin/login" },
                 pty, pty, pty
             );
 
             userSpace.Api.WaitPid(shPid);
+
+            int poweroffPid = userSpace.Api.StartProcess(
+                new string[] { "/usr/sbin/poweroff" }
+            );
+
+            userSpace.Api.WaitPid(poweroffPid);
 
             return 0;
         }

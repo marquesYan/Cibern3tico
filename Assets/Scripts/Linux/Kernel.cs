@@ -41,6 +41,8 @@ namespace Linux
 
         public ArpTable ArpTable;
 
+        public ShadowDatabase ShadowDb;
+
         public CommandHandler CmdHandler;
 
         public ConcurrentDictionary<string, Action<UEvent>> PostInterruptHooks;

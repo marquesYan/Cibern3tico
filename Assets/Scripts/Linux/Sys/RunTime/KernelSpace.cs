@@ -121,6 +121,10 @@ namespace Linux.Sys.RunTime
 
         // Public Calls
 
+        public string Name() {
+            return "Lunix " + Kernel.Version;
+        }
+
         public int Open(string filePath, int mode) {
             if ((mode & (AccessMode.O_WRONLY | AccessMode.O_APONLY | AccessMode.O_RDWR)) != 0) {
                 CreateFileIfMissing(filePath, false);
@@ -267,6 +271,39 @@ namespace Linux.Sys.RunTime
             );
         }
 
+        public bool CheckLogin(string login, string password) {
+            bool success = Kernel.ShadowDb.CheckLoginPassword(login, password);
+
+            if (!success) {
+                Thread.Sleep(2000);
+            }
+
+            return success;
+        }
+
+        public int RunLogin(string login, string password) {
+            if (!CheckLogin(login, password)) {
+                throw new System.AccessViolationException(
+                    "Access denied"
+                );
+            }
+
+            User user = LookupLoginOrFail(login);
+
+            Process process = CreateProcess(
+                user,
+                new string[] { user.Shell },
+                new Dictionary<string, string>(),
+                0,
+                1,
+                2
+            );
+
+            process.MainTask.Start();
+
+            return process.Pid;
+        }
+
         public ReadOnlyFile FindFile(string path) {
             File file = LookupFileOrFail(path);
 
@@ -274,13 +311,7 @@ namespace Linux.Sys.RunTime
         }
 
         public int RunAs(string login) {
-            User user = Kernel.UsersDb.LookupLogin(login);
-            
-            if (user == null) {
-                throw new ArgumentException(
-                    $"User does not exist: {login}"
-                );
-            }
+            User user = LookupLoginOrFail(login);
 
             if (IsRootUser()) {
                 // int pty = OpenPty();
@@ -716,6 +747,18 @@ namespace Linux.Sys.RunTime
             }
 
             return basePermission - umask;
+        }
+
+        protected User LookupLoginOrFail(string login) {
+            User user = Kernel.UsersDb.LookupLogin(login);
+            
+            if (user == null) {
+                throw new ArgumentException(
+                    $"User does not exist: {login}"
+                );
+            }
+
+            return user;
         }
 
         protected void CreateFileIfMissing(string path, bool asDirectory) {

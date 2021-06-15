@@ -31,6 +31,8 @@ namespace Linux.Boot
             Kernel.GroupsDb = new GroupsDatabase(Kernel.Fs);
             // Print("groups database: created");
 
+            Kernel.ShadowDb = new ShadowDatabase(Kernel.Fs);
+
             MakeSystemUsers();
             int usersCount = Kernel.UsersDb.Count();
             // Print($"created system users: {usersCount}");
@@ -102,6 +104,8 @@ namespace Linux.Boot
                 "/usr/bin/bash"
             ));
 
+            Kernel.ShadowDb.Add(new ShadowEntry("root"));
+
             Kernel.UsersDb.Add(new User(
                 "bin",
                 1, 1,
@@ -110,6 +114,8 @@ namespace Linux.Boot
                 "/usr/sbin/nologin"
             ));
 
+            Kernel.ShadowDb.Add(new ShadowEntry("bin"));
+
             Kernel.UsersDb.Add(new User(
                 "user",
                 1000, 1000,
@@ -117,6 +123,10 @@ namespace Linux.Boot
                 "/home/user",
                 "/usr/bin/bash"
             ));
+
+            Kernel.ShadowDb.Add(
+                ShadowEntry.FromPlainText("user", "senha")
+            );
 
             // Kernel.Fs.CreateDir(
             //     "/home/user",
@@ -204,6 +214,12 @@ namespace Linux.Boot
                     configPerm
                 );
             }
+
+            Kernel.Fs.Create(
+                "/etc/shadow",
+                0, 0,
+                Perm.FromInt(6, 0, 0)
+            );
         }
     }
 }

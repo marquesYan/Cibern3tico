@@ -95,6 +95,9 @@ namespace Linux.Library
                 }
             }
 
+            // Ensure pty is not connected anymore
+            userSpace.Api.RemovePty(pty);
+
             return 0;
        }
 
