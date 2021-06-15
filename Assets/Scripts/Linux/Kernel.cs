@@ -50,6 +50,8 @@ namespace Linux
         public ProcessSignalsTable ProcSigTable;
         public string PersistentPath { get; protected set; }
 
+        public string HostName { get; protected set; }
+
         protected Process InitProcess;
 
         protected bool IsShutdown;
@@ -60,9 +62,10 @@ namespace Linux
 
         public static bool IsRunning { get; protected set; }
 
-        public Kernel(string persistentPath, VirtualMachine machine) {
+        public Kernel(string persistentPath, VirtualMachine machine, string hostName) {
             PersistentPath = persistentPath;
             Machine = machine;
+            HostName = hostName;
 
             IsRunning = true;
             IsShutdown = false;

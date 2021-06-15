@@ -507,6 +507,7 @@ MonoBehaviour:
   UnityNetwork: {fileID: 1249445682}
   IpAddress: 10.0.0.2/24
   MacAddress: a1:a2:a3:d1:d2:d3
+  HostName: webserver01
   Client: 0
   KernelInit: {fileID: 569494631}
 --- !u!114 &569494631
@@ -774,6 +775,7 @@ MonoBehaviour:
   UnityNetwork: {fileID: 1249445682}
   IpAddress: 10.0.0.1/24
   MacAddress: d1:d2:d3:a1:a2:a3
+  HostName: hacker01
   Client: 1
   KernelInit: {fileID: 1064211132}
 --- !u!114 &1064211132

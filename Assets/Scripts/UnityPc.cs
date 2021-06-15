@@ -23,6 +23,8 @@ public class UnityPc : MonoBehaviour {
 
     public string MacAddress;
 
+    public string HostName;
+
     public bool Client = false;
 
     public KernelInit KernelInit;
@@ -66,7 +68,11 @@ public class UnityPc : MonoBehaviour {
         
         machine.BiosDrivers.Add(GetUnityNetworkDriver(netCard));
 
-        Kernel = new Linux.Kernel(Application.persistentDataPath, machine);
+        Kernel = new Linux.Kernel(
+            Application.persistentDataPath,
+            machine,
+            HostName
+        );
         
         // Execute custom handler for code
         CompiledBin bin = KernelInit.Init();

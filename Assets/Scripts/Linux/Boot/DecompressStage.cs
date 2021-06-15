@@ -2,6 +2,7 @@ using SysPath = System.IO.Path;
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.Sys;
+using Linux.IO;
 
 namespace Linux.Boot
 {    
@@ -22,6 +23,8 @@ namespace Linux.Boot
 
             MountHomeFileSystem();
 
+            SetHostName();
+
             Kernel.UsersDb = new UsersDatabase(Kernel.Fs);
             // Print("users database: created");
 
@@ -35,6 +38,18 @@ namespace Linux.Boot
             MakeSystemGroups();
             int groupsCount = Kernel.GroupsDb.Count();
             // Print($"created system groups: {groupsCount}");
+        }
+
+        void SetHostName() {
+            Kernel.Fs.Create(
+                "/etc/hostname",
+                0, 0,
+                Perm.FromInt(7, 5, 5)
+            );
+
+            using (ITextIO stream = Kernel.Fs.Open("/etc/hostname", AccessMode.O_WRONLY)) {
+                stream.WriteLine(Kernel.HostName);
+            }
         }
 
         void MakeFileSystem() {

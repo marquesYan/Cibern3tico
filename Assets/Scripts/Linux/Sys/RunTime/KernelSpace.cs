@@ -201,6 +201,22 @@ namespace Linux.Sys.RunTime
             return group.Name;
         }
 
+        public string GetHostName() {
+            int fd = Open("/etc/hostname", AccessMode.O_RDONLY);
+
+            using (ITextIO stream = LookupByFD(fd)) {
+                return stream.ReadLine();
+            }
+        }
+
+        public void SetHostName(string hostName) {
+            int fd = Open("/etc/hostname", AccessMode.O_WRONLY);
+
+            using (ITextIO stream = LookupByFD(fd)) {
+                stream.WriteLine(hostName);
+            }
+        }
+
         public void RemoveFile(string path) {
             File file = LookupFileOrFail(path);
 

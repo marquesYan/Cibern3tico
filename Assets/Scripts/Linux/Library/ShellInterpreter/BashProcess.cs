@@ -24,6 +24,8 @@ namespace Linux.Library.ShellInterpreter
 
         protected BashHistory History;
 
+        protected string HostName;
+
         public UserSpace UserSpace { get; protected set; }
 
         public Dictionary<string, string> Environment { get; protected set; }
@@ -33,7 +35,9 @@ namespace Linux.Library.ShellInterpreter
         public BashProcess(UserSpace userSpace, bool autoCookPty) {
             UserSpace = userSpace;
             Environment = userSpace.Api.GetEnviron();
+            HostName = userSpace.Api.GetHostName();
             Login = userSpace.Api.GetLogin();
+
             History = new BashHistory(userSpace);
 
             ShowPrompt = true;
@@ -59,7 +63,7 @@ namespace Linux.Library.ShellInterpreter
         public bool Run() {
             string cwdName = PathUtils.BaseName(UserSpace.Api.GetCwd());
 
-            string prompt = $"[{Login}@hacking01 {cwdName}]$";
+            string prompt = $"[{Login}@{HostName} {cwdName}]$";
 
             if (ShowPrompt) {
                 UserSpace.Print(prompt, " ");
