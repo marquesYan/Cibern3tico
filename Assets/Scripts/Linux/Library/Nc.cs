@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Net;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
+using Linux.Configuration;
 using Linux.IO;
 using Linux.Net;
 using UnityEngine;
@@ -18,6 +19,15 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
+            bool eventSet = true;
+
+            userSpace.Api.Trap(
+                ProcessSignal.SIGTERM,
+                (int[] args) => {
+                    eventSet = false;
+                }
+            );
+
             var parser = new ArgumentParser.GenericArgParser(
                 userSpace,
                 "Usage: {0} IP PORT", 
@@ -62,8 +72,7 @@ namespace Linux.Library
             string portStr;
             int port;
             UdpSocket socket;
-
-            string message = "";
+            UdpPacket packet;
 
             if (listen) {
                 portStr = arguments[0];
@@ -78,13 +87,13 @@ namespace Linux.Library
                     srcPort
                 );
 
-                while (true) {
-                    message = socket.RecvFrom(
+                while (eventSet) {
+                    packet = socket.RecvFrom(
                         IPAddress.Parse("0.0.0.0"),
                         port
                     );
-                    Debug.Log("nc: recv message: " + message);
-                    userSpace.Stdout.WriteLine(message);
+
+                    userSpace.Stdout.WriteLine(packet.Message);
                 }
 
                 return 0;    
@@ -104,8 +113,10 @@ namespace Linux.Library
                 srcPort
             );
 
+            string message;
+
             Debug.Log("sending socket now!");
-            while (message != "exit") {
+            while (eventSet) {
                 Debug.Log("nc: reading stdin: " + userSpace.Stdin);
                 message = userSpace.Stdin.Read();
                 Debug.Log("nc: read message from stdin: " + message);

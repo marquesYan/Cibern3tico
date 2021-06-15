@@ -1,5 +1,7 @@
 using System.Threading;
+using System.Net;
 using Linux;
+using Linux.Net;
 using Linux.IO;
 using Linux.FileSystem;
 using Linux.Library;
@@ -16,35 +18,40 @@ public class WebServerOneBin : CompiledBin {
     ) : base(absolutePath, uid, gid, permission, type) { }
 
     public override int Execute(UserSpace userSpace) {
-        Debug.Log("calling webserver one");
+        userSpace.Api.CreateDir("/srv");
 
-        int fd = userSpace.Api.Open("/test", AccessMode.O_RDWR);
+        using (ITextIO stream = userSpace.Open("/srv/index.html", AccessMode.O_WRONLY)) {
+            stream.WriteLine("<html>");
+            stream.WriteLine("  <head>");
+            stream.WriteLine("  </head>");
+            stream.WriteLine("</html>");
+        }
 
-        ITextIO buffer = userSpace.Api.LookupByFD(fd);
-        buffer.WriteLine("test 1");
-        buffer.WriteLine("test 2");
-        buffer.WriteLine("test 3");
-        buffer.WriteLine("test 4");
-
-        Debug.Log("waiting");
-
-        Thread.Sleep(10000);
-
-        Debug.Log("sending data to socket: " + fd); 
-
-        int pid = userSpace.Api.StartProcess(
+        userSpace.Api.StartProcess(
             new string[] {
-                "/usr/bin/nc",
-                "-s", "10.0.0.2",
-                "10.0.0.1", "9999"
-            },
-            fd,
-            1,
-            2
+                "/usr/bin/httpd",
+                "/srv"
+            }
         );
 
-        int exitCode = userSpace.Api.WaitPid(pid);
-        Debug.Log("nc: exit code:" + exitCode);
+        // UdpSocket socket = userSpace.Api.UdpSocket(
+        //     IPAddress.Parse("10.0.0.2"),
+        //     8888
+        // );
+
+        // while (true) {
+        //     try {
+        //         socket.SendTo(
+        //             IPAddress.Parse("10.0.0.1"),
+        //             8000,
+        //             "testing"
+        //         );
+        //     } catch {
+        //         //
+        //     }
+
+        //     Thread.Sleep(2000);
+        // }
 
         return 0;
     }

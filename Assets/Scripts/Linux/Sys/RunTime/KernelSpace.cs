@@ -426,6 +426,19 @@ namespace Linux.Sys.RunTime
             return GetCurrentProc().Environ;
         }
 
+        public List<IPAddress> GetIPAddresses() {
+            List<NetworkAddress> netAddresses = Kernel.NetTable.LookupName("vt0")?.IPAddresses;
+            List<IPAddress> response = new List<IPAddress>();
+
+            netAddresses.ForEach(
+                netAddr => {
+                    response.Add(netAddr.IPAddress);
+                }
+            );
+
+            return response;
+        }
+
         public bool IsRootUser() {
             return GetUid() == 0;
         }

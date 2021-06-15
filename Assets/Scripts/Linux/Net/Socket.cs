@@ -111,14 +111,19 @@ namespace Linux.Net
             );
         }
 
-        public string RecvFrom(IPAddress peerAddress, int peerPort) {
+        public UdpPacket RecvFrom(IPAddress peerAddress, int peerPort) {
             Packet packet;
 
             do {
                 packet = Recv();
             } while (!IsUdpPacket(packet) && !MatchesPeerAddress(packet, peerAddress, peerPort));
 
-            return ((UdpPacket)packet.NextLayer.NextLayer).Message;
+            IpPacket ipPacket = (IpPacket)packet.NextLayer;
+            UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
+
+            udpPacket.NextLayer = ipPacket;
+
+            return udpPacket;
         }
 
         protected bool MatchesPeerAddress(

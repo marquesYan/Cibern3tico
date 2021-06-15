@@ -150,6 +150,16 @@ namespace Linux.Boot
 
             Kernel.Fs.AddFrom(
                 binDir,
+                new Httpd(
+                    "/usr/bin/httpd",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                binDir,
                 new Nc(
                     "/usr/bin/nc",
                     0, 0,
