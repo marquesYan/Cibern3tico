@@ -33,7 +33,6 @@ namespace Linux.Net
 
             Interface.Transport.ListenInput(
                 (Packet input) => {
-                    Debug.Log("packet recv on socket:" + input);
                     packet = input;
                 }
             );
@@ -124,6 +123,25 @@ namespace Linux.Net
             udpPacket.NextLayer = ipPacket;
 
             return udpPacket;
+        }
+
+        public void ListenInput(
+            Action<UdpPacket> listener,
+            IPAddress peerAddress,
+            int peerPort
+        ) {
+            Action<Packet> wrapper = (Packet packet) => {
+                if (IsUdpPacket(packet) && MatchesPeerAddress(packet, peerAddress, peerPort)) {
+                    IpPacket ipPacket = (IpPacket)packet.NextLayer;
+                    UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
+
+                    udpPacket.NextLayer = ipPacket;
+
+                    listener(udpPacket);
+                }
+            };
+
+            Interface.Transport.ListenInput(wrapper);
         }
 
         protected bool MatchesPeerAddress(

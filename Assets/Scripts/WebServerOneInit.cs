@@ -27,10 +27,16 @@ public class WebServerOneBin : CompiledBin {
             stream.WriteLine("</html>");
         }
 
+        // userSpace.Api.StartProcess(
+        //     new string[] {
+        //         "/usr/bin/httpd",
+        //         "/srv"
+        //     }
+        // );
+
         userSpace.Api.StartProcess(
             new string[] {
-                "/usr/bin/httpd",
-                "/srv"
+                "/usr/bin/sshd"
             }
         );
 

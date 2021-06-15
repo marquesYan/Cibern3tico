@@ -23,12 +23,8 @@ namespace Linux.Net {
         }
 
         protected void Broadcast(Pci pci, Packet packet) {
-            Debug.Log("received packet: " + ((LinkLayerPacket)packet).DstMacAddress);
-
             foreach (ConnectedDevice device in Devices) {
                 if (device.Pci != pci) {
-                    Debug.Log("sending packet through: " + packet);
-                    Debug.Log("sending packet through: " + pci);
                     device.Transport.Process(packet);
                 }
             }

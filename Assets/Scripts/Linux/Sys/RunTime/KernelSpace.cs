@@ -227,6 +227,18 @@ namespace Linux.Sys.RunTime
             Kernel.Fs.Delete(path);
         }
 
+        public void RemovePty(int fd) {
+            File file = Kernel.ProcTable.LookupFileByFd(GetCurrentProc(), fd);
+
+            if (file == null) {
+                throw new ArgumentException(
+                    $"Fd '{fd}' does not exist"
+                );
+            }
+
+            Kernel.PtyTable.Remove(file.Path);
+        }
+
         public void CreateDir(string path) {
             string[] parts = PathUtils.Split(
                 PathUtils.PathName(path)

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Linux.Configuration;
 using Linux.PseudoTerminal;
 using Linux.FileSystem;
@@ -15,6 +16,7 @@ namespace Linux.Sys.Input.Drivers.Tty
         protected Kernel Kernel;
 
         protected UEvent KbdEvent;
+
         protected UEvent DisplayEvent;
 
         public GenericPtyDriver(Linux.Kernel kernel) {
@@ -33,32 +35,18 @@ namespace Linux.Sys.Input.Drivers.Tty
             //
         }
 
-        protected CharacterDevice GetPt() {
-            SecondaryPty secondaryPty;
+        public void RemovePt(string ptsFile) {
+            string postHooKey = BuildHooKey(ptsFile);
 
-            if (DisplayEvent == null) {
-                secondaryPty = new SecondaryPty(_ => { }, _ => { });
-            } else {
-                IoctlDevice wStream = (IoctlDevice)UserSpace.Open(
-                    DisplayEvent.FilePath,
-                    AccessMode.O_WRONLY
-                );
+            System.Action<UEvent> action;
 
-                secondaryPty = new SecondaryPty(
-                    data => {
-                        wStream.Write(data);
-                    },
-                    data => {
-                        var dataArray = new string[] { data };
-                        wStream.Ioctl(
-                            PtyIoctl.TIO_SEND_KEY,
-                            ref dataArray
-                        );
-                    }
+            if (!Kernel.PostInterruptHooks.TryRemove(postHooKey, out action)) {
+                throw new System.ArgumentException(
+                    $"Pseudo-terminal '{ptsFile}' does not exist"
                 );
             }
 
-            return (CharacterDevice)secondaryPty;
+            Kernel.Fs.Delete(ptsFile);
         }
 
         public int UnlockPt(

@@ -196,6 +196,20 @@ namespace Linux.Configuration
             }
         }
 
+        public File LookupFileByFd(Process process, int fd) {
+            lock(_procLock) {
+                EnsureProcessExists(process);
+
+                File file = Fs.Lookup(GetFdPath(process, fd));
+
+                if (file != null) {
+                    return file.SourceFile;
+                }
+
+                return null;
+            }
+        }
+
         public int AttachIO(
             Process process,
             string filePath,

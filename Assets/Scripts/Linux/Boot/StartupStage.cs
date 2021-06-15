@@ -150,6 +150,26 @@ namespace Linux.Boot
 
             Kernel.Fs.AddFrom(
                 binDir,
+                new Sshd(
+                    "/usr/bin/sshd",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                binDir,
+                new Ssh(
+                    "/usr/bin/ssh",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                binDir,
                 new Curl(
                     "/usr/bin/curl",
                     0, 0,

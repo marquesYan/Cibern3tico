@@ -44,5 +44,9 @@ namespace Linux.Configuration
 
             return ptsFd;
         }
+
+        public void Remove(string ptsFile) {
+            TtyDriver.RemovePt(ptsFile);
+        }
     }
 }

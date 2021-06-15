@@ -10,5 +10,7 @@ namespace Linux.Sys.Input
             int gid,
             int permission
         );
+
+        void RemovePt(string ptsFile);
     }
 }
