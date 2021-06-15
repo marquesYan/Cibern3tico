@@ -38,9 +38,16 @@ namespace Linux.Library
                 (string port) => srcPortStr = port
             );
 
+            bool listen = false;
+            parser.AddArgument<string>(
+                "l|listen",
+                "bind and listen for incoming connections",
+                v => listen = true
+            );
+
             List<string> arguments = parser.Parse();
 
-            if (arguments.Count < 2) {
+            if ((listen && arguments.Count < 1) || (!listen && arguments.Count < 2)) {
                 parser.ShowHelpInfo();
                 return 1;
             }
@@ -52,25 +59,56 @@ namespace Linux.Library
                 return 2;
             }
 
-            string peerAddress = arguments[0];
-            string portStr = arguments[1];
-
+            string portStr;
             int port;
+            UdpSocket socket;
+
+            string message = "";
+
+            if (listen) {
+                portStr = arguments[0];
+
+                if (!int.TryParse(portStr, out port)) {
+                    userSpace.Stderr.WriteLine("Port must be a number: " + portStr);
+                    return 3;
+                }
+
+                socket = userSpace.Api.UdpSocket(
+                    IPAddress.Parse(srcAddress),
+                    srcPort
+                );
+
+                while (true) {
+                    message = socket.RecvFrom(
+                        IPAddress.Parse("0.0.0.0"),
+                        port
+                    );
+                    Debug.Log("nc: recv message: " + message);
+                    userSpace.Stdout.WriteLine(message);
+                }
+
+                return 0;    
+            }
+
+            string peerAddress = arguments[0];
+            portStr = arguments[1];
 
             if (!int.TryParse(portStr, out port)) {
+                Debug.Log("wrong port number!");
                 userSpace.Stderr.WriteLine("Port must be a number: " + portStr);
                 return 3;
             }
 
-            UdpSocket socket = userSpace.Api.UdpSocket(
+            socket = userSpace.Api.UdpSocket(
                 IPAddress.Parse(srcAddress), 
                 srcPort
             );
 
-            string message = "";
-
+            Debug.Log("sending socket now!");
             while (message != "exit") {
-                message = userSpace.Stdin.ReadLine();
+                Debug.Log("nc: reading stdin: " + userSpace.Stdin);
+                message = userSpace.Stdin.Read();
+                Debug.Log("nc: read message from stdin: " + message);
                 socket.SendTo(IPAddress.Parse(peerAddress), port, message);
             }
 

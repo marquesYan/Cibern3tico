@@ -122,7 +122,7 @@ namespace Linux.Sys.RunTime
         // Public Calls
 
         public int Open(string filePath, int mode) {
-            if ((mode & (AccessMode.O_WRONLY | AccessMode.O_APONLY)) != 0) {
+            if ((mode & (AccessMode.O_WRONLY | AccessMode.O_APONLY | AccessMode.O_RDWR)) != 0) {
                 CreateFileIfMissing(filePath, false);
             }
 
@@ -453,7 +453,7 @@ namespace Linux.Sys.RunTime
 
         public int StartProcess(
             string[] cmdLine,
-            params int[] fds
+            int[] fds
         ) {
             Process currentProc = GetCurrentProc();
 

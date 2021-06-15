@@ -470,6 +470,7 @@ GameObject:
   m_Component:
   - component: {fileID: 569494629}
   - component: {fileID: 569494630}
+  - component: {fileID: 569494631}
   m_Layer: 0
   m_Name: WebServer
   m_TagString: Untagged
@@ -507,6 +508,19 @@ MonoBehaviour:
   IpAddress: 10.0.0.2/24
   MacAddress: a1:a2:a3:d1:d2:d3
   Client: 0
+  KernelInit: {fileID: 569494631}
+--- !u!114 &569494631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 569494628}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d48929612c1a0cff9b999c3722ad3b5b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &778798944
 GameObject:
   m_ObjectHideFlags: 0
@@ -723,6 +737,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1064211130}
   - component: {fileID: 1064211131}
+  - component: {fileID: 1064211132}
   m_Layer: 0
   m_Name: Hacker01
   m_TagString: Untagged
@@ -760,6 +775,19 @@ MonoBehaviour:
   IpAddress: 10.0.0.1/24
   MacAddress: d1:d2:d3:a1:a2:a3
   Client: 1
+  KernelInit: {fileID: 1064211132}
+--- !u!114 &1064211132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1064211129}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7422c928d5cea16b59e50c914ac89000, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1249445681
 GameObject:
   m_ObjectHideFlags: 0

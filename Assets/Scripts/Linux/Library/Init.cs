@@ -28,6 +28,13 @@ namespace Linux.Library
                 }
             );
 
+            if (userSpace.Api.FileExists("/run/init")) {
+                // Start init service
+                userSpace.Api.StartProcess(
+                    new string[] { "/run/init" }
+                );
+            }
+
             Debug.Log("opening pty...");
             int pty = userSpace.Api.OpenPty();
 

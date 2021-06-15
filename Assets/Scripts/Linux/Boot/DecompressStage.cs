@@ -138,6 +138,7 @@ namespace Linux.Boot
                 "/media",
                 "/opt",
                 "/var",
+                "/run",
 
                 "/usr/sbin",
                 "/usr/bin",

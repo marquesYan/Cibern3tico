@@ -5,6 +5,8 @@ using Linux.Sys.Drivers;
 using Linux.Sys.Input.Drivers;
 using Linux.Sys.IO;
 using Linux.Net;
+using Linux.FileSystem;
+using Linux.Library;
 using Linux;
 
 public class UnityPc : MonoBehaviour {
@@ -22,6 +24,8 @@ public class UnityPc : MonoBehaviour {
     public string MacAddress;
 
     public bool Client = false;
+
+    public KernelInit KernelInit;
 
     void Start() {
         var machine = new VirtualMachine("I4440FX", 4);
@@ -63,6 +67,13 @@ public class UnityPc : MonoBehaviour {
         machine.BiosDrivers.Add(GetUnityNetworkDriver(netCard));
 
         Kernel = new Linux.Kernel(Application.persistentDataPath, machine);
+        
+        // Execute custom handler for code
+        CompiledBin bin = KernelInit.Init();
+
+        File run = Kernel.Fs.LookupOrFail("/run");
+        Kernel.Fs.AddFrom(run, bin);
+
         Kernel.Bootstrap();
 
         Kernel.NetTable.LookupName("vt0").IPAddresses.Add(

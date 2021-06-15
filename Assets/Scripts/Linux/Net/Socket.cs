@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Threading;
 using Linux.Configuration;
 using UnityEngine;
 
@@ -25,6 +26,23 @@ namespace Linux.Net
             Interface = interface_;
             IpAddress = ipAddress;
             Port = port;
+        }
+
+        protected Packet Recv() {
+            Packet packet = null;
+
+            Interface.Transport.ListenInput(
+                (Packet input) => {
+                    Debug.Log("packet recv on socket:" + input);
+                    packet = input;
+                }
+            );
+
+            while (packet == null) {
+                Thread.Sleep(200);
+            }
+
+            return packet;
         }
 
         protected void SendPacket(string peerAddress, Packet packet) {
@@ -91,6 +109,35 @@ namespace Linux.Net
                     )
                 )
             );
+        }
+
+        public string RecvFrom(IPAddress peerAddress, int peerPort) {
+            Packet packet;
+
+            do {
+                packet = Recv();
+            } while (!IsUdpPacket(packet) && !MatchesPeerAddress(packet, peerAddress, peerPort));
+
+            return ((UdpPacket)packet.NextLayer.NextLayer).Message;
+        }
+
+        protected bool MatchesPeerAddress(
+            Packet packet,
+            IPAddress peerAddress,
+            int peerPort
+        ) {
+            IpPacket ipPacket = (IpPacket)packet.NextLayer;
+            UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
+
+            return (peerAddress.ToString() == "0.0.0.0" ||
+                    ipPacket.SrcAddress == peerAddress.ToString())
+                    && udpPacket.LocalPort == peerPort;
+        }
+
+        protected bool IsUdpPacket(Packet packet) {
+            return packet.ProtocolID == ProtocolIdentifier.LINK
+                && packet.NextLayer?.ProtocolID == ProtocolIdentifier.IP
+                && packet.NextLayer?.NextLayer?.ProtocolID == ProtocolIdentifier.UDP;
         }
     }
 }
