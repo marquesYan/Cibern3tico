@@ -58,14 +58,6 @@ namespace Linux.PseudoTerminal
             CursorLinesMngr.RemoveAtBack();
         }
 
-        public void MoveCursorUp() {
-            CursorLinesMngr.MoveLine(-1);
-        }
-
-        public void MoveCursorDown() {
-            CursorLinesMngr.MoveLine(1);
-        }
-
         public void MoveCursorRight() {
             CursorLinesMngr.MoveCursor(1);
         }
@@ -98,6 +90,10 @@ namespace Linux.PseudoTerminal
 
         protected abstract Vector CalcSize(string message);
 
+        // protected abstract float CalcHeight(string message);
+
+        // protected abstract float GetFontSize();
+
         protected void DrawTerm() {
             FlushBuffer();
         }
@@ -105,27 +101,12 @@ namespace Linux.PseudoTerminal
         protected void FlushBuffer() {
             int i = 0;
             float screenWidth = GetScreenWidth() - 32;
+            string[] lines = CursorLinesMngr.GetLines();
 
-            foreach (string line in CursorLinesMngr.GetLines()) {
+            foreach (string line in lines) {
                 DrawLine(line);
 
-                Vector vector = CalcSize(line);
-
-                if (vector.X >= screenWidth) {
-                    int position = line.Length;
-                    Vector remove;
-
-                    do {
-                        remove = CalcSize(
-                            line.Substring(0, position)
-                        );
-                        position--;
-                    } while (remove.X >= screenWidth);
-
-                    CursorLinesMngr.WrapAt(line, position);
-                }
-
-                if (i == CursorLinesMngr.LineIndex) {
+                if (i == (lines.Length - 1)) {
                     string lineToCalc = line;
                     if (string.IsNullOrEmpty(line)) {
                         // Calculate the height of a real character
@@ -133,6 +114,20 @@ namespace Linux.PseudoTerminal
                     }
 
                     CursorSize = CalcSize(lineToCalc);
+
+                    if (CursorSize.X >= screenWidth) {
+                        int position = line.Length;
+                        Vector remove;
+
+                        do {
+                            remove = CalcSize(
+                                line.Substring(0, position)
+                            );
+                            position--;
+                        } while (remove.X >= screenWidth);
+
+                        CursorLinesMngr.WrapAt(line, position);
+                    }
                 }
 
                 i++;

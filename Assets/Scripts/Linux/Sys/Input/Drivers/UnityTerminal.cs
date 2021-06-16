@@ -146,18 +146,30 @@ namespace Linux
 
             DrawTerm();
 
-            if (CursorSize != null) {
-                Vector2 cursorPos = LabelStyle.GetCursorPixelPosition(
-                    new Rect(0, 0, 0, 0),
-                    new GUIContent(CursorLinesMngr.CurrentLine),
-                    CursorLinesMngr.Cursor
-                );
+            Vector2 cursorPos = LabelStyle.GetCursorPixelPosition(
+                new Rect(0, 0, 0, 0),
+                new GUIContent(CursorLinesMngr.CurrentLine),
+                CursorLinesMngr.Cursor
+            );
 
-                LabelStyle.DrawCursor(
-                    new Rect(cursorPos.x, (CursorSize.Y * CursorLinesMngr.LineIndex) - 20, 4, 4),
-                    new GUIContent("|"), 0, 0
+            float height = 0f;
+
+            foreach(string line in CursorLinesMngr.GetLines()) {
+                height += LabelStyle.CalcHeight(
+                    new GUIContent(line),
+                    GetScreenWidth()
                 );
             }
+
+            float yAxis = (
+                (height / ConsoleFont.fontSize) * ConsoleFont.fontSize  // Lines * LineSize 
+            ) - ConsoleFont.fontSize;   // Subtract a line
+
+            LabelStyle.DrawCursor(
+                new Rect(cursorPos.x, yAxis, 0, 0),
+                new GUIContent("|"), 0, 0
+            );
+
             GUILayout.EndScrollView();
 
             GUILayout.EndVertical();
