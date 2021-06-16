@@ -115,12 +115,6 @@ namespace Linux
                 myPerm
             );
 
-            Fs.Create(
-                "/home/user/ssh",
-                1000, 1000,
-                Perm.FromInt(7, 5, 5)
-            );
-
             // using (ITextIO stream = Fs.Open("/root/myprog.sh", AccessMode.O_APONLY)) {
             //     stream.WriteLine("#!/usr/bin/bash");
             //     stream.WriteLine("");

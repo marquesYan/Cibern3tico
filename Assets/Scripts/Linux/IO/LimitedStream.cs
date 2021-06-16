@@ -5,15 +5,17 @@ namespace Linux.IO
     public class LimitedStream : BufferedStream {
         protected StringBuilder Buffer = new StringBuilder();
 
-        public int Length { get; protected set; }
+        // public int Length { get; protected set; }
 
         public int Size { get; protected set; }
 
-        // public int Length {
-        //     get {
-        //         return Buffer.Length;
-        //     }
-        // }
+        public int Length {
+            get {
+                return Buffer.Length;
+            }
+
+            set { }
+        }
 
         public LimitedStream(
             int maxSize

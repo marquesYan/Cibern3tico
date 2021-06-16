@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
@@ -101,6 +102,7 @@ namespace Linux.Library.ShellInterpreter
                 }
 
                 UserSpace.Print("\r", "");
+
                 UserSpace.Print(prompt, " ");
 
                 var bufClearArray = new string[] {

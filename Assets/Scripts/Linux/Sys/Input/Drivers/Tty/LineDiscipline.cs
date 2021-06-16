@@ -8,6 +8,8 @@ using UnityEngine;
 
 namespace Linux.Sys.Input.Drivers.Tty {
     public class PtyLineDiscipline {
+        readonly object _cursorLock = new object();
+
         int[] _nullArg = new int[0];
 
         protected int[] Flags = { 0 };
@@ -65,6 +67,12 @@ namespace Linux.Sys.Input.Drivers.Tty {
         }
 
         public void Receive(string input) {
+            lock(_cursorLock) {
+                InternalReceive(input);
+            }
+        }
+
+        protected void InternalReceive(string input) {
             string output = input;
 
             if ((Flags[0] & PtyFlags.ECHO) == 0) {
@@ -197,6 +205,11 @@ namespace Linux.Sys.Input.Drivers.Tty {
         }
 
         protected void WriteBuffer(string data) {
+            if (data == "\n") {
+                int index = Buffer.Length;
+                Pointer = index;
+            }
+
             Buffer.Insert(Pointer, data);
             Pointer += data.Length;
         }
