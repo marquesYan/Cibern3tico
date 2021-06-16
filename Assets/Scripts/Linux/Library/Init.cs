@@ -35,7 +35,6 @@ namespace Linux.Library
                 );
             }
 
-            Debug.Log("opening pty...");
             int pty = userSpace.Api.OpenPty();
 
             int shPid = userSpace.Api.StartProcess(

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
@@ -126,12 +127,43 @@ namespace Linux.Library
                 packet = socket.RecvFrom(listenAddress, port);
 
                 if (packet.Message == "init") {
+                    packet = socket.RecvFrom(listenAddress, port);
+                    string login = packet.Message;
+
                     IpPacket ipPacket = (IpPacket)packet.NextLayer;
+
+                    IPAddress peerAddress = IPAddress.Parse(ipPacket.SrcAddress);
+                    int peerPort = packet.LocalPort;
+
+                    string password = null;
+                    bool loggedOut = true;
+                    string loginMessage;
+
+                    while (eventSet && loggedOut) {
+                        packet = socket.RecvFrom(listenAddress, port);
+                        password = packet.Message;
+
+                        loggedOut = !userSpace.Api.CheckLogin(login, password);
+
+                        loginMessage = loggedOut ? "0" : "1";
+
+                        socket.SendTo(
+                            peerAddress,
+                            peerPort,
+                            loginMessage
+                        );
+                    }
+
+                    if (loggedOut || (login == null || password == null)) {
+                        continue;
+                    }
+
+                    Thread.Sleep(200);
 
                     io = new SocketIO(
                         socket,
-                        IPAddress.Parse(ipPacket.SrcAddress),
-                        packet.LocalPort,
+                        peerAddress,
+                        peerPort,
                         listenAddress,
                         port
                     );

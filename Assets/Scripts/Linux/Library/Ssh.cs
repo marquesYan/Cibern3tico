@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
@@ -66,12 +67,41 @@ namespace Linux.Library
             );
 
             IPAddress peerAddress = IPAddress.Parse(host);
-
-            // Open a new one to be used by ssh
-            int pty = userSpace.Api.OpenPty();
             
             // Initiate connection
             socket.SendTo(peerAddress, port, "init");
+
+            Thread.Sleep(200);
+
+            // Send Username
+            socket.SendTo(peerAddress, port, username);
+
+            string password = null;
+            bool loggedOut = true;
+
+            UdpPacket packet;
+
+            while (eventSet && loggedOut) {
+                userSpace.Print($"{arguments[0]}: ", "");
+                password = userSpace.Stdin.ReadLine();
+
+                socket.SendTo(peerAddress, port, password);
+
+                packet = socket.RecvFrom(peerAddress, port);
+
+                loggedOut = packet.Message != "1";
+            }
+
+            if (password == null) {
+                return 128;
+            }
+
+            if (loggedOut) {
+                return 1;
+            }
+
+            // Open a new one to be used by ssh
+            int pty = userSpace.Api.OpenPty();
 
             using (ITextIO stream = userSpace.Api.LookupByFD(pty)) {
                 // CookPty(stream);

@@ -102,10 +102,10 @@ namespace Linux
 
         void SetupLabels() {
             LabelStyle = new GUIStyle();
-            LabelStyle.padding = new RectOffset(0, 0, 0, 4);
+            LabelStyle.padding = new RectOffset(0, 0, 0, 0);
             LabelStyle.font = ConsoleFont;
             LabelStyle.normal.textColor = ForegroundColor;
-            LabelStyle.wordWrap = true;
+            LabelStyle.wordWrap = false;
         }
 
         void SetupInput() {
@@ -149,10 +149,8 @@ namespace Linux
                     CursorLinesMngr.Cursor
                 );
 
-                // CursorSize.X, CursorSize.Y * Buffer.CurrentLineIndex
-
                 LabelStyle.DrawCursor(
-                    new Rect(cursorPos.x, (CursorSize.Y * CursorLinesMngr.LineIndex)-20, 4, 4),
+                    new Rect(cursorPos.x, (CursorSize.Y * CursorLinesMngr.LineIndex) + 2, 4, 4),
                     new GUIContent("|"), 0, 0
                 );
             }

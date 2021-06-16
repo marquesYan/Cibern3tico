@@ -76,8 +76,6 @@ namespace Linux.Configuration
                 return false;
             }
 
-            Debug.Log("has passwd: " + shadow.HasPasswd);
-
             if (!shadow.HasPasswd) {
                 return true;
             }
