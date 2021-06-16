@@ -125,8 +125,11 @@ namespace Linux.Library {
                 return "---";
             }
 
+            // Only look for onwer shifts (8)
+            bool isSuid = shift == 8 && (permission & PermModes.S_SUID) != 0;
+
             if ((basePermission - (7 << shift)) == 0) {
-                return "rwx";
+                return isSuid ? "rws" : "rwx";
             }
 
             if ((basePermission - (6 << shift)) == 0) {
@@ -134,7 +137,7 @@ namespace Linux.Library {
             }
 
             if ((basePermission - (5 << shift)) == 0) {
-                return "r-x";
+                return isSuid ? "r-s" : "r-x";
             }
 
             if ((basePermission - (4 << shift)) == 0) {
@@ -142,7 +145,7 @@ namespace Linux.Library {
             }
 
             if ((basePermission - (3 << shift)) == 0) {
-                return "-wx";
+                return isSuid ? "-ws" : "-wx";
             }
 
             if ((basePermission - (2 << shift)) == 0) {
@@ -150,7 +153,7 @@ namespace Linux.Library {
             }
 
             if ((basePermission - (1 << shift)) == 0) {
-                return "--x";
+                return isSuid ? "--s" : "--x";
             }
 
             return "?";

@@ -692,6 +692,17 @@ namespace Linux.Sys.RunTime
 
             EnsureFdsExists(proc, fds);
 
+            if ((executable.Permission & PermModes.S_SUID) != 0) {
+                Debug.Log("suid file: " + executable.Path);
+                user = Kernel.UsersDb.LookupUid(executable.Uid);
+            
+                if (user == null) {
+                    throw new System.InvalidOperationException(
+                        $"user with uid '{executable.Uid}' not found"
+                    );
+                }
+            }
+
             return Kernel.CreateProcess(
                 proc.Pid,
                 user,

@@ -34,6 +34,7 @@ namespace Linux.Library
                 return 1;
             }
 
+            int stickyBit = 0;
             int owner, group, other;
             bool parsedMode = true;
 
@@ -49,12 +50,18 @@ namespace Linux.Library
                 parsedMode = false;
             }
 
+            if (mode.Length == 4) {
+                if (!int.TryParse($"{mode[mode.Length - 4]}", out stickyBit)) {
+                    parsedMode = false;
+                }
+            }
+
             if (!parsedMode) {
                 userSpace.Stderr.WriteLine($"chmod: unknow octal mode: {mode}");
                 return 2;
             }
 
-            int permission = Perm.FromInt(owner, group, other);
+            int permission = Perm.FromInt(stickyBit, owner, group, other);
 
             string file = userSpace.ResolvePath(arguments[1]);
 
