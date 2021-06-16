@@ -94,6 +94,7 @@ namespace Linux.PseudoTerminal
         protected abstract void MoveXAxis(int position);
         protected abstract void DrawLine(string message);
         protected abstract void HandleDraw();
+        protected abstract float GetScreenWidth();
 
         protected abstract Vector CalcSize(string message);
 
@@ -103,8 +104,26 @@ namespace Linux.PseudoTerminal
 
         protected void FlushBuffer() {
             int i = 0;
+            float screenWidth = GetScreenWidth() - 32;
+
             foreach (string line in CursorLinesMngr.GetLines()) {
                 DrawLine(line);
+
+                Vector vector = CalcSize(line);
+
+                if (vector.X >= screenWidth) {
+                    int position = line.Length;
+                    Vector remove;
+
+                    do {
+                        remove = CalcSize(
+                            line.Substring(0, position)
+                        );
+                        position--;
+                    } while (remove.X >= screenWidth);
+
+                    CursorLinesMngr.WrapAt(line, position);
+                }
 
                 if (i == CursorLinesMngr.LineIndex) {
                     string lineToCalc = line;

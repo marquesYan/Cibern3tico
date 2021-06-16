@@ -60,6 +60,10 @@ namespace Linux
             _textEditor.MoveCursorToPosition(new Vector2(999, 999));
         }
 
+        protected override float GetScreenWidth() {
+            return Screen.width;
+        }
+
         protected override void HandleDraw() {
             HandleOpenness();
             _window = GUILayout.Window(88, _window, DrawConsole, "", WindowStyle);
@@ -105,7 +109,7 @@ namespace Linux
             LabelStyle.padding = new RectOffset(0, 0, 0, 0);
             LabelStyle.font = ConsoleFont;
             LabelStyle.normal.textColor = ForegroundColor;
-            LabelStyle.wordWrap = false;
+            LabelStyle.wordWrap = true;
         }
 
         void SetupInput() {
@@ -150,7 +154,7 @@ namespace Linux
                 );
 
                 LabelStyle.DrawCursor(
-                    new Rect(cursorPos.x, (CursorSize.Y * CursorLinesMngr.LineIndex) + 2, 4, 4),
+                    new Rect(cursorPos.x, (CursorSize.Y * CursorLinesMngr.LineIndex) - 20, 4, 4),
                     new GUIContent("|"), 0, 0
                 );
             }

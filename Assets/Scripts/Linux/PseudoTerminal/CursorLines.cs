@@ -28,6 +28,8 @@ namespace Linux.PseudoTerminal
         public string CurrentLine { get; protected set; }
         public int BlockedIndex { get; protected set; }
 
+        public int LineWrapIndex { get; protected set; }
+
 
         public CursorLines(int bufferSize) {
             Buffer = new LimitedStream(bufferSize);
@@ -36,6 +38,7 @@ namespace Linux.PseudoTerminal
             LineIndex = 0;
             CurrentLine = "";
             BlockedIndex = -1;
+            LineWrapIndex = 0;
         }
 
         public void Truncate() {
@@ -43,6 +46,7 @@ namespace Linux.PseudoTerminal
             _linesCache = null;
             BlockedIndex = -1;
             LineIndex = 0;
+            LineWrapIndex = 0;
             CurrentLine = "";
             CursorIndexes.Clear();
         }
@@ -132,6 +136,37 @@ namespace Linux.PseudoTerminal
 
         public void MoveLine(int step) {
             UpdateCurrentLine(LineIndex + step);
+        }
+
+        public void WrapAt(string message, int position) {
+            if (message == CurrentLine) {
+                int oldBlockedIndex = BlockedIndex;
+                BlockedIndex = -1;
+
+                int toRemove = message.Length - position;
+                Debug.Log($"cursor: removing '{toRemove}' chars");
+
+                for (var i = 0; i < toRemove; i++) {
+                    MoveCursor(-1);
+                    Buffer.Remove();
+                }
+
+                BlockedIndex = oldBlockedIndex;
+                Debug.Log($"cursor: old line: {LineIndex}");
+
+                Add("\n");
+
+                Debug.Log($"cursor: new line: {LineIndex}");
+
+                string nextMsg = message.Substring(position);
+
+                Debug.Log("cursor: adding back in new line: " + nextMsg);
+                Add(nextMsg);
+            }
+        }
+
+        public void Unwrap() {
+            LineWrapIndex = 0;
         }
 
         public bool IsAtEnd() {
