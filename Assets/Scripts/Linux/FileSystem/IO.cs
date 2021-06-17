@@ -1,6 +1,5 @@
 using System.Text;
-using SysStreamReader = System.IO.StreamReader;
-using SysStreamWriter = System.IO.StreamWriter;
+using SysFile = System.IO.File;
 using Linux.IO;
 
 namespace Linux.FileSystem {
@@ -56,44 +55,32 @@ namespace Linux.FileSystem {
     }
 
     public class LocalFileStream : AbstractTextIO {
-        protected SysStreamReader ReaderStream;
+        protected string Path;
 
-        protected SysStreamWriter WriterStream;
         public LocalFileStream(
             string path,
             int mode
         ) : base(mode) {
-            if (AccessMode.CanWrite(mode)) {
-                WriterStream = new SysStreamWriter(
-                    path,
-                    mode == AccessMode.O_APONLY
-                );
-            }
+            Path = path;
 
-            if (AccessMode.CanRead(mode)) {
-                ReaderStream = new SysStreamReader(path);
+            if (AccessMode.CanCreate(mode)) {
+                Truncate();
             }
         }
 
         protected override void InternalTruncate() {
-            //
+            if (Path != null) {
+                SysFile.WriteAllText(Path, "");
+            }
         }
 
         protected override int InternalAppend(string data) {
-            WriterStream.Write(data);
-
+            SysFile.AppendAllText(Path, data);
             return data.Length;
         }
 
         protected override string InternalRead(int length) {
-            if (length == -1) {
-                return ReaderStream.ReadToEnd();
-            }
-
-            char[] buffer = new char[length];
-            ReaderStream.Read();
-
-            return buffer.ToString();
+            return SysFile.ReadAllText(Path);
         }
 
         protected override bool CanMovePointer(int newPosition) {
@@ -101,27 +88,7 @@ namespace Linux.FileSystem {
         }
 
         protected override void InternalClose() {
-            System.Exception exception = null;
-
-            if (WriterStream != null) {
-                try {
-                    WriterStream.Dispose();
-                } catch (System.Exception e1) {
-                    exception = e1;
-                }
-            } 
-
-            if (ReaderStream != null) {
-                try {
-                    ReaderStream.Dispose();
-                } catch (System.Exception e2) {
-                    exception = e2;
-                }
-            }
-
-            if (exception != null) {
-                throw exception;
-            }
+            //
         }
     }
 }
