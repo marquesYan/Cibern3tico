@@ -9,6 +9,7 @@ namespace Linux.PseudoTerminal
 {
     public class SecondaryPty : CharacterDevice {
         protected int[] Flags;
+        protected int[] Pid;
         protected string[] SpecialChars;
         protected string[] UnbufferedChars;
 
@@ -43,6 +44,22 @@ namespace Linux.PseudoTerminal
 
                 case PtyIoctl.TIO_UNSET_FLAG: {
                     Flags[0] &= (~args[0]) & 0b1111_1111_1111;
+                    break;
+                }
+
+                case PtyIoctl.TIO_SET_PID_FLAG: {
+                    if (Pid == null) {
+                        Pid = args;
+                    } else {
+                        throw new System.ArgumentException(
+                            "Pty pid flag already set"
+                        );
+                    }
+                    break;
+                }
+
+                case PtyIoctl.TIO_SET_PID: {
+                    Pid[0] = args[0];
                     break;
                 }
 

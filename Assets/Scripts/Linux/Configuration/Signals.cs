@@ -9,6 +9,7 @@ namespace Linux.Configuration
         SIGTERM = 15,
         SIGKILL = 9,
         SIGHUP = 1,
+        SIGINT = 2,
     }
 
     public class ProcessSignalsTable {

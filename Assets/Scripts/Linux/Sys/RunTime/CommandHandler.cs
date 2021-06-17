@@ -2,19 +2,13 @@ using System.Collections.Generic;
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.Library.RunTime;
+using Linux.PseudoTerminal;
+using Linux.IO;
+using Linux.Sys.Input.Drivers.Tty;
 using UnityEngine;
 
 namespace Linux.Sys.RunTime
 {
-    public class ExitProcessException : System.Exception {
-        public int ExitCode { get; protected set; }
-
-        public ExitProcessException(int exitCode) : base("Process exited")
-        {
-            ExitCode = exitCode;
-        }
-    }
-
     public class CommandHandler {
         protected KernelSpace Api;
         protected Linux.Kernel Kernel;
@@ -30,23 +24,75 @@ namespace Linux.Sys.RunTime
         }
 
         public void Handle() {
+            int returnCode = 255;
+
+            try {
+                returnCode = InternalHandle();
+            }
+
+            catch (ExitProcessException exc) {
+                returnCode = exc.ExitCode;
+            }
+
+            catch (System.Exception e) {
+                Debug.Log($"cmdhandler: {e.Message}");
+                Debug.Log(e.ToString());
+            }
+
+            Process process = Kernel.ProcTable.LookupPid(Api.GetPid());
+            process.ReturnCode = returnCode;
+        }
+
+        protected int InternalHandle() {
+            ITextIO stream = Api.LookupByFD(0);
+
+            int pid = Api.GetPid();
+
+            if (stream != null && stream is SecondaryPty) {
+                var pty = (SecondaryPty)stream;
+                int[] pidArray = new int[] { pid };
+
+                pty.Ioctl(
+                    PtyIoctl.TIO_SET_PID,
+                    ref pidArray
+                );
+            }
+
+            Process proc = Kernel.ProcTable.LookupPid(pid);
+
+            int SIGINTCount = 0;
+
+            Api.Trap(ProcessSignal.SIGINT, (int[] args) => {
+                SIGINTCount++;
+
+                ProcessSignal signal;
+
+                if (SIGINTCount == 1) {
+                    signal = ProcessSignal.SIGTERM;
+                } else {
+                    signal = ProcessSignal.SIGKILL;
+                }
+
+                Kernel.KillProcess(proc, signal);
+            });
+
             string executable = Api.GetExecutable();
 
             File execFile = Kernel.Fs.LookupOrFail(executable);
-
-            int returnCode = 255;
 
             AbstractRunTimeHandler handler = FindAvailableHandler(execFile);
             var userSpace = new UserSpace(Api);
 
             if (handler == null) {
                 userSpace.Stderr.WriteLine($"{executable}: invalid command");
-            } else {
-                returnCode = handler.Execute(execFile);
+                return 255;
             }
+                
+            return handler.Execute(execFile);
+        }
 
-            Process process = Kernel.ProcTable.LookupPid(Api.GetPid());
-            process.ReturnCode = returnCode;
+        protected void KeyboardInterrupt(int[] args) {
+            throw new KeyboardInterruptException();
         }
 
         protected AbstractRunTimeHandler FindAvailableHandler(File file) {

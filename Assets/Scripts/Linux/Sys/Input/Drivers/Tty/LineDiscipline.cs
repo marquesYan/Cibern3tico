@@ -1,9 +1,13 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using Linux.Configuration;
 using Linux.PseudoTerminal;
 using Linux.Sys.IO;
+using Linux.Sys.RunTime;
+using Linux.Configuration;
 using Linux.IO;
+using Linux;
 using UnityEngine;
 
 namespace Linux.Sys.Input.Drivers.Tty {
@@ -13,6 +17,8 @@ namespace Linux.Sys.Input.Drivers.Tty {
         int[] _nullArg = new int[0];
 
         protected int[] Flags = { 0 };
+
+        protected int[] Pid = { -1 };
 
         protected StringBuilder Buffer;
 
@@ -26,12 +32,16 @@ namespace Linux.Sys.Input.Drivers.Tty {
 
         protected IoctlDevice Output;
 
+        protected Kernel Kernel;
+
         protected bool ControlPressed = false;
 
         public PtyLineDiscipline(
+            Kernel kernel,
             IoctlDevice pts,
             IoctlDevice output
         ) {
+            Kernel = kernel;
             Pts = pts;
             Output = output;
             SpecialChars = CharacterControl.GetConstants().ToArray();
@@ -51,6 +61,11 @@ namespace Linux.Sys.Input.Drivers.Tty {
             Pts.Ioctl(
                 PtyIoctl.TIO_SET_UNBUFFERED_CHARS,
                 ref UnbufferedChars
+            );
+
+            Pts.Ioctl(
+                PtyIoctl.TIO_SET_PID_FLAG,
+                ref Pid
             );
 
             Buffer = new StringBuilder();
@@ -106,9 +121,19 @@ namespace Linux.Sys.Input.Drivers.Tty {
             }
 
             if (output != null) {
-                if (ControlPressed && output == "l") {
-                    Output.Ioctl(PtyIoctl.TIO_CLEAR, ref _nullArg);
-                    RemoveAtBack();
+                if (ControlPressed) {
+                    switch (output) {
+                        case "l": {
+                            Output.Ioctl(PtyIoctl.TIO_CLEAR, ref _nullArg);
+                            RemoveAtBack();
+                            break;
+                        }
+
+                        case "c": {
+                            KillAttachedProcess();
+                            break;
+                        }
+                    }
                 } else {
                     var outputArray = new string[] { output };
                     Output.Ioctl(
@@ -116,6 +141,21 @@ namespace Linux.Sys.Input.Drivers.Tty {
                         ref outputArray
                     );
                 }
+            }
+        }
+
+        protected void KillAttachedProcess() {
+            if (Pid[0] == -1) {
+                return;
+            }
+
+            Process proc = Kernel.ProcTable.LookupPid(Pid[0]);
+
+            if (proc != null) {
+                Kernel.ProcSigTable.Dispatch(
+                    proc,
+                    ProcessSignal.SIGINT
+                );
             }
         }
 

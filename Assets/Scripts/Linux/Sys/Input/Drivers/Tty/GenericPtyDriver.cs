@@ -111,7 +111,11 @@ namespace Linux.Sys.Input.Drivers.Tty
             
             int ptsFd = UserSpace.Api.Open(ptsFile, AccessMode.O_RDWR);
 
-            var lineDiscipline = new PtyLineDiscipline(secondaryPty, wStream);
+            var lineDiscipline = new PtyLineDiscipline(
+                Kernel,
+                secondaryPty,
+                wStream
+            );
 
             System.Action<UEvent> hookAction = (UEvent evt) => {
                 if (KbdEvent == evt && rStream.GetLength() > 0) {

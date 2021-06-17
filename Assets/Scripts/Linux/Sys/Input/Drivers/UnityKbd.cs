@@ -55,6 +55,8 @@ namespace Linux.Sys.Input.Drivers
                 WriteKeyboard(CharacterControl.C_UCTRL);
             } else if (UnityEngine.Input.GetKeyDown(KeyCode.L)) {
                 WriteKeyboard("l");
+            } else if (UnityEngine.Input.GetKeyDown(KeyCode.C)) {
+                WriteKeyboard("c");
             }
         }
 

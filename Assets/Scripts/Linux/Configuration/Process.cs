@@ -108,6 +108,8 @@ namespace Linux.Configuration
 
                     parent.ChildPids.Remove(process.Pid);
                 }
+
+                Fs.RecursivelyDeleteDir(ProcessDirectory(process));
                 
                 FdTable.Remove(process);
             }

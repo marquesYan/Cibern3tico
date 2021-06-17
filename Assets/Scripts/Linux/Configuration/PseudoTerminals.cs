@@ -7,6 +7,7 @@ namespace Linux.Configuration
 {
     public class PseudoTerminalTable {
         protected VirtualFileTree Fs;
+
         protected ITtyDriver TtyDriver;
 
         public int Count { get; protected set;}

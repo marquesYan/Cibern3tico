@@ -175,6 +175,28 @@ namespace Linux.FileSystem
             RemoveFrom(baseDirectory, file);
         }
 
+        public void RecursivelyDeleteDir(string path) {
+            File file = LookupOrFail(path);
+
+            if (file.Type != FileType.F_DIR) {
+                throw new System.ArgumentException(
+                    "File is not a directory"
+                );
+            }
+
+            File baseDirectory = ParseBaseDirectory(path);
+
+            foreach (File child in file.ListChilds()) {
+                if (child.Type == FileType.F_DIR) {
+                    RecursivelyDeleteDir(child.Path);
+                } else {
+                    RemoveFrom(file, child);
+                }
+            }
+
+            RemoveFrom(baseDirectory, file);
+        }
+
         public File Create(
             string file,
             int uid,

@@ -6,6 +6,8 @@ using Linux.Sys.IO;
 
 namespace Linux.Net {
     public class VirtualEthernetTransport {
+        readonly object _transportLock = new object();
+
         protected List<Action<Packet>> InputListeners;
         protected List<Action<Packet>> OutputListeners;
 
@@ -15,23 +17,31 @@ namespace Linux.Net {
         }
 
         public void Broadcast(Packet packet) {
-            foreach (Action<Packet> listener in OutputListeners) {
-                listener(packet);
-            }
+            MapListeners(packet, OutputListeners);
         }
 
         public void Process(Packet packet) {
-            foreach (Action<Packet> listener in InputListeners) {
-                listener(packet);
-            }
+            MapListeners(packet, InputListeners);
         }
 
         public void ListenOutput(Action<Packet> listener) {
-            OutputListeners.Add(listener);
+            lock(_transportLock) {
+                OutputListeners.Add(listener);
+            }
         }
 
         public void ListenInput(Action<Packet> listener) {
-            InputListeners.Add(listener);
+            lock(_transportLock) {
+                InputListeners.Add(listener);
+            }
+        }
+
+        protected void MapListeners(Packet packet, List<Action<Packet>> listeners) {
+            lock(_transportLock) {
+                foreach (Action<Packet> listener in listeners) {
+                    listener(packet);
+                }
+            }
         }
     }
 }
