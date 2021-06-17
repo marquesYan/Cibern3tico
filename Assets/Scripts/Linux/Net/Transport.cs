@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using Linux.IO;
 using Linux.Sys.IO;
+using UnityEngine;
 
 namespace Linux.Net {
     public class VirtualEthernetTransport {
         readonly object _transportLock = new object();
 
-        protected List<Action<Packet>> InputListeners;
-        protected List<Action<Packet>> OutputListeners;
+        protected List<Predicate<Packet>> OutputListeners;
+
+        protected List<Predicate<Packet>> InputListeners;
 
         public VirtualEthernetTransport() {
-            InputListeners = new List<Action<Packet>>();
-            OutputListeners = new List<Action<Packet>>();
+            OutputListeners = new List<Predicate<Packet>>();
+            InputListeners = new List<Predicate<Packet>>();
         }
 
         public void Broadcast(Packet packet) {
@@ -21,25 +23,36 @@ namespace Linux.Net {
         }
 
         public void Process(Packet packet) {
-            MapListeners(packet, InputListeners);
+            packet.Ttl++;
+
+            if (packet.Ttl < 15) {
+                MapListeners(packet, InputListeners);
+            }
         }
 
-        public void ListenOutput(Action<Packet> listener) {
+        public void ListenOutput(Predicate<Packet> listener) {
             lock(_transportLock) {
                 OutputListeners.Add(listener);
             }
         }
 
-        public void ListenInput(Action<Packet> listener) {
+        public void ListenInput(Predicate<Packet> listener) {
             lock(_transportLock) {
                 InputListeners.Add(listener);
             }
         }
 
-        protected void MapListeners(Packet packet, List<Action<Packet>> listeners) {
+        protected void MapListeners(Packet packet, List<Predicate<Packet>> listeners) {
             lock(_transportLock) {
-                foreach (Action<Packet> listener in listeners) {
-                    listener(packet);
+                foreach (Predicate<Packet> listener in listeners.ToArray()) {
+                    try {
+                        if (!listener(packet)) {
+                            Debug.Log("transport: removing listener: " + listener);
+                            listeners.Remove(listener);
+                        }
+                    } catch (Exception exc) {
+                        Debug.Log(exc.ToString());
+                    }
                 }
             }
         }

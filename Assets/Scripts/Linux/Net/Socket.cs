@@ -30,14 +30,19 @@ namespace Linux.Net
 
         protected Packet Recv() {
             Packet packet = null;
+            bool packetRecv = false;
 
             Interface.Transport.ListenInput(
                 (Packet input) => {
                     packet = input;
+
+                    packetRecv = true;
+
+                    return false;   // Will read just the first packet
                 }
             );
 
-            while (packet == null) {
+            while (!packetRecv) {
                 Thread.Sleep(200);
             }
 
@@ -111,11 +116,23 @@ namespace Linux.Net
         }
 
         public UdpPacket RecvFrom(IPAddress peerAddress, int peerPort) {
-            Packet packet;
+            Packet packet = null;
 
-            do {
+            while (packet == null && Linux.Kernel.IsRunning) {
                 packet = Recv();
-            } while (!IsUdpPacket(packet) && !MatchesPeerAddress(packet, peerAddress, peerPort));
+
+                if (!(IsUdpPacket(packet) 
+                    && MatchesPeerAddress(packet, peerAddress, peerPort))) {
+                    Debug.Log("udp: packet not for me: " + packet);
+                    // Put packet back in queue
+                    Interface.Transport.Process(packet);
+                    packet = null;
+                }
+            }
+
+            if (packet == null) {
+                return null;
+            }
 
             IpPacket ipPacket = (IpPacket)packet.NextLayer;
             UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
@@ -126,19 +143,21 @@ namespace Linux.Net
         }
 
         public void ListenInput(
-            Action<UdpPacket> listener,
+            Predicate<UdpPacket> listener,
             IPAddress peerAddress,
             int peerPort
         ) {
-            Action<Packet> wrapper = (Packet packet) => {
+            Predicate<Packet> wrapper = (Packet packet) => {
                 if (IsUdpPacket(packet) && MatchesPeerAddress(packet, peerAddress, peerPort)) {
                     IpPacket ipPacket = (IpPacket)packet.NextLayer;
                     UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
 
                     udpPacket.NextLayer = ipPacket;
 
-                    listener(udpPacket);
+                    return listener(udpPacket);
                 }
+
+                return true;
             };
 
             Interface.Transport.ListenInput(wrapper);

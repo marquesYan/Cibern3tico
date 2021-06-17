@@ -60,6 +60,10 @@ namespace Linux.Sys.RunTime
 
             Process proc = Kernel.ProcTable.LookupPid(pid);
 
+            var userSpace = new UserSpace(Api);
+
+            ITextIO stdout = userSpace.Stdout;
+
             int SIGINTCount = 0;
 
             Api.Trap(ProcessSignal.SIGINT, (int[] args) => {
@@ -73,6 +77,8 @@ namespace Linux.Sys.RunTime
                     signal = ProcessSignal.SIGKILL;
                 }
 
+                stdout.WriteLine("^C");
+
                 Kernel.KillProcess(proc, signal);
             });
 
@@ -81,7 +87,6 @@ namespace Linux.Sys.RunTime
             File execFile = Kernel.Fs.LookupOrFail(executable);
 
             AbstractRunTimeHandler handler = FindAvailableHandler(execFile);
-            var userSpace = new UserSpace(Api);
 
             if (handler == null) {
                 userSpace.Stderr.WriteLine($"{executable}: invalid command");

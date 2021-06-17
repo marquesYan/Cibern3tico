@@ -13,6 +13,8 @@ namespace Linux.Net {
         public int ProtocolID;
 
         public Packet NextLayer;
+
+        public int Ttl = 1;
     }
 
     public class LinkLayerPacket : Packet {

@@ -36,6 +36,8 @@ namespace Linux.Net {
             transport.ListenOutput(
                 (Packet packet) => {
                     Broadcast(pci, packet);
+
+                    return true;    // Permanent listener
                 }
             );
 

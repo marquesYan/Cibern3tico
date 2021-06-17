@@ -111,6 +111,8 @@ namespace Linux.Library
                 socket.ListenInput(
                     (UdpPacket input) => {
                         stdout.Write(input.Message);
+
+                        return eventSet;
                     },
                     peerAddress,
                     port

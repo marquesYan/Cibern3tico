@@ -67,18 +67,20 @@ namespace Linux.Net
             return IPAddresses.Find(netAddr => netAddr.IPAddress.ToString() == ipAddress) != null;
         }
 
-        protected void HandleInputPacket(Packet packet) {
+        protected bool HandleInputPacket(Packet packet) {
             if (packet.ProtocolID == ProtocolIdentifier.LINK) {
                 if (packet.NextLayer.ProtocolID == ProtocolIdentifier.ARP) {
                     HandleInputArpPacket((ArpPacket) packet.NextLayer);
-                    return;
+                    return true;
                 }
             } else {
                 // unknow packet
-                return;
+                return true;
             }
 
             InputQueue.Enqueue(packet);
+
+            return true;
         }
 
         protected void HandleInputArpPacket(ArpPacket packet) {
