@@ -34,34 +34,12 @@ namespace Linux.Library
                 return 1;
             }
 
-            int stickyBit = 0;
-            int owner, group, other;
-            bool parsedMode = true;
+            int permission = Perm.FromString(mode);
 
-            if (!int.TryParse($"{mode[mode.Length - 1]}", out other)) {
-                parsedMode = false;
-            }
-
-            if (!int.TryParse($"{mode[mode.Length - 2]}", out group)) {
-                parsedMode = false;
-            }
-
-            if (!int.TryParse($"{mode[mode.Length - 3]}", out owner)) {
-                parsedMode = false;
-            }
-
-            if (mode.Length == 4) {
-                if (!int.TryParse($"{mode[mode.Length - 4]}", out stickyBit)) {
-                    parsedMode = false;
-                }
-            }
-
-            if (!parsedMode) {
+            if (permission == -1) {
                 userSpace.Stderr.WriteLine($"chmod: unknow octal mode: {mode}");
                 return 2;
             }
-
-            int permission = Perm.FromInt(stickyBit, owner, group, other);
 
             string file = userSpace.ResolvePath(arguments[1]);
 

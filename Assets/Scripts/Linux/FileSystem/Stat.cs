@@ -27,5 +27,41 @@ namespace Linux.FileSystem
         public static int FromInt(int stickyBit, int owner, int group, int other) {
             return (stickyBit << 12) | (owner << 8) | (group << 4) | other;
         }
+
+        public static int FromString(string mode) {
+            int stickyBit = 0;
+            int owner, group, other;
+            bool parsedMode = true;
+
+            if (mode.Length < 3) {
+                throw new System.ArgumentException(
+                    "Permission mode must be at least 3 chars"
+                );
+            }
+
+            if (!int.TryParse($"{mode[mode.Length - 1]}", out other)) {
+                parsedMode = false;
+            }
+
+            if (!int.TryParse($"{mode[mode.Length - 2]}", out group)) {
+                parsedMode = false;
+            }
+
+            if (!int.TryParse($"{mode[mode.Length - 3]}", out owner)) {
+                parsedMode = false;
+            }
+
+            if (mode.Length == 4) {
+                if (!int.TryParse($"{mode[mode.Length - 4]}", out stickyBit)) {
+                    parsedMode = false;
+                }
+            }
+
+            if (parsedMode) {
+                return FromInt(stickyBit, owner, group, other);
+            }
+
+            return -1;
+        }
     }
 }
