@@ -13,12 +13,12 @@ namespace Linux.Library.RunTime
             return executable is CompiledBin;
         }
 
-        public override int Execute(File executable) {
+        public override int Execute(UserSpace procSpace, File executable) {
             CompiledBin bin = (CompiledBin)executable;
             int returnCode = 255;
 
             try {
-                returnCode = bin.Execute(UserSpace);
+                returnCode = bin.Execute(procSpace);
             }
             
             catch (ExitProcessException exc) {
@@ -26,7 +26,7 @@ namespace Linux.Library.RunTime
             }
             
             catch (System.Exception exception) {
-                UserSpace.Print($"{bin.Name}: {exception.Message}");
+                procSpace.Print($"{bin.Name}: {exception.Message}");
                 Debug.Log(exception.ToString());
             }
 

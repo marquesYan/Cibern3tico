@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Net;
 using Linux;
 using Linux.Net;
@@ -39,25 +38,6 @@ public class WebServerOneBin : CompiledBin {
                 "/usr/bin/sshd"
             }
         );
-
-        // UdpSocket socket = userSpace.Api.UdpSocket(
-        //     IPAddress.Parse("10.0.0.2"),
-        //     8888
-        // );
-
-        // while (true) {
-        //     try {
-        //         socket.SendTo(
-        //             IPAddress.Parse("10.0.0.1"),
-        //             8000,
-        //             "testing"
-        //         );
-        //     } catch {
-        //         //
-        //     }
-
-        //     Thread.Sleep(2000);
-        // }
 
         return 0;
     }

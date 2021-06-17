@@ -113,10 +113,14 @@ namespace Linux.Sys.RunTime
     }
 
     public class KernelSpace {
+        protected Process Proc;
+
         public Linux.Kernel Kernel;
 
         public KernelSpace(Linux.Kernel kernel) {
             Kernel = kernel;
+
+            Proc = GetCurrentProc();
         }
 
         // Public Calls
@@ -744,6 +748,11 @@ namespace Linux.Sys.RunTime
         }
 
         protected Process GetCurrentProc() {
+            if (Proc != null) {
+                // Use cached process
+                return Proc;
+            }
+
             return Kernel.ProcTable.LookupThread(Thread.CurrentThread);
         }
 

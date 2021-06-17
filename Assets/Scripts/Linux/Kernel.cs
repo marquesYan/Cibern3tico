@@ -78,6 +78,8 @@ namespace Linux
         }
 
         public void Bootstrap() {
+            new StartupStage(this);
+
             NetTable = new NetworkTable(Fs);
             ArpTable = new ArpTable();
 
@@ -132,7 +134,9 @@ namespace Linux
                 stream.WriteLine("id");
             }
 
-            TriggerStartup();
+            CmdHandler = new CommandHandler(this);
+
+            Init();
         }
 
         public void ScheduleShutdown() {
@@ -298,14 +302,6 @@ namespace Linux
                     }
                 }
             }
-        }
-
-        void TriggerStartup() {
-            CmdHandler = new CommandHandler(this);
-
-            new StartupStage(this);
-
-            Init();
         }
 
         public Process CreateProcess(

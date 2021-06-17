@@ -21,10 +21,10 @@ namespace Linux.Library.RunTime
             }
         }
 
-        public override int Execute(File executable) {
-            var bash = new BashProcess(UserSpace, false);
+        public override int Execute(UserSpace procSpace, File executable) {
+            var bash = new BashProcess(procSpace, false);
 
-            using (ITextIO stream = UserSpace.Open(executable.Path, AccessMode.O_RDONLY)) {
+            using (ITextIO stream = procSpace.Open(executable.Path, AccessMode.O_RDONLY)) {
                 string[] lines = stream.ReadLines();
 
                 foreach (string line in lines) {
@@ -39,7 +39,7 @@ namespace Linux.Library.RunTime
                             bash.ParseAndStartCommands(cmd);
                         }
                     } catch (System.Exception e) {
-                        UserSpace.Stderr.WriteLine($"-bash: {e.Message}");
+                        procSpace.Stderr.WriteLine($"-bash: {e.Message}");
                     }
                 }
             }

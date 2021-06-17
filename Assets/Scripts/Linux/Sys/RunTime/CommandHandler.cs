@@ -10,8 +10,9 @@ using UnityEngine;
 namespace Linux.Sys.RunTime
 {
     public class CommandHandler {
-        protected KernelSpace Api;
         protected Linux.Kernel Kernel;
+
+        protected KernelSpace Api;
 
         protected List<AbstractRunTimeHandler> RunTimeHandlers;
 
@@ -24,10 +25,13 @@ namespace Linux.Sys.RunTime
         }
 
         public void Handle() {
+            // Make sure executable receive a fresh kernel space instance
+            var api = new KernelSpace(Kernel); 
+
             int returnCode = 255;
 
             try {
-                returnCode = InternalHandle();
+                returnCode = InternalHandle(api);
             }
 
             catch (ExitProcessException exc) {
@@ -39,19 +43,21 @@ namespace Linux.Sys.RunTime
                 Debug.Log(e.ToString());
             }
 
-            Process process = Kernel.ProcTable.LookupPid(Api.GetPid());
+            Process process = Kernel.ProcTable.LookupPid(api.GetPid());
             process.ReturnCode = returnCode;
         }
 
-        protected int InternalHandle() {
-            ITextIO stream = Api.LookupByFD(0);
+        protected int InternalHandle(KernelSpace api) {
+            ITextIO stream = api.LookupByFD(0);
 
-            int pid = Api.GetPid();
+            int pid = api.GetPid();
 
             if (stream != null && stream is SecondaryPty) {
                 var pty = (SecondaryPty)stream;
+
                 int[] pidArray = new int[] { pid };
 
+                // Set pty as controlling terminal for this process
                 pty.Ioctl(
                     PtyIoctl.TIO_SET_PID,
                     ref pidArray
@@ -60,13 +66,11 @@ namespace Linux.Sys.RunTime
 
             Process proc = Kernel.ProcTable.LookupPid(pid);
 
-            var userSpace = new UserSpace(Api);
-
-            ITextIO stdout = userSpace.Stdout;
+            var procSpace = new UserSpace(api);
 
             int SIGINTCount = 0;
 
-            Api.Trap(ProcessSignal.SIGINT, (int[] args) => {
+            api.Trap(ProcessSignal.SIGINT, (int[] args) => {
                 SIGINTCount++;
 
                 ProcessSignal signal;
@@ -77,23 +81,23 @@ namespace Linux.Sys.RunTime
                     signal = ProcessSignal.SIGKILL;
                 }
 
-                stdout.WriteLine("^C");
+                procSpace.Stdout.WriteLine("^C");
 
                 Kernel.KillProcess(proc, signal);
             });
 
-            string executable = Api.GetExecutable();
+            string executable = api.GetExecutable();
 
             File execFile = Kernel.Fs.LookupOrFail(executable);
 
             AbstractRunTimeHandler handler = FindAvailableHandler(execFile);
 
             if (handler == null) {
-                userSpace.Stderr.WriteLine($"{executable}: invalid command");
+                procSpace.Stderr.WriteLine($"{executable}: invalid command");
                 return 255;
             }
                 
-            return handler.Execute(execFile);
+            return handler.Execute(procSpace, execFile);
         }
 
         protected void KeyboardInterrupt(int[] args) {

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
@@ -77,22 +78,24 @@ namespace Linux.Library
 
             UdpSocket socket = userSpace.Api.UdpSocket(outAddress, port);
 
-            string message;
+            string message, response;
             UdpPacket packet;
             IpPacket ipPacket;
 
-            while (eventSet) {
-                packet = socket.RecvFrom(listenAddress, port);
+            socket.ListenAnyInput(packet => {
+                message = packet.Message;
 
-                ReadOnlyFile file = FindFile(userSpace, packet.Message, path);
+                if (string.IsNullOrEmpty(message)) {
+                    message = "index.html";
+                }
 
-                string response;
+                ReadOnlyFile file = FindFile(userSpace, message, path);
 
                 if (file == null) {
-                    message = "404 not found!";
+                    response = "404 not found!";
                 } else {
                     using (ITextIO stream = userSpace.Open(file.Path, AccessMode.O_RDONLY)) {
-                        message = stream.Read();
+                        response = stream.Read();
                     }
                 }
 
@@ -101,8 +104,14 @@ namespace Linux.Library
                 socket.SendTo(
                     IPAddress.Parse(ipPacket.SrcAddress),
                     packet.LocalPort,
-                    message
+                    response
                 );
+
+                return eventSet;
+            });
+
+            while (eventSet) {
+                Thread.Sleep(1000);
             }
 
             return 0;

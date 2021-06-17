@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Net;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
@@ -22,6 +23,13 @@ namespace Linux.Library
 
         public override int Execute(UserSpace userSpace) {
             bool eventSet = true;
+
+            userSpace.Api.Trap(
+                ProcessSignal.SIGTERM,
+                (int[] args) => {
+                    eventSet = false;
+                }
+            );
 
             var parser = new GenericArgParser(
                 userSpace,
@@ -47,11 +55,25 @@ namespace Linux.Library
 
             IPAddress peerAddress = IPAddress.Parse(url.Host);
 
-            socket.SendTo(peerAddress, url.Port, url.PathAndQuery.TrimStart('/'));
+            bool responseRcv = false;
 
-            UdpPacket packet = socket.RecvFrom(peerAddress, url.Port);
+            socket.ListenInput((UdpPacket packet) => {
+                userSpace.Print(packet.Message, "");
 
-            userSpace.Print(packet.Message);
+                responseRcv = true;
+
+                return false;
+            }, peerAddress, url.Port);
+
+            socket.SendTo(
+                peerAddress,
+                url.Port, 
+                url.PathAndQuery.TrimStart('/')
+            );
+
+            while (eventSet && !responseRcv) {
+                Thread.Sleep(200);
+            }
 
             return 0;
        }

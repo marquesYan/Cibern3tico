@@ -13,6 +13,6 @@ namespace Linux.Library.RunTime
 
         public abstract bool IsFileSupported(File executable);
 
-        public abstract int Execute(File executable);
+        public abstract int Execute(UserSpace procSpace, File executable);
     }
 }
