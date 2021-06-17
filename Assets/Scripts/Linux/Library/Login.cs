@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
+using Linux.Sys.IO;
+using Linux.PseudoTerminal;
+using Linux.Sys.Input.Drivers.Tty;
 using Linux.FileSystem;
 using Linux.Library.ArgumentParser;
 using UnityEngine;
@@ -38,30 +41,65 @@ namespace Linux.Library
             string password = null;
             bool loggedOut = true;
 
-            userSpace.Print(userSpace.Api.Name());
+            while (eventSet) {
+                userSpace.Print(userSpace.Api.Name());
 
-            userSpace.Print("");
+                userSpace.Print("");
 
-            while (eventSet && loggedOut) {
-                userSpace.Print("Login: ", "");
-                login = userSpace.Stdin.ReadLine();
+                while (eventSet && loggedOut) {
+                    login = userSpace.Input("Login: ", "");
 
-                userSpace.Print("Password: ", "");
-                password = userSpace.Stdin.ReadLine();
+                    password = userSpace.Input("Password: ", "");
 
-                loggedOut = !userSpace.Api.CheckLogin(login, password);
+                    loggedOut = !userSpace.Api.CheckLogin(login, password);
+                }
+
+                if (loggedOut || login == null || password == null) {
+                    continue;
+                }
+
+                int pid = userSpace.Api.RunLogin(login, password);
+                userSpace.Api.WaitPid(pid);
+
+                // Ensure process is killed
+                userSpace.Api.KillProcess(pid);
+
+                if (userSpace.Api.IsTtyControlled()) {
+                    var pts = (IoctlDevice)userSpace.Stdin;
+
+                    // Above operations clear the screen
+
+                    string[] clearArray = new string[] { 
+                        CharacterControl.C_DCTRL
+                    };
+                    
+                    // Press Ctrl
+                    pts.Ioctl(
+                        PtyIoctl.TIO_SEND_KEY,
+                        ref clearArray
+                    );
+
+                    clearArray = new string[] { "l" };
+                    
+                    // Send L
+                    pts.Ioctl(
+                        PtyIoctl.TIO_SEND_KEY,
+                        ref clearArray
+                    );
+
+                    clearArray = new string[] {
+                        CharacterControl.C_UCTRL
+                    };
+                    
+                    // Unpress Ctrl
+                    pts.Ioctl(
+                        PtyIoctl.TIO_SEND_KEY,
+                        ref clearArray
+                    );
+                }
             }
 
-            if (login == null || password == null) {
-                return 128;
-            }
-
-            if (loggedOut) {
-                return 1;
-            }
-
-            int pid = userSpace.Api.RunLogin(login, password);
-            return userSpace.Api.WaitPid(pid);
+            return 0;
         }
     }
 }

@@ -15,15 +15,17 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            bool keepRunning = true;
+            bool eventSet = true;
 
             userSpace.Api.Trap(ProcessSignal.SIGTERM, (int[] args) => {
-                keepRunning = false;
+                eventSet = false;
             });
 
             BashProcess bashProc = new BashProcess(userSpace);
 
-            while (keepRunning) {
+            bool keepRunning = true;
+
+            while (eventSet && keepRunning) {
                 keepRunning = bashProc.Run();
             }
 

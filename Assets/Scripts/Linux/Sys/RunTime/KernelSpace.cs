@@ -7,6 +7,7 @@ using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.IO;
 using Linux.Net;
+using Linux.PseudoTerminal;
 using Linux.Sys.Input.Drivers;
 using UnityEngine;
 
@@ -245,6 +246,10 @@ namespace Linux.Sys.RunTime
             }
 
             Kernel.PtyTable.Remove(file.Path);
+        }
+
+        public bool IsTtyControlled() {
+            return LookupByFD(0) is SecondaryPty;
         }
 
         public void CreateDir(string path) {

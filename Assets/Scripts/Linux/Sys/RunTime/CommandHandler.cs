@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.Library.RunTime;
-using Linux.PseudoTerminal;
 using Linux.IO;
 using Linux.Sys.Input.Drivers.Tty;
+using Linux.Sys.IO;
 using UnityEngine;
 
 namespace Linux.Sys.RunTime
@@ -48,12 +48,12 @@ namespace Linux.Sys.RunTime
         }
 
         protected int InternalHandle(KernelSpace api) {
-            ITextIO stream = api.LookupByFD(0);
+            var procSpace = new UserSpace(api);
 
             int pid = api.GetPid();
 
-            if (stream != null && stream is SecondaryPty) {
-                var pty = (SecondaryPty)stream;
+            if (api.IsTtyControlled()) {
+                var pty = (IoctlDevice)procSpace.Stdin;
 
                 int[] pidArray = new int[] { pid };
 
@@ -65,8 +65,6 @@ namespace Linux.Sys.RunTime
             }
 
             Process proc = Kernel.ProcTable.LookupPid(pid);
-
-            var procSpace = new UserSpace(api);
 
             int SIGINTCount = 0;
 
