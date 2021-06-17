@@ -148,7 +148,17 @@ namespace Linux.Net
             int peerPort
         ) {
             Predicate<Packet> wrapper = (Packet packet) => {
-                if (IsUdpPacket(packet) && MatchesPeerAddress(packet, peerAddress, peerPort)) {
+                IpPacket ipp = (IpPacket)packet.NextLayer;
+                UdpPacket udp = (UdpPacket)ipp.NextLayer;
+
+                Debug.Log($"udp: src address: {ipp.SrcAddress}:{udp.LocalPort}");
+                Debug.Log($"udp: dst address: {ipp.DstAddress}:{udp.PeerPort}");
+
+                if (IsUdpPacket(packet) &&
+                    MatchesSocketAddress(packet) &&
+                    MatchesPeerAddress(packet, peerAddress, peerPort)
+                ) {
+                    Debug.Log("udp: packet for me");
                     IpPacket ipPacket = (IpPacket)packet.NextLayer;
                     UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
 
@@ -157,10 +167,29 @@ namespace Linux.Net
                     return listener(udpPacket);
                 }
 
+                Debug.Log("udp: packet not for me");
+
                 return true;
             };
 
             Interface.Transport.ListenInput(wrapper);
+        }
+
+        public void ListenAnyInput(Predicate<UdpPacket> listener) {
+            ListenInput(
+                listener,
+                IPAddress.Parse("0.0.0.0"),
+                0
+            );
+        }
+
+        protected bool MatchesSocketAddress(Packet packet) {
+            IpPacket ipPacket = (IpPacket)packet.NextLayer;
+            UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
+
+            return (IpAddress.ToString() == "0.0.0.0" ||
+                        ipPacket.DstAddress == IpAddress.ToString())
+                    && udpPacket.PeerPort == Port;
         }
 
         protected bool MatchesPeerAddress(
@@ -173,7 +202,7 @@ namespace Linux.Net
 
             return (peerAddress.ToString() == "0.0.0.0" ||
                     ipPacket.SrcAddress == peerAddress.ToString())
-                    && udpPacket.LocalPort == peerPort;
+                    && (peerPort == 0 || udpPacket.LocalPort == peerPort);
         }
 
         protected bool IsUdpPacket(Packet packet) {

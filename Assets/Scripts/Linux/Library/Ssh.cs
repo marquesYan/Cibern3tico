@@ -14,7 +14,45 @@ using Linux.Library.ArgumentParser;
 using UnityEngine;
 
 namespace Linux.Library
-{    
+{
+    public class SshAuthInfo {
+        public bool LoggedOut = true;
+        public int Attempts = 0;
+
+        public readonly ITextIO Stdin;
+        public readonly ITextIO Stdout;
+        public readonly string Url;
+        public readonly UdpSocket Socket;
+        public readonly IPAddress PeerAddress;
+        public readonly int PeerPort;
+
+        public readonly int MaxAttempts;
+
+        public bool HasAttempts {
+            get {
+                return Attempts < MaxAttempts;
+            }
+        }
+
+        public SshAuthInfo(
+            int maxAttempts,
+            ITextIO stdin,
+            ITextIO stdout,
+            string url,
+            UdpSocket socket,
+            IPAddress peerAddress,
+            int peerPort
+        ) {
+            MaxAttempts = maxAttempts;
+            Stdin = stdin;
+            Stdout = stdout;
+            Url = url;
+            Socket = socket;
+            PeerAddress = peerAddress;
+            PeerPort = peerPort;
+        }
+    }
+
     public class Ssh : CompiledBin {
         public Ssh(
             string absolutePath,
@@ -49,7 +87,7 @@ namespace Linux.Library
 
             IPAddress outAddress = userSpace.Api.GetIPAddresses()[0];
 
-            int port = 22;
+            int peerPort = 22;
 
             string[] url = arguments[0].Split('@');
 
@@ -67,36 +105,44 @@ namespace Linux.Library
             );
 
             IPAddress peerAddress = IPAddress.Parse(host);
-            
+
+            ITextIO stdout = userSpace.Stdout;
+
+            SshAuthInfo authInfo = new SshAuthInfo(
+                3,
+                userSpace.Stdin,
+                stdout,
+                arguments[0],
+                socket,
+                peerAddress,
+                peerPort
+            );
+
+            socket.ListenInput((UdpPacket packet) => {
+                Debug.Log("ssh: rcv init packet");
+                if (packet.Message == "ack") {
+                    // Send Username
+                    socket.SendTo(peerAddress, peerPort, username);
+
+                    Authenticate(authInfo);
+                }
+
+                return false;
+            }, peerAddress, peerPort);
+
             // Initiate connection
-            socket.SendTo(peerAddress, port, "init");
+            socket.SendTo(peerAddress, peerPort, "init");
 
-            Thread.Sleep(200);
-
-            // Send Username
-            socket.SendTo(peerAddress, port, username);
-
-            string password = null;
-            bool loggedOut = true;
-
-            UdpPacket packet;
-
-            while (eventSet && loggedOut) {
-                userSpace.Print($"{arguments[0]}: ", "");
-                password = userSpace.Stdin.ReadLine();
-
-                socket.SendTo(peerAddress, port, password);
-
-                packet = socket.RecvFrom(peerAddress, port);
-
-                loggedOut = packet.Message != "1";
+            while (eventSet && authInfo.LoggedOut && authInfo.HasAttempts) {
+                Thread.Sleep(200);
             }
 
-            if (password == null) {
-                return 128;
+            if (!eventSet) {
+                return 255;
             }
 
-            if (loggedOut) {
+            if (authInfo.LoggedOut) {
+                userSpace.Stderr.WriteLine("ssh: authentication failed");
                 return 1;
             }
 
@@ -106,8 +152,6 @@ namespace Linux.Library
             using (ITextIO stream = userSpace.Api.LookupByFD(pty)) {
                 // CookPty(stream);
 
-                ITextIO stdout = userSpace.Stdout;
-
                 socket.ListenInput(
                     (UdpPacket input) => {
                         stdout.Write(input.Message);
@@ -115,7 +159,7 @@ namespace Linux.Library
                         return eventSet;
                     },
                     peerAddress,
-                    port
+                    peerPort
                 );
 
                 string key = "";
@@ -123,7 +167,7 @@ namespace Linux.Library
                 while (eventSet && key != "exit") {
                     key = stream.ReadLine();
                     
-                    socket.SendTo(peerAddress, port, key + "\n");
+                    socket.SendTo(peerAddress, peerPort, key + "\n");
                 }
             }
 
@@ -131,6 +175,34 @@ namespace Linux.Library
             userSpace.Api.RemovePty(pty);
 
             return 0;
+        }
+
+        protected void Authenticate(SshAuthInfo authInfo) {
+            if (!authInfo.HasAttempts) {
+                return;
+            }
+
+            authInfo.Attempts++;
+
+            authInfo.Stdout.Write($"{authInfo.Url}: ");
+
+            string password = authInfo.Stdin.ReadLine();
+
+            authInfo.Socket.ListenInput((UdpPacket packet) => {
+                if (packet.Message == "1") {
+                    authInfo.LoggedOut = false;
+                } else {
+                    Authenticate(authInfo);
+                }
+
+                return false;
+            }, authInfo.PeerAddress, authInfo.PeerPort);
+
+            authInfo.Socket.SendTo(
+                authInfo.PeerAddress, 
+                authInfo.PeerPort, 
+                password
+            );
        }
 
        protected void CookPty(ITextIO stream) {
