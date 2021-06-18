@@ -61,6 +61,12 @@ namespace Linux.Library
             switch (command) {
                 case "cmd": return value + "\n";
 
+                case "exit": {
+                    UserSpace.Api.KillProcess(Pid[0]);
+                    Close();
+                    break;
+                }
+
                 case "signal": {
                     int signal;
                     if (int.TryParse(value, out signal)) {

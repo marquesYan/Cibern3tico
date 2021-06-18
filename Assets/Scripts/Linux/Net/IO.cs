@@ -24,8 +24,9 @@ namespace Linux.Net
             PeerPort = peerPort;
 
             socket.ListenInput((UdpPacket packet) => {
+                string message = transform(packet);
+
                 if (!IsClosed) {
-                    string message = transform(packet);
                     Buffer.Enqueue(message);
                 }
 

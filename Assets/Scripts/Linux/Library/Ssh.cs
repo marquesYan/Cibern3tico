@@ -84,6 +84,10 @@ namespace Linux.Library
         public void ListenInput(Predicate<UdpPacket> listener) {
             RawSocket.ListenInput(listener, PeerAddress, PeerPort);
         }
+
+        public void Close() {
+            Send("exit=");
+        }
     }
 
     public class Ssh : CompiledBin {
@@ -201,7 +205,7 @@ namespace Linux.Library
             if (command != null) {
                 socket.SendCommand(command);
                 socket.SendCommand("exit");
-                socket.SendSignal(ProcessSignal.SIGTERM);
+                socket.Close();
                 return 0;
             }
 
@@ -225,34 +229,37 @@ namespace Linux.Library
             // Open a new one to be used by ssh
             int ptFd = userSpace.Api.OpenPty();
 
-            using (ITextIO stream = userSpace.Api.LookupByFD(ptFd)) {
-                CookPty(userSpace, stream);
+            try {
+                using (ITextIO stream = userSpace.Api.LookupByFD(ptFd)) {
+                    CookPty(userSpace, stream);
 
-                socket.ListenInput(
-                    (UdpPacket input) => {
-                        if (eventSet) {
-                            userSpace.Stdout.Write(input.Message);
+                    socket.ListenInput(
+                        (UdpPacket input) => {
+                            if (eventSet) {
+                                userSpace.Stdout.Write(input.Message);
+                            }
+
+                            return eventSet;
                         }
+                    );
 
-                        return eventSet;
+                    string key = "";
+
+                    while (eventSet) {
+                        key = stream.ReadLine();
+                        
+                        socket.SendCommand(key);
                     }
-                );
-
-                string key = "";
-
-                while (eventSet) {
-                    key = stream.ReadLine();
-                    Debug.Log("ssh: stream sigint count: " + sigintCount);
-                    
-                    socket.SendCommand(key);
                 }
-
+            } finally {
                 // Shutdown net listener
                 eventSet = false;
-            }
 
-            // Ensure pty is not connected anymore
-            userSpace.Api.RemovePty(ptFd);
+                // Ensure pty is not connected anymore
+                userSpace.Api.RemovePty(ptFd);
+
+                socket.Close();
+            }
 
             return 0;
         }
