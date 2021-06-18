@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
 using UnityEngine;
@@ -14,8 +15,11 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            string[] args = userSpace.Api.GetArgs();
-            args[0] = "";
+            List<string> args = new List<string>(userSpace.Api.GetArgs());
+
+            // Exclude executable argument
+            args.RemoveAt(0);
+
             userSpace.Print(string.Join(" ", args));
             return 0;
         }
