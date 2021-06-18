@@ -162,6 +162,7 @@ namespace Linux.Boot
                 "/opt",
                 "/var",
                 "/run",
+                "/home",
 
                 "/usr/sbin",
                 "/usr/bin",

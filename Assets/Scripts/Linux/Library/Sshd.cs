@@ -59,8 +59,6 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            Linux.Kernel kernel = userSpace.Api.AccessKernel();
-
             bool eventSet = true;
 
             userSpace.Api.Trap(
@@ -164,7 +162,7 @@ namespace Linux.Library
             });
 
             while (eventSet) {
-                Thread.Sleep(500);
+                Thread.Sleep(1000);
             }
 
             return 0;
