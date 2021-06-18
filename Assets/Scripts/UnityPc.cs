@@ -70,6 +70,7 @@ public class UnityPc : MonoBehaviour {
 
         Kernel = new Linux.Kernel(
             Application.persistentDataPath,
+            Application.dataPath,
             machine,
             HostName
         );

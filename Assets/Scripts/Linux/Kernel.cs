@@ -52,6 +52,8 @@ namespace Linux
         public ProcessSignalsTable ProcSigTable;
         public string PersistentPath { get; protected set; }
 
+        public string DataPath { get; protected set; }
+
         public string HostName { get; protected set; }
 
         protected Process InitProcess;
@@ -64,8 +66,14 @@ namespace Linux
 
         public static bool IsRunning { get; protected set; }
 
-        public Kernel(string persistentPath, VirtualMachine machine, string hostName) {
+        public Kernel(
+            string persistentPath,
+            string dataPath,
+            VirtualMachine machine,
+            string hostName
+        ) {
             PersistentPath = persistentPath;
+            DataPath = dataPath;
             Machine = machine;
             HostName = hostName;
 
