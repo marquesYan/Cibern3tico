@@ -53,7 +53,7 @@ namespace Linux.Library.ShellInterpreter
     }
 
     public class BashCommandParser {
-        protected Regex SetVariablesRegex = new Regex(@"^([a-zA-Z_]+)=([a-zA-Z0-9_]*)(?:;?)$");
+        protected Regex SetVariablesRegex = new Regex(@"^([a-zA-Z_]+)=([a-zA-Z0-9_./]*)(?:;?)$");
 
         protected Regex ReplaceVariablesRegex = new Regex(@"\\?\$([a-zA-Z_]+|\$|\?|\!)");
 
@@ -103,10 +103,10 @@ namespace Linux.Library.ShellInterpreter
 
                     case TokenType.OUT_REDIR_APPEND:
                     case TokenType.OUT_REDIR: {
-                        Debug.Log("received redirect token type: " + token.Type);
-                        Debug.Log("received redirect token: " + token.Value);
+                        string path = ReplaceShellVariables(token.Value);
+
                         // Add command line and clear to start new one
-                        currentCmd.Stdout = UserSpace.ResolvePath(token.Value);
+                        currentCmd.Stdout = UserSpace.ResolvePath(path);
 
                         currentCmd.AppendStdout = token.Type == TokenType.OUT_REDIR_APPEND;
                         commands.Add(currentCmd);
