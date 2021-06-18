@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Linux.Configuration;
 using Linux.FileSystem;
 using Linux.Library.ShellInterpreter;
@@ -21,7 +22,27 @@ namespace Linux.Library
                 eventSet = false;
             });
 
+            var parser = new ArgumentParser.GenericArgParser(
+                userSpace,
+                "Usage: {0} [COMMAND]",
+                "Bourne-Again SHell"
+            );
+
+            List<string> arguments = parser.Parse();
+
             BashProcess bashProc = new BashProcess(userSpace);
+
+            if (arguments.Count > 0) {
+                bashProc.ParseAndStartCommands(string.Join(" ", arguments));
+                string exitCodeStr = bashProc.Variables["?"];
+                int exitCode;
+
+                if (int.TryParse(exitCodeStr, out exitCode)) {
+                    return exitCode;
+                }
+
+                return 1;
+            }
 
             bool keepRunning = true;
 

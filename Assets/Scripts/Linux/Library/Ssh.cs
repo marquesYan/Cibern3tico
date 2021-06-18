@@ -19,12 +19,9 @@ namespace Linux.Library
         public bool LoggedOut = true;
         public int Attempts = 0;
 
-        public readonly ITextIO Stdin;
-        public readonly ITextIO Stdout;
+        public readonly UserSpace UserSpace;
         public readonly string Url;
-        public readonly UdpSocket Socket;
-        public readonly IPAddress PeerAddress;
-        public readonly int PeerPort;
+        public readonly SshSocket Socket;
 
         public readonly int MaxAttempts;
 
@@ -36,20 +33,56 @@ namespace Linux.Library
 
         public SshAuthInfo(
             int maxAttempts,
-            ITextIO stdin,
-            ITextIO stdout,
+            UserSpace userSpace,
             string url,
-            UdpSocket socket,
+            SshSocket socket
+        ) {
+            MaxAttempts = maxAttempts;
+            UserSpace = userSpace;
+            Url = url;
+            Socket = socket;
+        }
+    }
+
+    public class SshSocket {
+        public UdpSocket RawSocket;
+
+        protected IPAddress PeerAddress;
+
+        protected int PeerPort;
+
+        public SshSocket(
+            UdpSocket udpSocket,
             IPAddress peerAddress,
             int peerPort
         ) {
-            MaxAttempts = maxAttempts;
-            Stdin = stdin;
-            Stdout = stdout;
-            Url = url;
-            Socket = socket;
+            RawSocket = udpSocket;
             PeerAddress = peerAddress;
             PeerPort = peerPort;
+        }
+
+        public void Send(string message) {
+            RawSocket.SendTo(PeerAddress, PeerPort, message);
+        }
+
+        public void SendCommand(string command) {
+            Send($"cmd={command}");
+        }
+
+        public void SendStdout(string text) {
+            Send($"stdout={text}");
+        }
+
+        public void SendStderr(string text) {
+            Send($"stderr={text}");
+        }
+
+        public void SendSignal(ProcessSignal signal) {
+            Send($"signal={(int)signal}");
+        }
+
+        public void ListenInput(Predicate<UdpPacket> listener) {
+            RawSocket.ListenInput(listener, PeerAddress, PeerPort);
         }
     }
 
@@ -116,42 +149,41 @@ namespace Linux.Library
             string command = null;
 
             if (arguments.Count > 1 && !string.IsNullOrEmpty(arguments[0])) {
-                command = arguments[0];
+                command = arguments[1];
             }
-
-            UdpSocket socket = userSpace.Api.UdpSocket(
-                outAddress,
-                9999
-            );
 
             IPAddress peerAddress = IPAddress.Parse(host);
 
-            ITextIO stdout = userSpace.Stdout;
+            var socket = new SshSocket(
+                userSpace.Api.UdpSocket(
+                    outAddress,
+                    9999
+                ),
+                peerAddress,
+                peerPort
+            );
 
             SshAuthInfo authInfo = new SshAuthInfo(
                 attemptCount,
-                userSpace.Stdin,
-                stdout,
+                userSpace,
                 arguments[0],
-                socket,
-                peerAddress,
-                peerPort
+                socket
             );
 
             socket.ListenInput((UdpPacket packet) => {
                 Debug.Log("ssh: rcv init packet");
                 if (packet.Message == "ack") {
                     // Send Username
-                    socket.SendTo(peerAddress, peerPort, username);
+                    socket.Send(username);
 
                     Authenticate(authInfo);
                 }
 
                 return false;
-            }, peerAddress, peerPort);
+            });
 
             // Initiate connection
-            socket.SendTo(peerAddress, peerPort, "init");
+            socket.Send("init");
 
             while (eventSet && authInfo.LoggedOut && authInfo.HasAttempts) {
                 Thread.Sleep(200);
@@ -167,34 +199,52 @@ namespace Linux.Library
             }
 
             if (command != null) {
-                socket.SendTo(peerAddress, peerPort, command + "\nexit\n");
+                socket.SendCommand(command);
+                socket.SendCommand("exit");
+                socket.SendSignal(ProcessSignal.SIGTERM);
                 return 0;
             }
+
+            int sigintCount = 0;
+
+            userSpace.Api.Trap(
+                ProcessSignal.SIGINT,
+                (int[] args) => {
+                    sigintCount++;
+
+                    if (sigintCount > 3) {
+                        eventSet = false;
+                    }
+
+                    userSpace.Stdout.Write("^C");
+
+                    socket.SendSignal(ProcessSignal.SIGINT);
+                }
+            );
 
             // Open a new one to be used by ssh
             int ptFd = userSpace.Api.OpenPty();
 
             using (ITextIO stream = userSpace.Api.LookupByFD(ptFd)) {
-                // CookPty(stream);
+                CookPty(userSpace, stream);
 
                 socket.ListenInput(
                     (UdpPacket input) => {
                         if (eventSet) {
-                            stdout.Write(input.Message);
+                            userSpace.Stdout.Write(input.Message);
                         }
 
                         return eventSet;
-                    },
-                    peerAddress,
-                    peerPort
+                    }
                 );
 
                 string key = "";
 
-                while (eventSet && key != "exit") {
+                while (eventSet) {
                     key = stream.ReadLine();
+                    Debug.Log("ssh: stream sigint count: " + sigintCount);
                     
-                    socket.SendTo(peerAddress, peerPort, key + "\n");
+                    socket.SendCommand(key);
                 }
 
                 // Shutdown net listener
@@ -214,11 +264,7 @@ namespace Linux.Library
 
             authInfo.Attempts++;
 
-            authInfo.Stdout.Write($"{authInfo.Url}: ");
-
-            string password = authInfo.Stdin.ReadLine();
-
-            Debug.Log("ssh: recv password: " + password);
+            string password = authInfo.UserSpace.Input($"{authInfo.Url}: ", "");
 
             authInfo.Socket.ListenInput((UdpPacket packet) => {
                 if (packet.Message == "1") {
@@ -228,54 +274,58 @@ namespace Linux.Library
                 }
 
                 return false;
-            }, authInfo.PeerAddress, authInfo.PeerPort);
+            });
 
-            authInfo.Socket.SendTo(
-                authInfo.PeerAddress, 
-                authInfo.PeerPort, 
-                password
-            );
+            authInfo.Socket.Send(password);
        }
 
-       protected void CookPty(ITextIO stream) {
+       protected void CookPty(UserSpace userSpace, ITextIO stream) {
             var pts = (IoctlDevice)stream;
 
+            int[] pidArray = new int[] { userSpace.Api.GetPid() };
+
+            // Set pty as controlling terminal for this process
+            pts.Ioctl(
+                PtyIoctl.TIO_SET_PID,
+                ref pidArray
+            );
+
             // Disable auto control of DownArrow character
-            var downArrowArray = new string[] {
-                CharacterControl.C_DDOWN_ARROW
-            };
-            pts.Ioctl(
-                PtyIoctl.TIO_DEL_SPECIAL_CHARS,
-                ref downArrowArray
-            );
+            // var downArrowArray = new string[] {
+            //     CharacterControl.C_DDOWN_ARROW
+            // };
+            // pts.Ioctl(
+            //     PtyIoctl.TIO_DEL_SPECIAL_CHARS,
+            //     ref downArrowArray
+            // );
 
-            // Disable auto control of UpArrow character
-            var upArrowArray = new string[] {
-                CharacterControl.C_DUP_ARROW
-            };
-            pts.Ioctl(
-                PtyIoctl.TIO_DEL_SPECIAL_CHARS,
-                ref upArrowArray
-            );
+            // // Disable auto control of UpArrow character
+            // var upArrowArray = new string[] {
+            //     CharacterControl.C_DUP_ARROW
+            // };
+            // pts.Ioctl(
+            //     PtyIoctl.TIO_DEL_SPECIAL_CHARS,
+            //     ref upArrowArray
+            // );
 
-            // Enable unbuffered operations on UpArrow character
-            pts.Ioctl(
-                PtyIoctl.TIO_ADD_UNBUFFERED_CHARS,
-                ref upArrowArray
-            );
+            // // Enable unbuffered operations on UpArrow character
+            // pts.Ioctl(
+            //     PtyIoctl.TIO_ADD_UNBUFFERED_CHARS,
+            //     ref upArrowArray
+            // );
 
-            pts.Ioctl(
-                PtyIoctl.TIO_ADD_UNBUFFERED_CHARS,
-                ref downArrowArray
-            );
+            // pts.Ioctl(
+            //     PtyIoctl.TIO_ADD_UNBUFFERED_CHARS,
+            //     ref downArrowArray
+            // );
 
-            // Disable buffering, so we can receive the UpArrow
-            // just when pressed by user
-            var flagArray = new int[] { PtyFlags.BUFFERED };
-            pts.Ioctl(
-                PtyIoctl.TIO_UNSET_FLAG,
-                ref flagArray
-            );
+            // // Disable buffering, so we can receive the UpArrow
+            // // just when pressed by user
+            // var flagArray = new int[] { PtyFlags.BUFFERED };
+            // pts.Ioctl(
+            //     PtyIoctl.TIO_UNSET_FLAG,
+            //     ref flagArray
+            // );
        }
     }
 }

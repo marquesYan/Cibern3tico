@@ -26,12 +26,12 @@ namespace Linux.Sys.RunTime
 
         public void Handle() {
             // Make sure executable receive a fresh kernel space instance
-            var api = new KernelSpace(Kernel); 
+            var procSpace = new UserSpace(new KernelSpace(Kernel));
 
             int returnCode = 255;
 
             try {
-                returnCode = InternalHandle(api);
+                returnCode = InternalHandle(procSpace);
             }
 
             catch (ExitProcessException exc) {
@@ -43,16 +43,31 @@ namespace Linux.Sys.RunTime
                 Debug.Log(e.ToString());
             }
 
-            Process process = Kernel.ProcTable.LookupPid(api.GetPid());
+            // if (procSpace.Api.IsTtyControlled()) {
+            //     int ppid = procSpace.Api.GetPPid();
+
+            //     var pty = (IoctlDevice)procSpace.Stdin;
+
+            //     int[] pidArray = new int[] { ppid };
+
+            //     // Set controll back to parent process
+            //     pty.Ioctl(
+            //         PtyIoctl.TIO_SET_PID,
+            //         ref pidArray
+            //     );
+            // }
+
+            Process process = Kernel.ProcTable.LookupPid(
+                procSpace.Api.GetPid()
+            );
+
             process.ReturnCode = returnCode;
         }
 
-        protected int InternalHandle(KernelSpace api) {
-            var procSpace = new UserSpace(api);
+        protected int InternalHandle(UserSpace procSpace) {
+            int pid = procSpace.Api.GetPid();
 
-            int pid = api.GetPid();
-
-            if (api.IsTtyControlled()) {
+            if (procSpace.Api.IsTtyControlled()) {
                 var pty = (IoctlDevice)procSpace.Stdin;
 
                 int[] pidArray = new int[] { pid };
@@ -68,7 +83,7 @@ namespace Linux.Sys.RunTime
 
             int SIGINTCount = 0;
 
-            api.Trap(ProcessSignal.SIGINT, (int[] args) => {
+            procSpace.Api.Trap(ProcessSignal.SIGINT, (int[] args) => {
                 SIGINTCount++;
 
                 ProcessSignal signal;
@@ -84,7 +99,7 @@ namespace Linux.Sys.RunTime
                 Kernel.KillProcess(proc, signal);
             });
 
-            string executable = api.GetExecutable();
+            string executable = procSpace.Api.GetExecutable();
 
             File execFile = Kernel.Fs.LookupOrFail(executable);
 

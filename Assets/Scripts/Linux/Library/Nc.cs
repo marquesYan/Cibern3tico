@@ -88,7 +88,7 @@ namespace Linux.Library
                 );
 
                 while (eventSet) {
-                    packet = socket.RecvFrom(
+                    packet = socket.WaitRecvFrom(
                         IPAddress.Parse("0.0.0.0"),
                         port
                     );

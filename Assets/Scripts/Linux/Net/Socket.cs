@@ -115,31 +115,22 @@ namespace Linux.Net
             );
         }
 
-        public UdpPacket RecvFrom(IPAddress peerAddress, int peerPort) {
-            Packet packet = null;
+        public UdpPacket WaitRecvFrom(IPAddress peerAddress, int peerPort) {
+            UdpPacket packet = null;
 
-            while (packet == null && Linux.Kernel.IsRunning) {
-                packet = Recv();
+            ListenInput(packet => {
+                return false;
+            }, peerAddress, peerPort);
 
-                if (!(IsUdpPacket(packet) 
-                    && MatchesPeerAddress(packet, peerAddress, peerPort))) {
-                    Debug.Log("udp: packet not for me: " + packet);
-                    // Put packet back in queue
-                    Interface.Transport.Process(packet);
-                    packet = null;
-                }
+            while (Kernel.IsRunning && packet == null) {
+                Thread.Sleep(200);
             }
 
             if (packet == null) {
                 return null;
             }
 
-            IpPacket ipPacket = (IpPacket)packet.NextLayer;
-            UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
-
-            udpPacket.NextLayer = ipPacket;
-
-            return udpPacket;
+            return packet;
         }
 
         public void ListenInput(
@@ -152,11 +143,7 @@ namespace Linux.Net
                     MatchesSocketAddress(packet) &&
                     MatchesPeerAddress(packet, peerAddress, peerPort)
                 ) {
-                    IpPacket ipPacket = (IpPacket)packet.NextLayer;
-                    UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
-
-                    udpPacket.NextLayer = ipPacket;
-
+                    UdpPacket udpPacket = Unpack(packet);
                     return listener(udpPacket);
                 }
 
@@ -172,6 +159,15 @@ namespace Linux.Net
                 IPAddress.Parse("0.0.0.0"),
                 0
             );
+        }
+
+        protected UdpPacket Unpack(Packet packet) {
+            IpPacket ipPacket = (IpPacket)packet.NextLayer;
+            UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
+
+            udpPacket.NextLayer = ipPacket;
+
+            return udpPacket;
         }
 
         protected bool MatchesSocketAddress(Packet packet) {

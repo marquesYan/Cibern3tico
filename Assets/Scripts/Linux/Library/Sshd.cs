@@ -5,6 +5,7 @@ using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
 using Linux.IO;
+using Linux.PseudoTerminal;
 using Linux.Sys.IO;
 using Linux.Net;
 using Linux.Library.ArgumentParser;
@@ -12,40 +13,77 @@ using UnityEngine;
 
 namespace Linux.Library
 {
-    public class SocketIO : CharacterDevice {
-        protected UdpSocket Socket;
+    public class SshPtySocket : SecondaryPty {
+        protected UserSpace UserSpace;
 
-        protected IPAddress PeerAddress;
+        protected SocketIO Socket;
 
-        protected int PeerPort;
-
-        public SocketIO(
+        public SshPtySocket(
+            UserSpace userSpace,
             UdpSocket socket,
             IPAddress peerAddress,
             int peerPort
-        ) : base(AccessMode.O_RDWR) {
-            Socket = socket;
-            PeerAddress = peerAddress;
-            PeerPort = peerPort;
+        ) : base(
+            _ => {},
+            _ => {}
+        ) {
+            UserSpace = userSpace;
+            Socket = new SocketIO(
+                socket,
+                peerAddress,
+                peerPort,
+                ProcessPacket
+            );
 
-            socket.ListenInput((UdpPacket packet) => {
-                Buffer.Enqueue(packet.Message);
+            Pid = new int[1];
 
-                return !IsClosed;
-            }, PeerAddress, PeerPort);
+            // Will be not used, but must be instantiated
+            Flags = new int[1];
+            SpecialChars = new string[32];
+            UnbufferedChars = new string[32];
         }
 
-        protected override void InternalTruncate() {
-            //
-        }
+        protected string ProcessPacket(UdpPacket packet)
+        {
+            string[] message = packet.Message.Split(
+                new char[] { '=' },
+                2,
+                System.StringSplitOptions.None
+            );
 
-        protected override bool CanMovePointer(int newPosition) {
-            return false;
+            if (message.Length != 2) {
+                return "";
+            }
+
+            string command = message[0];
+            string value = message[1];
+
+            switch (command) {
+                case "cmd": return value + "\n";
+
+                case "signal": {
+                    int signal;
+                    if (int.TryParse(value, out signal)) {
+                        UserSpace.Api.KillProcess(Pid[0], (ProcessSignal)signal);
+                    }
+
+                    break;
+                }
+            }
+
+            return "";
         }
 
         protected override int InternalAppend(string data) {
-            Socket.SendTo(PeerAddress, PeerPort, data);
-            return data.Length;
+            return Socket.Write(data);
+        }
+
+        protected override string InternalRead(int length) {
+            return Socket.Read(length);
+        }
+
+        protected override void InternalClose() {
+            Socket.Close();
         }
     }
 
@@ -101,7 +139,6 @@ namespace Linux.Library
 
             UdpPacket packet;
 
-            bool loggedOut = true;
             IPAddress peerAddress = null;
             int peerPort = -1;
 
@@ -121,7 +158,7 @@ namespace Linux.Library
                         socket.ListenInput(packet => {                            
                             password = packet.Message;
 
-                            loggedOut = !userSpace.Api.CheckLogin(login, password);
+                            bool loggedOut = !userSpace.Api.CheckLogin(login, password);
 
                             loginMessage = loggedOut ? "0" : "1";
 
@@ -132,7 +169,9 @@ namespace Linux.Library
                             );
 
                             if (!loggedOut) {
-                                SocketIO sock = new SocketIO(
+                                // Handle "ssh" protocol
+                                var sock = new SshPtySocket(
+                                    userSpace,
                                     socket,
                                     peerAddress,
                                     peerPort
