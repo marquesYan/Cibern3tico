@@ -61,7 +61,7 @@ namespace Linux.Library
                         continue;
                     }
 
-                    buffer.WriteLine(password.Trim());
+                    buffer.WriteLine(password);
 
                     Debug.Log("sshcrack: trying password: " + password);
 
