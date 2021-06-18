@@ -147,6 +147,13 @@ namespace Linux.Sys.RunTime
             return -1;
         }
 
+        public int OpenStream(ITextIO stream) {
+            return Kernel.ProcTable.AttachStream(
+                GetCurrentProc(),
+                stream
+            );
+        }
+
         public UdpSocket UdpSocket(IPAddress peerAddress, int port) {
             NetInterface netInterface = Kernel.NetTable.LookupIpAddress(
                 peerAddress.ToString()
@@ -290,7 +297,13 @@ namespace Linux.Sys.RunTime
             return success;
         }
 
-        public int RunLogin(string login, string password) {
+        public int RunLogin(
+            string login,
+            string password,
+            int stdinFd,
+            int stdoutFd,
+            int stderrFd
+        ) {
             if (!CheckLogin(login, password)) {
                 throw new System.AccessViolationException(
                     "Access denied"
@@ -303,14 +316,18 @@ namespace Linux.Sys.RunTime
                 user,
                 new string[] { user.Shell },
                 new Dictionary<string, string>(),
-                0,
-                1,
-                2
+                stdinFd,
+                stdoutFd,
+                stderrFd
             );
 
             process.MainTask.Start();
 
             return process.Pid;
+        }
+
+        public int RunLogin(string login, string password) {
+            return RunLogin(login, password, 0, 1, 2);
         }
 
         public ReadOnlyFile FindFile(string path) {

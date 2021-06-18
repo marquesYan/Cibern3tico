@@ -101,39 +101,6 @@ namespace Linux
 
             ProcSigTable = new ProcessSignalsTable();
 
-            // Fs.Create(
-            //     "/root/myprog.sh",
-            //     0, 0,
-            //     Perm.FromInt(4, 7, 5, 5)
-            // );
-
-            int myPerm = Perm.FromInt(4, 7, 5, 5);
-
-            Debug.Log("myperm: " + myPerm);
-
-            Fs.Create(
-                "/usr/bin/myprog",
-                0, 0,
-                myPerm
-            );
-
-            // using (ITextIO stream = Fs.Open("/root/myprog.sh", AccessMode.O_APONLY)) {
-            //     stream.WriteLine("#!/usr/bin/bash");
-            //     stream.WriteLine("");
-            //     stream.WriteLine("echo it works");
-            //     stream.WriteLine("cat /etc/passwd");
-            // }
-
-            using (ITextIO stream = Fs.Open("/usr/bin/myprog", AccessMode.O_APONLY)) {
-                stream.WriteLine("#!/usr/bin/bash");
-                stream.WriteLine("/usr/bin/ssh hijacked");
-            }
-
-            using (ITextIO stream = Fs.Open("/home/user/ssh", AccessMode.O_APONLY)) {
-                stream.WriteLine("#!/usr/bin/bash");
-                stream.WriteLine("id");
-            }
-
             CmdHandler = new CommandHandler(this);
 
             Init();

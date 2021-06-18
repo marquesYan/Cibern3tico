@@ -192,10 +192,37 @@ namespace Linux.Configuration
 
                 ITextIO stream = Fs.Open(filePath, mode);
 
+                AttachStream(process, stream);
+            }
+        }
+
+        public void AttachStream(
+            Process process,
+            ITextIO stream,
+            int fd
+        ) {
+            lock(_procLock) {
+                EnsureProcessExists(process);
+
                 FdTable.Add(process, stream, fd);
 
                 process.Fds.Add(fd);
             }
+        }
+
+        public int AttachStream(
+            Process process,
+            ITextIO stream
+        ) {
+            int fd;
+
+            lock(_procLock) {
+                fd = FdTable.GetAvailableFd(process);    
+            }
+
+            AttachStream(process, stream, fd);
+
+            return fd;
         }
 
         public File LookupFileByFd(Process process, int fd) {
@@ -236,16 +263,28 @@ namespace Linux.Configuration
         ) {
             ITextIO stream = LookupFd(process, fd);
 
+            if (stream == null) {
+                throw new System.ArgumentException(
+                    "No such file descriptor: " + fd
+                );
+            }
+
             string fdPath = GetFdPath(process, fd);
 
-            File file = Fs.LookupOrFail(fdPath).SourceFile;
+            File file = Fs.Lookup(fdPath);
 
-            AttachIO(
-                destProcess,
-                file.Path,
-                stream.GetMode(),
-                destFd
-            );
+            if (file == null) {
+                // Add raw stream
+                AttachStream(destProcess, stream, destFd);
+            } else {
+                // Open a file stream
+                AttachIO(
+                    destProcess,
+                    file.SourceFile.Path,
+                    stream.GetMode(),
+                    destFd
+                );
+            }
         }
 
         public int DuplicateFd(

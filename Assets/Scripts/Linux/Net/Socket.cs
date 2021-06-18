@@ -148,17 +148,10 @@ namespace Linux.Net
             int peerPort
         ) {
             Predicate<Packet> wrapper = (Packet packet) => {
-                IpPacket ipp = (IpPacket)packet.NextLayer;
-                UdpPacket udp = (UdpPacket)ipp.NextLayer;
-
-                Debug.Log($"udp: src address: {ipp.SrcAddress}:{udp.LocalPort}");
-                Debug.Log($"udp: dst address: {ipp.DstAddress}:{udp.PeerPort}");
-
                 if (IsUdpPacket(packet) &&
                     MatchesSocketAddress(packet) &&
                     MatchesPeerAddress(packet, peerAddress, peerPort)
                 ) {
-                    Debug.Log("udp: packet for me");
                     IpPacket ipPacket = (IpPacket)packet.NextLayer;
                     UdpPacket udpPacket = (UdpPacket)ipPacket.NextLayer;
 
@@ -166,8 +159,6 @@ namespace Linux.Net
 
                     return listener(udpPacket);
                 }
-
-                Debug.Log("udp: packet not for me");
 
                 return true;
             };

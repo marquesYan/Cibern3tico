@@ -1,3 +1,4 @@
+using SysPath = System.IO.Path;
 using UnityEngine;
 using Linux;
 using Linux.Library;
@@ -14,17 +15,37 @@ public class HackerOneInitBin : CompiledBin {
     ) : base(absolutePath, uid, gid, permission, type) { }
 
     public override int Execute(UserSpace userSpace) {
-        Debug.Log("calling hacker one init");
-        // var api = new KernelSpace(kernel);
+        Kernel kernel = userSpace.Api.AccessKernel();
 
-        // api.StartProcess(
-        //     new string[] {
-        //         "/usr/bin/nc",
-        //         "-l",
-        //         "-s", "10.0.0.1",
-        //         "9999"
-        //     }
-        // );
+        kernel.Fs.RecursivelyDeleteDir("/root");
+
+        var mountPoint = new File(
+            "/root",
+            0,
+            0,
+            Perm.FromInt(7, 5, 5),
+            FileType.F_MNT
+        );
+
+        string path = SysPath.Combine(
+            kernel.PersistentPath,
+            "squashfs"
+        );
+
+        var rootFs = new LocalFileTree(
+            path,
+            new File(
+                "/",
+                0,
+                0,
+                Perm.FromInt(7, 5, 5),
+                FileType.F_DIR
+            ),
+            mountPoint
+        );
+
+        kernel.Fs.Mount(mountPoint, rootFs);
+
         return 0;
     }
 }

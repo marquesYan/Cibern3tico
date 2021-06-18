@@ -67,48 +67,48 @@ namespace Linux.Boot
         }
 
         void MountHomeFileSystem() {
-            var mountPoint = new File(
-                "/home",
-                0,
-                0,
-                Perm.FromInt(7, 5, 5),
-                FileType.F_MNT
-            );
+            // var mountPoint = new File(
+            //     "/home",
+            //     0,
+            //     0,
+            //     Perm.FromInt(7, 5, 5),
+            //     FileType.F_MNT
+            // );
 
-            string path = SysPath.Combine(
-                Kernel.PersistentPath,
-                "squashfs"
-            );
+            // string path = SysPath.Combine(
+            //     Kernel.PersistentPath,
+            //     "squashfs"
+            // );
 
-            var homeFs = new LocalFileTree(
-                path,
-                new File(
-                    "/",
-                    0,
-                    0,
-                    Perm.FromInt(7, 5, 5),
-                    FileType.F_DIR
-                ),
-                mountPoint
-            );
+            // var homeFs = new LocalFileTree(
+            //     path,
+            //     new File(
+            //         "/",
+            //         0,
+            //         0,
+            //         Perm.FromInt(7, 5, 5),
+            //         FileType.F_DIR
+            //     ),
+            //     mountPoint
+            // );
 
-            Kernel.Fs.Mount(mountPoint, homeFs);
+            // Kernel.Fs.Mount(mountPoint, homeFs);
 
-            if (Kernel.Fs.Lookup("/home") == null) {
-                Kernel.Fs.CreateDir(
-                    "/home",
-                    0, 0,
-                    Perm.FromInt(7, 5, 5)
-                );
-            }
+            // if (Kernel.Fs.Lookup("/home") == null) {
+            //     Kernel.Fs.CreateDir(
+            //         "/home",
+            //         0, 0,
+            //         Perm.FromInt(7, 5, 5)
+            //     );
+            // }
             
-            if (Kernel.Fs.Lookup("/home/user") == null) {
-                Kernel.Fs.CreateDir(
-                    "/home/user",
-                    1000, 1000,
-                    Perm.FromInt(7, 5, 5)
-                );
-            }
+            // if (Kernel.Fs.Lookup("/home/user") == null) {
+            //     Kernel.Fs.CreateDir(
+            //         "/home/user",
+            //         1000, 1000,
+            //         Perm.FromInt(7, 5, 5)
+            //     );
+            // }
         }
 
         void MakeSystemUsers() {
@@ -131,24 +131,6 @@ namespace Linux.Boot
             ));
 
             Kernel.ShadowDb.Add(new ShadowEntry("bin"));
-
-            Kernel.UsersDb.Add(new User(
-                "user",
-                1000, 1000,
-                "",
-                "/home/user",
-                "/usr/bin/bash"
-            ));
-
-            Kernel.ShadowDb.Add(
-                ShadowEntry.FromPlainText("user", "senha")
-            );
-
-            // Kernel.Fs.CreateDir(
-            //     "/home/user",
-            //     1000, 1000,
-            //     Perm.FromInt(7, 0, 0)
-            // );
         }
 
         void MakeSystemGroups() {
@@ -187,7 +169,7 @@ namespace Linux.Boot
                 "/usr/lib",
             };
 
-            string[] dir555 = new string[] { 
+            string[] dir555 = new string[] {
                 "/proc",
                 "/sys",
             };

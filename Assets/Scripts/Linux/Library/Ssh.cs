@@ -74,8 +74,15 @@ namespace Linux.Library
 
             var parser = new GenericArgParser(
                 userSpace,
-                "Usage: {0} user@hostname",
+                "Usage: {0} user@hostname [COMMAND]",
                 "Remote login client"
+            );
+
+            string attemptCountStr = "3";
+            parser.AddArgument<string>(
+                "c|count=",
+                $"Authentication attempt count. Default is '{attemptCountStr}'",
+                (string count) => attemptCountStr = count
             );
 
             List<string> arguments = parser.Parse();
@@ -96,8 +103,21 @@ namespace Linux.Library
                 return 1;
             }
 
+            int attemptCount;
+
+            if (!int.TryParse(attemptCountStr, out attemptCount)) {
+                userSpace.Stderr.WriteLine("ssh: Attempt count must be a number");
+                return 1;
+            }
+
             string username = url[0];
             string host = url[1];
+
+            string command = null;
+
+            if (arguments.Count > 1 && !string.IsNullOrEmpty(arguments[0])) {
+                command = arguments[0];
+            }
 
             UdpSocket socket = userSpace.Api.UdpSocket(
                 outAddress,
@@ -109,7 +129,7 @@ namespace Linux.Library
             ITextIO stdout = userSpace.Stdout;
 
             SshAuthInfo authInfo = new SshAuthInfo(
-                3,
+                attemptCount,
                 userSpace.Stdin,
                 stdout,
                 arguments[0],
@@ -146,15 +166,22 @@ namespace Linux.Library
                 return 1;
             }
 
-            // Open a new one to be used by ssh
-            int pty = userSpace.Api.OpenPty();
+            if (command != null) {
+                socket.SendTo(peerAddress, peerPort, command + "\nexit\n");
+                return 0;
+            }
 
-            using (ITextIO stream = userSpace.Api.LookupByFD(pty)) {
+            // Open a new one to be used by ssh
+            int ptFd = userSpace.Api.OpenPty();
+
+            using (ITextIO stream = userSpace.Api.LookupByFD(ptFd)) {
                 // CookPty(stream);
 
                 socket.ListenInput(
                     (UdpPacket input) => {
-                        stdout.Write(input.Message);
+                        if (eventSet) {
+                            stdout.Write(input.Message);
+                        }
 
                         return eventSet;
                     },
@@ -169,10 +196,13 @@ namespace Linux.Library
                     
                     socket.SendTo(peerAddress, peerPort, key + "\n");
                 }
+
+                // Shutdown net listener
+                eventSet = false;
             }
 
             // Ensure pty is not connected anymore
-            userSpace.Api.RemovePty(pty);
+            userSpace.Api.RemovePty(ptFd);
 
             return 0;
         }
@@ -187,6 +217,8 @@ namespace Linux.Library
             authInfo.Stdout.Write($"{authInfo.Url}: ");
 
             string password = authInfo.Stdin.ReadLine();
+
+            Debug.Log("ssh: recv password: " + password);
 
             authInfo.Socket.ListenInput((UdpPacket packet) => {
                 if (packet.Message == "1") {

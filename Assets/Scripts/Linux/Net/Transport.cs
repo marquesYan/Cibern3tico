@@ -47,7 +47,6 @@ namespace Linux.Net {
                 foreach (Predicate<Packet> listener in listeners.ToArray()) {
                     try {
                         if (!listener(packet)) {
-                            Debug.Log("transport: removing listener: " + listener);
                             listeners.Remove(listener);
                         }
                     } catch (Exception exc) {

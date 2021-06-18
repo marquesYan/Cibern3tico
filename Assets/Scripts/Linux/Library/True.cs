@@ -1,11 +1,10 @@
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
-using UnityEngine;
 
 namespace Linux.Library
 {    
-    public class TestLibrary : CompiledBin {
-        public TestLibrary(
+    public class True : CompiledBin {
+        public True(
             string absolutePath,
             int uid,
             int gid,
@@ -14,8 +13,6 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
-            string answer = userSpace.Input("confirm? [Y/n]");
-            userSpace.Print("answer is " + answer);
             return 0;
         }
     }

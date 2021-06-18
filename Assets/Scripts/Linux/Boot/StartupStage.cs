@@ -70,8 +70,8 @@ namespace Linux.Boot
 
             Kernel.Fs.AddFrom(
                 binDir,
-                new TestLibrary(
-                    "/usr/bin/testlib",
+                new True(
+                    "/usr/bin/true",
                     0, 0,
                     Perm.FromInt(7, 5, 5),
                     FileType.F_REG
@@ -162,6 +162,16 @@ namespace Linux.Boot
                 binDir,
                 new Ssh(
                     "/usr/bin/ssh",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                binDir,
+                new SshCrack(
+                    "/usr/bin/ssh-crack",
                     0, 0,
                     Perm.FromInt(7, 5, 5),
                     FileType.F_REG

@@ -101,7 +101,6 @@ namespace Linux.Library
 
             UdpSocket socket = userSpace.Api.UdpSocket(outAddress, port);
 
-            SocketIO io;
             UdpPacket packet;
 
             bool loggedOut = true;
@@ -134,7 +133,25 @@ namespace Linux.Library
                                 loginMessage
                             );
 
-                            return loggedOut;   // Loop while logged out
+                            if (!loggedOut) {
+                                SocketIO sock = new SocketIO(
+                                    socket,
+                                    peerAddress,
+                                    peerPort
+                                );
+
+                                int sockFd = userSpace.Api.OpenStream(sock);
+
+                                userSpace.Api.RunLogin(
+                                    login,
+                                    password,
+                                    sockFd,
+                                    sockFd,
+                                    sockFd
+                                );
+                            }
+
+                            return eventSet && loggedOut;   // Loop while logged out
                         }, peerAddress, peerPort);
 
                         return false;      // Listen just once
@@ -143,45 +160,11 @@ namespace Linux.Library
                     socket.SendTo(peerAddress, peerPort, "ack");
                 }
 
-                return true;    // Loop forever
+                return eventSet;    // Loop forever
             });
 
-            int socketId = 0;
-
             while (eventSet) {
-                if (!loggedOut) {
-                    io = new SocketIO(
-                        socket,
-                        peerAddress,
-                        peerPort
-                    );
-
-                    string socketName = $"/dev/socket{socketId}";
-                    socketId++;
-
-                    kernel.Fs.Create(
-                        socketName,
-                        0, 0,
-                        Perm.FromInt(7, 5, 5),
-                        FileType.F_SCK,
-                        io
-                    );
-
-                    int fd = userSpace.Api.Open(socketName, AccessMode.O_RDWR);
-
-                    int pid = userSpace.Api.StartProcess(
-                        new string[] {
-                            "/usr/bin/bash"
-                        },
-                        fd,
-                        fd,
-                        fd
-                    );
-
-                    userSpace.Api.WaitPid(pid);
-                }
-
-                Thread.Sleep(2000);
+                Thread.Sleep(500);
             }
 
             return 0;
