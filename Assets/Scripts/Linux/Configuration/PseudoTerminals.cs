@@ -6,11 +6,13 @@ using Linux.Sys.Input;
 namespace Linux.Configuration
 {
     public class PseudoTerminalTable {
+        readonly object _ptyLock = new object();
+
         protected VirtualFileTree Fs;
 
         protected ITtyDriver TtyDriver;
 
-        public int Count { get; protected set;}
+        protected int Count;
 
         public PseudoTerminalTable(
             VirtualFileTree fs,
@@ -26,24 +28,20 @@ namespace Linux.Configuration
                 0, 0, 
                 Perm.FromInt(7, 5, 5)
             );
-
-            Fs.Create(
-                "/dev/pts/ptmx",
-                0, 0,
-                Perm.FromInt(6, 6, 6)
-            );
         }
 
         public int Add(User user) {
-            int ptsFd = TtyDriver.UnlockPt(
-                $"/dev/pts/{Count}",
-                user.Uid, 0,
-                Perm.FromInt(6, 2, 0)
-            );
+            lock(_ptyLock) {
+                int ptsFd = TtyDriver.UnlockPt(
+                    $"/dev/pts/{Count}",
+                    user.Uid, 0,
+                    Perm.FromInt(6, 2, 0)
+                );
 
-            Count++;
+                Count++;
 
-            return ptsFd;
+                return ptsFd;
+            }
         }
 
         public void Remove(string ptsFile) {

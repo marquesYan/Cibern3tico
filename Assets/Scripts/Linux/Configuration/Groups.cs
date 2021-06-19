@@ -63,7 +63,7 @@ namespace Linux.Configuration
                 return null;
             }
 
-            string[] users = tokens[3].Split(':');
+            string[] users = tokens[3].Split(',');
 
             return new Group(name, gid, users);
         }

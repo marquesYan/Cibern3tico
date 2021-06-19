@@ -610,10 +610,12 @@ namespace Linux.Sys.RunTime
         }
 
         protected List<Group> LookupUserGroups(User user) {
+            string userId = user.Uid.ToString();
+
             return Kernel.GroupsDb.ToList().FindAll(
                 group => {
-                    foreach (string login in group.Users) {
-                        if (user.Login == login) {
+                    foreach (string uid in group.Users) {
+                        if (userId == uid) {
                             return true;
                         }
                     }

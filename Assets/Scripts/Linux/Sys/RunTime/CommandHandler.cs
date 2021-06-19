@@ -30,6 +30,10 @@ namespace Linux.Sys.RunTime
 
             int returnCode = 255;
 
+            Process process = Kernel.ProcTable.LookupPid(
+                procSpace.Api.GetPid()
+            );
+
             try {
                 returnCode = InternalHandle(procSpace);
             }
@@ -56,10 +60,6 @@ namespace Linux.Sys.RunTime
             //         ref pidArray
             //     );
             // }
-
-            Process process = Kernel.ProcTable.LookupPid(
-                procSpace.Api.GetPid()
-            );
 
             process.ReturnCode = returnCode;
         }

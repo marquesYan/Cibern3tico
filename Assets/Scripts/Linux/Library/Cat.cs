@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.IO;
+using Linux.Sys.IO;
 using Linux.FileSystem;
 
 namespace Linux.Library
@@ -15,6 +17,15 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
+            bool eventSet = true;
+
+            userSpace.Api.Trap(
+                ProcessSignal.SIGTERM,
+                (int[] args) => {
+                    eventSet = false;
+                }
+            );
+
             var parser = new ArgumentParser.GenericArgParser(
                 userSpace,
                 "Usage: {0} [FILE]...",
@@ -31,7 +42,14 @@ namespace Linux.Library
             string path = userSpace.ResolvePath(arguments[0]);
 
             ITextIO stream = userSpace.Open(path, AccessMode.O_RDONLY);
-            userSpace.Print(stream.Read(), "");
+
+            if (stream is CharacterDevice) {
+                while (eventSet) {
+                    userSpace.Print(stream.Read(1), "");
+                }
+            } else {
+                userSpace.Print(stream.Read(), "");
+            }
 
             return 0;
         }
