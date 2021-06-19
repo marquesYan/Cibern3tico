@@ -17,30 +17,25 @@ namespace Linux.Library
 {
     public class SshAuthInfo {
         public bool LoggedOut = true;
-        public int Attempts = 0;
+
+        public bool Done = false;
 
         public readonly UserSpace UserSpace;
         public readonly string Url;
         public readonly SshSocket Socket;
 
-        public readonly int MaxAttempts;
-
-        public bool HasAttempts {
-            get {
-                return Attempts < MaxAttempts;
-            }
-        }
+        public readonly string UserName;
 
         public SshAuthInfo(
-            int maxAttempts,
             UserSpace userSpace,
             string url,
-            SshSocket socket
+            SshSocket socket,
+            string userName
         ) {
-            MaxAttempts = maxAttempts;
             UserSpace = userSpace;
             Url = url;
             Socket = socket;
+            UserName = userName;
         }
     }
 
@@ -115,13 +110,6 @@ namespace Linux.Library
                 "Remote login client"
             );
 
-            string attemptCountStr = "3";
-            parser.AddArgument<string>(
-                "c|count=",
-                $"Authentication attempt count. Default is '{attemptCountStr}'",
-                (string count) => attemptCountStr = count
-            );
-
             List<string> arguments = parser.Parse();
 
             if (arguments.Count < 1) {
@@ -137,13 +125,6 @@ namespace Linux.Library
 
             if (url.Length != 2) {
                 userSpace.Stderr.WriteLine("ssh: Invalid url: " + arguments[0]);
-                return 1;
-            }
-
-            int attemptCount;
-
-            if (!int.TryParse(attemptCountStr, out attemptCount)) {
-                userSpace.Stderr.WriteLine("ssh: Attempt count must be a number");
                 return 1;
             }
 
@@ -168,28 +149,15 @@ namespace Linux.Library
             );
 
             SshAuthInfo authInfo = new SshAuthInfo(
-                attemptCount,
                 userSpace,
                 arguments[0],
-                socket
+                socket,
+                username
             );
 
-            socket.ListenInput((UdpPacket packet) => {
-                Debug.Log("ssh: rcv init packet");
-                if (packet.Message == "ack") {
-                    // Send Username
-                    socket.Send(username);
+            InitProtocol(authInfo);
 
-                    Authenticate(authInfo);
-                }
-
-                return false;
-            });
-
-            // Initiate connection
-            socket.Send("init");
-
-            while (eventSet && authInfo.LoggedOut && authInfo.HasAttempts) {
+            while (eventSet && authInfo.LoggedOut && !authInfo.Done) {
                 Thread.Sleep(200);
             }
 
@@ -264,25 +232,34 @@ namespace Linux.Library
             return 0;
         }
 
-        protected void Authenticate(SshAuthInfo authInfo) {
-            if (!authInfo.HasAttempts) {
-                return;
-            }
-
-            authInfo.Attempts++;
-
-            string password = authInfo.UserSpace.Input($"{authInfo.Url}: ", "");
-
+        protected void InitProtocol(SshAuthInfo authInfo) {
             authInfo.Socket.ListenInput((UdpPacket packet) => {
-                if (packet.Message == "1") {
-                    authInfo.LoggedOut = false;
-                } else {
+                if (packet.Message == "ack") {
                     Authenticate(authInfo);
                 }
 
                 return false;
             });
 
+            // Initiate connection
+            authInfo.Socket.Send("init");
+        }
+
+        protected void Authenticate(SshAuthInfo authInfo) {
+            // Send Username
+            authInfo.Socket.Send(authInfo.UserName);
+
+            authInfo.Socket.ListenInput((UdpPacket packet) => {
+                authInfo.Done = true;
+
+                if (packet.Message == "1") {
+                    authInfo.LoggedOut = false;
+                }
+
+                return false;
+            });
+
+            string password = authInfo.UserSpace.Input($"{authInfo.Url}: ", "");
             authInfo.Socket.Send(password);
        }
 

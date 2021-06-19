@@ -63,12 +63,9 @@ namespace Linux.Library
 
                     buffer.WriteLine(password);
 
-                    Debug.Log("sshcrack: trying password: " + password);
-
                     pid = userSpace.Api.StartProcess(
                         new string[] {
                             "/usr/bin/ssh",
-                            "-c", "1",
                             url,
                             "true"
                         },

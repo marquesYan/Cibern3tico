@@ -81,7 +81,6 @@ namespace Linux.Configuration
             }
 
             string hash = Hasher.HashPasswd(password);
-
             return shadow.Hash == hash;
         }
 

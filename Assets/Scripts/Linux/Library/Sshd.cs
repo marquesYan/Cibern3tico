@@ -161,7 +161,7 @@ namespace Linux.Library
                         string password = null;
                         string loginMessage;
 
-                        socket.ListenInput(packet => {                            
+                        socket.ListenInput(packet => {                  
                             password = packet.Message;
 
                             bool loggedOut = !userSpace.Api.CheckLogin(login, password);
@@ -194,7 +194,7 @@ namespace Linux.Library
                                 );
                             }
 
-                            return eventSet && loggedOut;   // Loop while logged out
+                            return false;   // Loop while logged out
                         }, peerAddress, peerPort);
 
                         return false;      // Listen just once
