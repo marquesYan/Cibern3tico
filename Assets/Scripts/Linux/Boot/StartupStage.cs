@@ -190,6 +190,16 @@ namespace Linux.Boot
 
             Kernel.Fs.AddFrom(
                 binDir,
+                new PassCrack(
+                    "/usr/bin/pass-crack",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                binDir,
                 new Curl(
                     "/usr/bin/curl",
                     0, 0,
