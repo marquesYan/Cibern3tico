@@ -145,12 +145,6 @@ namespace Linux.Boot
                 1,
                 "bin"
             ));
-
-            Kernel.GroupsDb.Add(new Group(
-                "user",
-                1000,
-                "user"
-            ));
         }
 
         void MakeLinuxDefaultDirectories() {

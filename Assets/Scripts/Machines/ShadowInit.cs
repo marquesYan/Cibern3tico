@@ -30,7 +30,7 @@ public class ShadowInitBin : CompiledBin {
         passwords.Add(ShadowEntry.FromPlainText("marco", "3af2a70bcf54d881"));
         passwords.Add(ShadowEntry.FromPlainText("anne", "Prinsengracht"));
 
-        using (ITextIO stream = userSpace.Open("/srv/passwords", AccessMode.O_WRONLY)) {
+        using (ITextIO stream = userSpace.Open("/srv/shadow", AccessMode.O_WRONLY)) {
             passwords.ForEach(
                 entry => {
                     stream.WriteLine(entry.ToString());

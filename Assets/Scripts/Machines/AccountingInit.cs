@@ -5,6 +5,7 @@ using Linux.IO;
 using Linux.Library;
 using Linux.FileSystem;
 using Linux.Sys.RunTime;
+using UnityEngine;
 
 public class AccountingInitBin : CompiledBin {
     public AccountingInitBin(
@@ -16,6 +17,8 @@ public class AccountingInitBin : CompiledBin {
     ) : base(absolutePath, uid, gid, permission, type) { }
 
     public override int Execute(UserSpace userSpace) {
+        Kernel kernel = userSpace.Api.AccessKernel();
+
         bool eventSet = true;
 
         userSpace.Api.Trap(
@@ -25,18 +28,57 @@ public class AccountingInitBin : CompiledBin {
             }
         );
 
-        int pid, fd;
+        userSpace.Api.StartProcess(
+            new string[] {
+                "/usr/bin/sshd"
+            }
+        );
+
+        kernel.UsersDb.Add(new User(
+            "marco",
+            1000,
+            1000,
+            "",
+            "/home/marco",
+            "/usr/bin/bash"
+        ));
+
+        kernel.GroupsDb.Add(new Group(
+            "marco",
+            1000,
+            "1000"
+        ));
+
+        kernel.UsersDb.Add(new User(
+            "anne",
+            1001,
+            1001,
+            "",
+            "/home/anne",
+            "/usr/bin/bash"
+        ));
+
+        kernel.GroupsDb.Add(new Group(
+            "anne",
+            1001,
+            "1001"
+        ));
+
+        userSpace.Api.CreateDir("/home/marco");
+        userSpace.Api.CreateDir("/home/anne");
+
+        int pid, shadowFd;
 
         while (eventSet) {
-            fd = userSpace.Api.Open("/etc/shadow", AccessMode.O_WRONLY);
+            shadowFd = userSpace.Api.Open("/etc/shadow", AccessMode.O_WRONLY);
 
             pid = userSpace.Api.StartProcess(
                 new string[] {
                     "/usr/bin/curl",
-                    "http://10.0.0.4/passwords"
+                    "http://10.0.0.4/shadow"
                 },
                 0,
-                fd,
+                shadowFd,
                 2
             );
 
