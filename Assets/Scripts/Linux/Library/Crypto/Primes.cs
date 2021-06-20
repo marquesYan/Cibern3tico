@@ -1,12 +1,12 @@
 using System;
-using UnityEngine;
+using System.Numerics;
 
 namespace Linux.Library.Crypto {
     public class Primes {
-        public static bool IsPrime(double number, double rounds) {
+        public static bool IsPrime(BigInteger number, int rounds) {
             // See https://gist.github.com/Ayrx/5884790
 
-            var rand = new System.Random();
+            var rand = new Random();
 
             if (number == 2) {
                 return true;
@@ -25,11 +25,12 @@ namespace Linux.Library.Crypto {
                 s /= 2;
             }
 
-            double random, temp;
+            BigInteger random, temp;
 
             for (double i = 0; i < rounds; i++) {
-                random = Convert.ToDouble(rand.Next(2, (int)number - 1));
-                temp = Math.Pow(random, s) % number;
+                random = new BigInteger(rand.Next(2, (int)number - 1));
+
+                temp = BigInteger.ModPow(random, s, number);
 
                 if (temp == 1 || temp == number - 1) {
                     continue;
@@ -40,7 +41,7 @@ namespace Linux.Library.Crypto {
                 }
 
                 for (double j = 0; j < r - 1; j++) {
-                    temp = Math.Pow(temp, 2) % number;
+                    temp = BigInteger.ModPow(temp, 2, number);
 
                     if (temp == (number - 1)) {
                         break;
@@ -51,27 +52,16 @@ namespace Linux.Library.Crypto {
             return true;
         }
 
-        public static double GreatestCommonDivisor(double a, double b) {
-            double remainer;
-
-            while (true) {
-                remainer = a % b;
-
-                if (remainer == 0) {
-                    return b;
-                }
-
-                a = b;
-                b = remainer;
-            }
-        }
-
-        public static double RandomPrime(int rounds) {
-            var rand = new System.Random();
+        public static BigInteger RandomPrime(
+            int minValue,
+            int maxValue,
+            int rounds
+        ) {
+            var rand = new Random();
             
-            double prime;
+            BigInteger prime;
             while (true) {
-                prime = Convert.ToDouble(rand.Next(1024, 65536));
+                prime = new BigInteger(rand.Next(minValue, maxValue));
 
                 if (IsPrime(prime, rounds)) {
                     return prime;

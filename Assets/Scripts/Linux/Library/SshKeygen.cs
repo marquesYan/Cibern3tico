@@ -31,33 +31,7 @@ namespace Linux.Library
                 return 1;
             }
 
-            int rounds = 3;
-
-            double p = Primes.RandomPrime(rounds);
-            Debug.Log("sshkeygen: generated p: " + p);
-            double q = Primes.RandomPrime(rounds);
-            Debug.Log("sshkeygen: generated q: " + q);
-
-            // Public key
-  
-            double n = p * q;
-
-            double phi = (p - 1) * (q - 1);
-
-            // Encryption  
-            double e = 2;
-
-            while (e < phi) {
-                Debug.Log("sshkeygen: finding E");
-                if (Primes.GreatestCommonDivisor(e, phi) == 1) {
-                    break;
-                } else {
-                    e++;
-                }
-            }
-
-            // Decryption
-            double d = (1 + (2 + phi)) / e;
+            RSA rsa = RSA.New();
 
             string path = userSpace.ResolvePath(arguments[0]);
 
@@ -65,13 +39,13 @@ namespace Linux.Library
             string publicKey = $"{path}.pub";
 
             using (ITextIO stream = userSpace.Open(privateKey, AccessMode.O_WRONLY)) {
-                stream.WriteLine(n.ToString());
-                stream.WriteLine(e.ToString());
+                stream.WriteLine(rsa.N.ToString());
+                stream.WriteLine(rsa.D.ToString());
             }
 
             using (ITextIO stream = userSpace.Open(publicKey, AccessMode.O_WRONLY)) {
-                stream.WriteLine(n.ToString());
-                stream.WriteLine(d.ToString());
+                stream.WriteLine(rsa.N.ToString());
+                stream.WriteLine(rsa.E.ToString());
             }
 
             return 0;

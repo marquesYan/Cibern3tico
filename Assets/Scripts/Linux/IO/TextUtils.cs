@@ -8,6 +8,14 @@ namespace Linux.IO
             return ((char) code).ToString();
         }
 
+        public static string FromByte(byte code) {
+            return FromByteArray(new byte[] { code });
+        }
+
+        public static string FromByteArray(byte[] array) {
+            return Encoding.UTF8.GetString(array);
+        }
+
         public static string FromUshort(ushort code) {
             return ((char) code).ToString();
         }
@@ -15,6 +23,10 @@ namespace Linux.IO
         public static int ToInt(string inputChar) {
             EnsureSingleCharacter(inputChar);
 
+            return (int) ToByte(inputChar);
+        }
+
+        public static int ToInt(char inputChar) {
             return (int) ToByte(inputChar);
         }
 
