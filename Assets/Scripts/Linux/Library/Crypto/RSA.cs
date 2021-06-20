@@ -39,20 +39,23 @@ namespace Linux.Library.Crypto {
         public static RSA New() {
             // See https://en.wikipedia.org/wiki/RSA_%28algorithm%29#Key_generation
   
-            int rounds = 3;
-            int minValue = 64;
-            int maxValue = 512;
+            int minValue = 128;
+            int maxValue = 1024;
 
-            BigInteger p = Primes.RandomPrime(
-                minValue,
-                maxValue,
-                rounds
+            var rand = new System.Random();
+
+            BigInteger p = new BigInteger(
+                Primes.RandomPrime(
+                    minValue,
+                    maxValue
+                )
             );
 
-            BigInteger q = Primes.RandomPrime(
-                minValue,
-                maxValue,
-                rounds
+            BigInteger q = new BigInteger(
+                Primes.RandomPrime(
+                    minValue,
+                    maxValue
+                )
             );
   
             BigInteger n = BigInteger.Multiply(p, q);
@@ -60,14 +63,13 @@ namespace Linux.Library.Crypto {
             BigInteger phi = LeastCommonMultiple((p - 1), (q - 1));
 
             // Encryption
-            BigInteger e = 2;
-
+            BigInteger e;
             while (true) {
+                e = rand.Next(1, (int)phi);
+
                 if (BigInteger.GreatestCommonDivisor(e, phi) == 1) {
                     break;
                 }
-
-                e++;
             }
 
             // Decryption
