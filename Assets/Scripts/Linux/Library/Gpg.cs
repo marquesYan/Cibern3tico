@@ -22,7 +22,7 @@ namespace Linux.Library
         public override int Execute(UserSpace userSpace) {
             var parser = new GenericArgParser(
                 userSpace,
-                "Usage: {0} [-d] KEYFILE FILE",
+                "Usage: {0} [-d] KEYFILE [FILE]",
                 "Encrypt/decrypt streams using public key algorithms"
             );
 
@@ -35,7 +35,7 @@ namespace Linux.Library
 
             List<string> arguments = parser.Parse();
 
-            if (arguments.Count < 2) {
+            if (arguments.Count < 1) {
                 parser.ShowHelpInfo();
                 return 1;
             }
@@ -65,8 +65,15 @@ namespace Linux.Library
             }
 
             string data;
+            int dataFd;
 
-            using (ITextIO stream = userSpace.Open(filePath, AccessMode.O_RDONLY)) {
+            if (arguments.Count > 1) {
+                dataFd = userSpace.Api.Open(arguments[1], AccessMode.O_RDONLY);
+            } else {
+                dataFd = 0;
+            }
+
+            using (ITextIO stream = userSpace.Api.LookupByFD(dataFd)) {
                 data = stream.Read();
             }
 

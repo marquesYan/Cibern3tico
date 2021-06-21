@@ -609,6 +609,20 @@ namespace Linux.Sys.RunTime
             return Kernel.ProcTable.LookupPid(pid);
         }
 
+        public NetInterface LookupInterface(string name) {
+            EnsureIsRoot();
+
+            NetInterface netInterface = Kernel.NetTable.LookupName(name);
+
+            if (netInterface == null) {
+                throw new InvalidOperationException(
+                    $"no such interface: {name}"
+                );
+            }
+
+            return netInterface;
+        }
+
         protected List<Group> LookupUserGroups(User user) {
             string userId = user.Uid.ToString();
 

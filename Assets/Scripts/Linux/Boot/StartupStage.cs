@@ -210,6 +210,16 @@ namespace Linux.Boot
 
             Kernel.Fs.AddFrom(
                 binDir,
+                new Tcpdump(
+                    "/usr/bin/tcpdump",
+                    0, 0,
+                    Perm.FromInt(7, 5, 5),
+                    FileType.F_REG
+                )
+            );
+
+            Kernel.Fs.AddFrom(
+                binDir,
                 new Gpg(
                     "/usr/bin/gpg",
                     0, 0,
