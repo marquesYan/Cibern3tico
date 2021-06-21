@@ -215,6 +215,14 @@ public class AccountingInitBin : CompiledBin {
         userSpace.Api.CreateDir("/home/marco");
         userSpace.Api.CreateDir("/home/anne");
 
+        using (ITextIO stream = userSpace.Open("/home/marco/root.txt", AccessMode.O_WRONLY)) {
+            stream.WriteLine("Agora é real, você destrói!");
+        }
+
+        userSpace.Api.ChangeFileGroup("/home/marco/root.txt", 1001);
+        userSpace.Api.ChangeFileOwner("/home/marco/root.txt", 1001);
+        userSpace.Api.ChangeFilePermission("/home/marco/root.txt", Perm.FromInt(6, 6, 0));
+
         int pid, shadowFd, bufferFd;
 
         var buffer = new BufferedStream(AccessMode.O_RDWR);
