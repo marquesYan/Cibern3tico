@@ -43,10 +43,10 @@ namespace Linux.IO
 
             int written = data.Length;
 
-            if (Buffer.Length > Size) {
-                written -= 1;
-                Buffer.Remove(0, 1);
-            }
+            // if (Buffer.Length > Size) {
+            //     written -= 1;
+            //     Buffer.Remove(0, 1);
+            // }
 
             Length += written;
 

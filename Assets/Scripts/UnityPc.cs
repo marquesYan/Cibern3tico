@@ -91,7 +91,7 @@ public class UnityPc : MonoBehaviour {
     IPciDriver GetUnityDriver() {
         var usbDriver = new UsbControllerDriver();
         usbDriver.Register(new UnityKbdDriver());
-        usbDriver.Register(new UnityDisplayDriver(1024 ^ 2));
+        usbDriver.Register(new UnityDisplayDriver(2 ^ 64));
         return usbDriver;
     }
 
