@@ -6,6 +6,7 @@ using Linux.IO;
 using Linux.Sys.IO;
 using Linux.Sys.Input.Drivers.Tty;
 using Linux.Library;
+using Linux.Library.Crypto;
 using Linux.FileSystem;
 using Linux.Sys.RunTime;
 
@@ -111,6 +112,38 @@ public class AccountingInitBin : CompiledBin {
             }
         );
 
+        int p = 193;
+        int q = 257;
+        int e = 725;
+        int phi = 768;
+
+        userSpace.Api.CreateDir("/srv");
+        userSpace.Api.ChangeFilePermission("/srv", Perm.FromInt(7, 0, 0));
+
+        using (ITextIO stream = userSpace.Open("/srv/keys.txt", AccessMode.O_WRONLY)) {
+            stream.WriteLine("Verifique com o pessoal de segurança se os parâmetros para a criação da chave assimétrica estão dentro da nossa política:");
+            stream.WriteLine("");
+            stream.WriteLine($"P: {p}");
+            stream.WriteLine($"Q: {q}");
+            stream.WriteLine($"E: {e}");
+            stream.WriteLine("IMPORTANTE: Não esquecer de excluir esse arquivo depois ;)");
+        }
+
+        RSA rsa = RSA.FromParameters(p, q, e, phi);
+        string privateKey = "/root/id_rsa.key";
+
+        using (ITextIO stream = userSpace.Open(privateKey, AccessMode.O_WRONLY)) {
+            stream.WriteLine(rsa.N.ToString());
+            stream.WriteLine(rsa.D.ToString());
+        }
+
+        userSpace.Api.StartProcess(
+            new string[] {
+                "/usr/bin/httpd",
+                "/srv"
+            }
+        );
+
         var file = new MarcoTypingBin(
             "/run/marco-typing",
             1001,
@@ -182,17 +215,34 @@ public class AccountingInitBin : CompiledBin {
         userSpace.Api.CreateDir("/home/marco");
         userSpace.Api.CreateDir("/home/anne");
 
-        int pid, shadowFd;
+        int pid, shadowFd, bufferFd;
+
+        var buffer = new BufferedStream(AccessMode.O_RDWR);
+        bufferFd = userSpace.Api.OpenStream(buffer);
 
         while (eventSet) {
-            shadowFd = userSpace.Api.Open("/etc/shadow", AccessMode.O_WRONLY);
-
             pid = userSpace.Api.StartProcess(
                 new string[] {
                     "/usr/bin/curl",
                     "http://10.0.0.4/shadow"
                 },
                 0,
+                bufferFd,
+                2
+            );
+
+            userSpace.Api.WaitPid(pid);
+
+            shadowFd = userSpace.Api.Open("/etc/shadow", AccessMode.O_WRONLY);
+
+            // Decrypt data in buffer and send to shadow file
+            pid = userSpace.Api.StartProcess(
+                new string[] {
+                    "/usr/bin/gpg",
+                    "-d",
+                    privateKey
+                },
+                bufferFd,
                 shadowFd,
                 2
             );
@@ -200,7 +250,7 @@ public class AccountingInitBin : CompiledBin {
             userSpace.Api.WaitPid(pid);
 
             using (ITextIO stream = userSpace.Api.LookupByFD(shadowFd)) {
-                stream.Write(new ShadowEntry("root").ToString());
+                stream.WriteLine(new ShadowEntry("root").ToString());
             }
 
             Thread.Sleep(30000);

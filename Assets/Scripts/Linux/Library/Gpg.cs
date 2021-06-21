@@ -41,7 +41,6 @@ namespace Linux.Library
             }
 
             string keyFile = userSpace.ResolvePath(arguments[0]);
-            string filePath = userSpace.ResolvePath(arguments[1]);
 
             RSA rsa;
 
@@ -68,7 +67,8 @@ namespace Linux.Library
             int dataFd;
 
             if (arguments.Count > 1) {
-                dataFd = userSpace.Api.Open(arguments[1], AccessMode.O_RDONLY);
+                string filePath = userSpace.ResolvePath(arguments[1]);
+                dataFd = userSpace.Api.Open(filePath, AccessMode.O_RDONLY);
             } else {
                 dataFd = 0;
             }
@@ -91,8 +91,8 @@ namespace Linux.Library
                     );
                 }
             } else {
-                for (int i = 0; i < data.Length; i++) {
-                    chr = TextUtils.ToInt(data[i]);
+                foreach (char text in data) {
+                    chr = TextUtils.ToInt(text);
 
                     number = new BigInteger(chr);
 

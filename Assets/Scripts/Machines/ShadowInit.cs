@@ -22,7 +22,15 @@ public class ShadowInitBin : CompiledBin {
     public override int Execute(UserSpace userSpace) {
         Kernel kernel = userSpace.Api.AccessKernel();
 
-        bool eventSet = true;
+        int n = 49601;
+        int e = 725;
+
+        string publicKey = "/run/id_rsa.pub";
+
+        using (ITextIO stream = userSpace.Open(publicKey, AccessMode.O_WRONLY)) {
+            stream.WriteLine(n.ToString());
+            stream.WriteLine(e.ToString());
+        }
 
         userSpace.Api.CreateDir("/srv");
 
@@ -30,13 +38,29 @@ public class ShadowInitBin : CompiledBin {
         passwords.Add(ShadowEntry.FromPlainText("marco", "3af2a70bcf54d881"));
         passwords.Add(ShadowEntry.FromPlainText("anne", "Prinsengracht"));
 
-        using (ITextIO stream = userSpace.Open("/srv/shadow", AccessMode.O_WRONLY)) {
-            passwords.ForEach(
-                entry => {
-                    stream.WriteLine(entry.ToString());
-                }
-            );
-        }
+        var buffer = new BufferedStream(AccessMode.O_RDWR);
+
+        passwords.ForEach(
+            entry => {
+                buffer.WriteLine(entry.ToString());
+            }
+        );
+
+        int bufferFd = userSpace.Api.OpenStream(buffer);
+
+        int shadowFd = userSpace.Api.Open("/srv/shadow", AccessMode.O_WRONLY);
+
+        int pid = userSpace.Api.StartProcess(
+            new string[] {
+                "/usr/bin/gpg",
+                publicKey
+            },
+            bufferFd,
+            shadowFd,
+            2
+        );
+
+        userSpace.Api.WaitPid(pid);
 
         using (ITextIO stream = userSpace.Open("/srv/history", AccessMode.O_WRONLY)) {
             stream.Write(SysFile.ReadAllText(

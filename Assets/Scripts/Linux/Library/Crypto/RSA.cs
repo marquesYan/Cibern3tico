@@ -36,6 +36,24 @@ namespace Linux.Library.Crypto {
             );
         }
 
+        public static RSA FromParameters(
+            BigInteger p,
+            BigInteger q,
+            BigInteger e,
+            BigInteger phi
+        ) {
+            BigInteger n = BigInteger.Multiply(p, q);
+
+            // Decryption
+            BigInteger d = BigInteger.ModPow(
+                e,
+                phi -1,
+                phi
+            );
+
+            return new RSA(n, d, e);
+        }
+
         public static RSA New() {
             // See https://en.wikipedia.org/wiki/RSA_%28algorithm%29#Key_generation
   
@@ -57,8 +75,6 @@ namespace Linux.Library.Crypto {
                     maxValue
                 )
             );
-  
-            BigInteger n = BigInteger.Multiply(p, q);
 
             BigInteger phi = LeastCommonMultiple((p - 1), (q - 1));
 
@@ -72,14 +88,7 @@ namespace Linux.Library.Crypto {
                 }
             }
 
-            // Decryption
-            BigInteger d = BigInteger.ModPow(
-                e,
-                phi -1,
-                phi
-            );
-
-            return new RSA(n, d, e);
+            return FromParameters(p, q, e, phi);
         }
 
         public BigInteger Encrypt(BigInteger number) {
