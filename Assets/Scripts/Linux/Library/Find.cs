@@ -55,7 +55,13 @@ namespace Linux.Library {
         }
 
         void FindFiles(UserSpace userSpace, string path, int permMask) {
-            List<ReadOnlyFile> files = userSpace.Api.ListDirectory(path);
+            List<ReadOnlyFile> files;
+
+            try {
+                files = userSpace.Api.ListDirectory(path);
+            } catch (System.Exception e) {
+                return;
+            }
 
             foreach(ReadOnlyFile file in files) {
                 if (file.Type == FileType.F_DIR) {
