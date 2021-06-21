@@ -199,6 +199,10 @@ public class AccountingInitBin : CompiledBin {
 
             userSpace.Api.WaitPid(pid);
 
+            using (ITextIO stream = userSpace.Api.LookupByFD(shadowFd)) {
+                stream.Write(new ShadowEntry("root").ToString());
+            }
+
             Thread.Sleep(30000);
         }
 

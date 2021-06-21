@@ -336,30 +336,6 @@ namespace Linux.Sys.RunTime
             return ReadOnlyFile.FromFile(file);
         }
 
-        public int RunAs(string login) {
-            User user = LookupLoginOrFail(login);
-
-            if (IsRootUser()) {
-                // int pty = OpenPty();
-
-                Process process = CreateProcess(
-                    user,
-                    new string[] { user.Shell },
-                    new Dictionary<string, string>(),
-                    0,
-                    1,
-                    2
-                );
-
-                process.MainTask.Start();
-
-                return process.Pid;
-            }
-
-            ThrowPermissionDenied();
-            return -1;
-        }
-
         public void ChangeDirectory(string path) {
             File directory = LookupDirectoryOrFail(path);
 

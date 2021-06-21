@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.IO;
 using Linux.FileSystem;
@@ -15,6 +16,15 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
+            bool eventSet = true;
+
+            userSpace.Api.Trap(
+                ProcessSignal.SIGTERM,
+                (int[] args) => {
+                    eventSet = false;
+                }
+            );
+
             var parser = new ArgumentParser.GenericArgParser(
                 userSpace,
                 "Usage: {0} [USER]",
@@ -31,8 +41,10 @@ namespace Linux.Library
                 user = arguments[0];
             }
 
+            string password = userSpace.Input("Password: ", "");
+
             try {
-                int pid = userSpace.Api.RunAs(user);
+                int pid = userSpace.Api.RunLogin(user, password);
                 userSpace.Api.WaitPid(pid);
             } catch (System.Exception e) {
                 userSpace.Stderr.WriteLine($"su: {e.Message}");

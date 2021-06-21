@@ -36,11 +36,36 @@ namespace Linux.Library
                 "Listen and dump every packet received on IF interface"
             );
 
+            string pcap = null;
+            parser.AddArgument<string>(
+                "o|pcap=",
+                "Output file of packet capture data",
+                (string path) => pcap = path
+            );
+
+            string portStr = null;
+            bool notPort = false;
+            parser.AddArgument<string>(
+                "p|port=",
+                "Filter port",
+                (string port) => portStr = port
+            );
+
             List<string> arguments = parser.Parse();
 
             if (arguments.Count < 1) {
                 parser.ShowHelpInfo();
                 return 1;
+            }
+
+            string pcapPath = null;
+            if (pcap != null) {
+                pcapPath = userSpace.ResolvePath(pcap);
+            }
+
+            if (portStr.StartsWith("!")) {
+                notPort = true;
+                portStr = portStr.Substring(1);
             }
 
             NetInterface netInterface = userSpace.Api.LookupInterface(arguments[0]);
@@ -73,8 +98,35 @@ namespace Linux.Library
                                 case ProtocolIdentifier.UDP: {
                                     var udpLayer = (UdpPacket)ipLayer.NextLayer;
 
+                                    if (portStr != null) {
+                                        if (notPort) {
+                                            if (udpLayer.PeerPort.ToString() == portStr) {
+                                                return eventSet;
+                                            }
+
+                                            if (udpLayer.LocalPort.ToString() == portStr) {
+                                                return eventSet;
+                                            }
+                                        } else {
+                                            if (udpLayer.PeerPort.ToString() != portStr) {
+                                                return eventSet;
+                                            }
+
+                                            if (udpLayer.LocalPort.ToString() != portStr) {
+                                                return eventSet;
+                                            }
+                                        }
+                                    }
+
                                     content += $"\tudp local: {udpLayer.LocalPort} ";
                                     content += $"peer: {udpLayer.PeerPort}\n";
+
+                                    if (pcapPath != null) {
+                                        using (ITextIO stream = userSpace.Open(pcapPath, AccessMode.O_APONLY)) {
+                                            stream.Write(udpLayer.Message);
+                                        }
+                                    }
+
                                     break;
                                 }
                             }
