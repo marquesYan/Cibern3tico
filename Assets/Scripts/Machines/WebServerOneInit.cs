@@ -24,7 +24,7 @@ public class WebServerOneBin : CompiledBin {
             "renan",
             1000, 1000,
             "",
-            "/home/user",
+            "/home/renan",
             "/usr/bin/bash"
         ));
 
@@ -78,6 +78,8 @@ public class WebServerOneBin : CompiledBin {
             stream.WriteLine("Hmm...não é que o cara é bom mesmo?!");
             stream.WriteLine("");
             stream.WriteLine("Dê uma investigada no servidor 10.0.0.5, parece que os funcionários usam ele remotamente na empresa...");
+            stream.WriteLine("");
+            stream.WriteLine("E ah, uma funcionária nossa está distribuindo tickets para um museu, talvez te interessa: https://www.annefrank.org/en/");
         }
 
         return 0;
