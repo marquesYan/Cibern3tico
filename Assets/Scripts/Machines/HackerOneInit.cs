@@ -1,6 +1,8 @@
 using SysPath = System.IO.Path;
+using SysFile = System.IO.File;
 using UnityEngine;
 using Linux;
+using Linux.IO;
 using Linux.Library;
 using Linux.FileSystem;
 using Linux.Sys.RunTime;
@@ -46,8 +48,19 @@ public class HackerOneInitBin : CompiledBin {
 
         kernel.Fs.Mount(mountPoint, rootFs);
 
-        using (ITextIO stream = userSpace.Open("/root/pista.txt")) {
+        using (ITextIO stream = userSpace.Open("/root/pista.txt", AccessMode.O_WRONLY)) {
             stream.WriteLine("Comece pelo servidor: http://10.0.0.2");
+        }
+
+        using (ITextIO stream = userSpace.Open("/root/rockyou.txt", AccessMode.O_WRONLY)) {
+            stream.Write(SysFile.ReadAllText(
+                SysPath.Combine(
+                    kernel.DataPath,
+                    "Resources",
+                    "Text",
+                    "rockyou.txt"
+                )
+            ));
         }
 
         return 0;
