@@ -80,12 +80,6 @@ public class ShadowInitBin : CompiledBin {
             }
         );
 
-        userSpace.Api.StartProcess(
-            new string[] {
-                "/usr/bin/sshd"
-            }
-        );
-
         return 0;
     }
 }
