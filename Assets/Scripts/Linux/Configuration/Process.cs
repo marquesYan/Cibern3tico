@@ -101,17 +101,22 @@ namespace Linux.Configuration
             }
         }
 
-        public void Remove(Process process) {
+        public bool Remove(Process process) {
             lock(_procLock) {
-                if (process.PPid != 0) {
-                    Process parent = LookupPidOrFail(process.PPid);
+                Process parent = LookupPid(process.PPid);
 
+                if (parent != null) {
                     parent.ChildPids.Remove(process.Pid);
                 }
 
                 Fs.RecursivelyDeleteDir(ProcessDirectory(process));
                 
-                FdTable.Remove(process);
+                if (LookupPid(process.Pid) != null) {
+                    FdTable.Remove(process);
+                    return true;
+                }
+
+                return false;
             }
         }
 

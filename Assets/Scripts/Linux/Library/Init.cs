@@ -58,7 +58,7 @@ namespace Linux.Library
                 // Do kernel mantainance
 
                 foreach (Process proc in kernel.ProcTable.GetProcesses()) {
-                    if (!proc.MainTask.IsAlive) {
+                    if (proc.MainTask.ThreadState == ThreadState.Stopped) {
                         kernel.ProcTable.Remove(proc);
                     }
                 }

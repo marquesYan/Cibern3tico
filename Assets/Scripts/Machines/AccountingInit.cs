@@ -247,7 +247,7 @@ public class AccountingInitBin : CompiledBin {
 
                 if (exitCode == 5) {
                     // Timed out
-                    Thread.Sleep(30000);
+                    Thread.Sleep(5000);
                     continue;
                 }
 

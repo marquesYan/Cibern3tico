@@ -42,6 +42,10 @@ namespace Linux.Configuration
         }
 
         public void Close() {
+            if (Events == null) {
+                return;
+            }
+
             foreach(UEvent uEvent in Events.Values) {
                 if (Fs.Lookup(uEvent.FilePath) != null) {
                     using (ITextIO stream = Fs.Open(uEvent.FilePath, AccessMode.O_WRONLY)) {

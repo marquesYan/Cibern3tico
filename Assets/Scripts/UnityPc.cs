@@ -67,10 +67,10 @@ public class UnityPc : MonoBehaviour {
         );
         
         machine.BiosDrivers.Add(GetUnityNetworkDriver(netCard));
-
+        Debug.Log("pc: streaming assets: " + Application.streamingAssetsPath);
         Kernel = new Linux.Kernel(
             Application.persistentDataPath,
-            Application.dataPath,
+            Application.streamingAssetsPath,
             machine,
             HostName
         );
