@@ -21,7 +21,7 @@ public class WebServerOneBin : CompiledBin {
         Kernel kernel = userSpace.Api.AccessKernel();
 
         kernel.UsersDb.Add(new User(
-            "user",
+            "renan",
             1000, 1000,
             "",
             "/home/user",
@@ -29,17 +29,18 @@ public class WebServerOneBin : CompiledBin {
         ));
 
         kernel.ShadowDb.Add(
-            ShadowEntry.FromPlainText("user", "senha")
+            ShadowEntry.FromPlainText("renan", "senha")
         );
 
-        userSpace.Api.CreateDir("/home/user");
+        userSpace.Api.CreateDir("/home/renan");
         userSpace.Api.CreateDir("/srv");
 
         using (ITextIO stream = userSpace.Open("/srv/index.html", AccessMode.O_WRONLY)) {
-            stream.WriteLine("<html>");
-            stream.WriteLine("  <head>");
-            stream.WriteLine("  </head>");
-            stream.WriteLine("</html>");
+            stream.WriteLine("tarefas concluídas:");
+            stream.WriteLine("\t- [X] atualizar o sistema");
+            stream.WriteLine("\t- [X] aplicar patches de segurança");
+            stream.WriteLine("\t- [ ] comprar um disco novo");
+            stream.WriteLine("\t- [ ] aplicar quota no diretório do Renan");
         }
 
         userSpace.Api.StartProcess(
@@ -72,6 +73,12 @@ public class WebServerOneBin : CompiledBin {
             "/usr/bin/makemerich",
             Perm.FromInt(4, 7, 5, 5)
         );
+
+        using (ITextIO stream = userSpace.Open("/root/pista.txt", AccessMode.O_WRONLY)) {
+            stream.WriteLine("Hmm...não é que o cara é bom mesmo?!");
+            stream.WriteLine("");
+            stream.WriteLine("Dê uma investigada no servidor 10.0.0.5, parece que os funcionários usam ele remotamente na empresa...");
+        }
 
         return 0;
     }

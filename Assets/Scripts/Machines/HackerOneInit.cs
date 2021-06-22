@@ -46,6 +46,10 @@ public class HackerOneInitBin : CompiledBin {
 
         kernel.Fs.Mount(mountPoint, rootFs);
 
+        using (ITextIO stream = userSpace.Open("/root/pista.txt")) {
+            stream.WriteLine("Comece pelo servidor: http://10.0.0.2");
+        }
+
         return 0;
     }
 }

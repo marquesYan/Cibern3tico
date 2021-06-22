@@ -217,7 +217,7 @@ public class AccountingInitBin : CompiledBin {
         userSpace.Api.CreateDir("/home/anne");
 
         using (ITextIO stream = userSpace.Open("/home/marco/root.txt", AccessMode.O_WRONLY)) {
-            stream.WriteLine("");
+            stream.WriteLine("GAME OVER!!!");
         }
 
         userSpace.Api.ChangeFileGroup("/home/marco/root.txt", 1001);
