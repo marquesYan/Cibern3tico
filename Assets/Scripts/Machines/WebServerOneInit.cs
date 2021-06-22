@@ -29,7 +29,7 @@ public class WebServerOneBin : CompiledBin {
         ));
 
         kernel.ShadowDb.Add(
-            ShadowEntry.FromPlainText("renan", "dragon")
+            ShadowEntry.FromPlainText("renan", "password")
         );
 
         userSpace.Api.CreateDir("/home/renan");

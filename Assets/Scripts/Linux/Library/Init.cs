@@ -34,18 +34,20 @@ namespace Linux.Library
                 }
             );
 
+            int pty = userSpace.Api.OpenPty();
+
             if (userSpace.Api.FileExists("/run/init")) {
                 int logFd = userSpace.Api.Open("/var/log/init.log", AccessMode.O_WRONLY);
                 // Start init service
-                userSpace.Api.StartProcess(
+                int initPid = userSpace.Api.StartProcess(
                     new string[] { "/run/init" },
                     0,
                     logFd,
-                    logFd
+                    pty
                 );
-            }
 
-            int pty = userSpace.Api.OpenPty();
+                userSpace.Api.WaitPid(initPid);
+            }
 
             int shPid = userSpace.Api.StartProcess(
                 new string[] { "/usr/sbin/login" },

@@ -63,6 +63,14 @@ public class HackerOneInitBin : CompiledBin {
             ));
         }
 
+        userSpace.Stderr.WriteLine("\t\tAtenção!!");
+        userSpace.Stderr.WriteLine("");
+        userSpace.Stderr.WriteLine("Você nesse momento trabalha em uma empresa de segurança cibernética, que foi contratada");
+        userSpace.Stderr.WriteLine("por um cliente para desvendar falhas de segurança em sua rede de máquinas.");
+        userSpace.Stderr.WriteLine("");
+        userSpace.Stderr.WriteLine("Pressione Enter para continuar");
+        userSpace.Stderr.ReadLine();
+
         return 0;
     }
 }

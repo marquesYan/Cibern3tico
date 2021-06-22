@@ -18,10 +18,19 @@ namespace Linux.Library
         ) : base(absolutePath, uid, gid, permission, type) { }
 
         public override int Execute(UserSpace userSpace) {
+            bool eventSet = true;
+
+            userSpace.Api.Trap(
+                ProcessSignal.SIGTERM,
+                (int[] args) => {
+                    eventSet = false;
+                }
+            );
+
             var parser = new GenericArgParser(
                 userSpace,
                 "Usage: {0} [-w WORDLIST] URL",
-                "Remove (unlink) the FILEs"
+                "Crack ssh passwords using a wordlist"
             );
 
             string wordlist = null;
@@ -59,6 +68,10 @@ namespace Linux.Library
                 foreach (string password in stream.ReadLines()) {
                     if (string.IsNullOrEmpty(password)) {
                         continue;
+                    }
+
+                    if (!eventSet) {
+                        return 5;
                     }
 
                     buffer.WriteLine(password);
