@@ -162,6 +162,8 @@ namespace Linux.Boot
                 "/usr/bin",
                 "/usr/share",
                 "/usr/lib",
+
+                "/var/log"
             };
 
             string[] dir555 = new string[] {

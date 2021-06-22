@@ -63,7 +63,7 @@ namespace Linux.Library
                 pcapPath = userSpace.ResolvePath(pcap);
             }
 
-            if (portStr.StartsWith("!")) {
+            if (portStr != null && portStr.StartsWith("!")) {
                 notPort = true;
                 portStr = portStr.Substring(1);
             }

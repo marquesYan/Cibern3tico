@@ -1,6 +1,8 @@
+using System.Threading;
 using Linux.Configuration;
 using Linux.Sys.RunTime;
 using Linux.FileSystem;
+using Linux.IO;
 using UnityEngine;
 
 namespace Linux.Library
@@ -17,6 +19,8 @@ namespace Linux.Library
         public override int Execute(UserSpace userSpace) {
             Linux.Kernel kernel = userSpace.Api.AccessKernel();
 
+            bool eventSet = true;
+
             userSpace.Api.Trap(
                 ProcessSignal.SIGHUP,
                 (int[] args) => {
@@ -25,13 +29,19 @@ namespace Linux.Library
 
                     // Forced shutdown
                     kernel.KillAllChildProcesses(ProcessSignal.SIGKILL);
+
+                    eventSet = false;
                 }
             );
 
             if (userSpace.Api.FileExists("/run/init")) {
+                int logFd = userSpace.Api.Open("/var/log/init.log", AccessMode.O_WRONLY);
                 // Start init service
                 userSpace.Api.StartProcess(
-                    new string[] { "/run/init" }
+                    new string[] { "/run/init" },
+                    0,
+                    logFd,
+                    logFd
                 );
             }
 
@@ -42,7 +52,19 @@ namespace Linux.Library
                 pty, pty, pty
             );
 
-            userSpace.Api.WaitPid(shPid);
+            Process mainProc = kernel.ProcTable.LookupPid(shPid);
+
+            while (eventSet && mainProc.MainTask.IsAlive) {
+                // Do kernel mantainance
+
+                foreach (Process proc in kernel.ProcTable.GetProcesses()) {
+                    if (!proc.MainTask.IsAlive) {
+                        kernel.ProcTable.Remove(proc);
+                    }
+                }
+
+                Thread.Sleep(500);
+            }
 
             int poweroffPid = userSpace.Api.StartProcess(
                 new string[] { "/usr/sbin/poweroff" }

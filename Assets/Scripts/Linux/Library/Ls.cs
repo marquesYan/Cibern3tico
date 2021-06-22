@@ -82,6 +82,10 @@ namespace Linux.Library {
 
                     buffer.Append(file.Name);
 
+                    if (file.Type == FileType.F_SYL) {
+                        buffer.AppendFormat(" -> {0}", file.SourceFile.Path);
+                    }
+
                     buffer.AppendLine();
                 } else {
                     buffer.Append(file.Name);

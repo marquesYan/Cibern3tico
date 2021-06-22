@@ -37,11 +37,25 @@ namespace Linux.Library
                 "Interact with a http server"
             );
 
+            string timeoutStr = null;
+            parser.AddArgument<string>(
+                "t|timeout=",
+                "Maximum time to wait for response",
+                (string timeout) => timeoutStr = timeout
+            );
+
             List<string> arguments = parser.Parse();
 
             if (arguments.Count < 1) {
                 parser.ShowHelpInfo();
                 return 1;
+            }
+
+            int timeoutSecs = -1;
+
+            if (timeoutStr != null && !int.TryParse(timeoutStr, out timeoutSecs)) {
+                userSpace.Stderr.WriteLine("curl: Timeout must be a number");
+                return 2;
             }
 
             IPAddress outAddress = userSpace.Api.GetIPAddresses()[0];
@@ -58,7 +72,9 @@ namespace Linux.Library
             bool responseRcv = false;
 
             socket.ListenInput((UdpPacket packet) => {
-                userSpace.Print(packet.Message, "");
+                if (eventSet) {
+                    userSpace.Print(packet.Message, "");
+                }
 
                 responseRcv = true;
 
@@ -71,8 +87,26 @@ namespace Linux.Library
                 url.PathAndQuery.TrimStart('/')
             );
 
-            while (eventSet && !responseRcv) {
+            DateTime start = DateTime.Now;
+            bool timedOut = false;
+
+            int elapsed;
+
+            while (eventSet && !responseRcv && !timedOut) {
                 Thread.Sleep(200);
+
+                if (timeoutSecs > 0) {
+                    elapsed = (int)DateTime.Now.Subtract(start).TotalSeconds;
+                    if (timeoutSecs < elapsed) {
+                        timedOut = true;
+                    }
+                }
+            }
+
+            eventSet = false;
+
+            if (timedOut) {
+                return 5;
             }
 
             return 0;

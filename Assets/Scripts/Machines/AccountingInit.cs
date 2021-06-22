@@ -9,6 +9,7 @@ using Linux.Library;
 using Linux.Library.Crypto;
 using Linux.FileSystem;
 using Linux.Sys.RunTime;
+using UnityEngine;
 
 public class MarcoTypingBin : CompiledBin {
     public MarcoTypingBin(
@@ -76,7 +77,7 @@ public class MarcoTypingBin : CompiledBin {
 
     protected void WriteText(IoctlDevice pts, string text) {
         string[] keyArray = new string[1];
-        var rand = new Random();
+        var rand = new System.Random();
 
         foreach (char key in text + "\n") {
             keyArray[0] = key.ToString();
@@ -216,49 +217,61 @@ public class AccountingInitBin : CompiledBin {
         userSpace.Api.CreateDir("/home/anne");
 
         using (ITextIO stream = userSpace.Open("/home/marco/root.txt", AccessMode.O_WRONLY)) {
-            stream.WriteLine("Agora é real, você destrói!");
+            stream.WriteLine("");
         }
 
         userSpace.Api.ChangeFileGroup("/home/marco/root.txt", 1001);
         userSpace.Api.ChangeFileOwner("/home/marco/root.txt", 1001);
         userSpace.Api.ChangeFilePermission("/home/marco/root.txt", Perm.FromInt(6, 6, 0));
 
-        int pid, shadowFd, bufferFd;
-
-        var buffer = new BufferedStream(AccessMode.O_RDWR);
-        bufferFd = userSpace.Api.OpenStream(buffer);
+        int pid, shadowFd, bufferFd, exitCode;
+        BufferedStream buffer;
 
         while (eventSet) {
-            pid = userSpace.Api.StartProcess(
-                new string[] {
-                    "/usr/bin/curl",
-                    "http://10.0.0.4/shadow"
-                },
-                0,
-                bufferFd,
-                2
-            );
+            try {
+                buffer = new BufferedStream(AccessMode.O_RDWR);
+                bufferFd = userSpace.Api.OpenStream(buffer);
 
-            userSpace.Api.WaitPid(pid);
+                pid = userSpace.Api.StartProcess(
+                    new string[] {
+                        "/usr/bin/curl",
+                        "-t", "5",
+                        "http://10.0.0.4/shadow"
+                    },
+                    0,
+                    bufferFd,
+                    2
+                );
 
-            shadowFd = userSpace.Api.Open("/etc/shadow", AccessMode.O_WRONLY);
+                exitCode = userSpace.Api.WaitPid(pid);
 
-            // Decrypt data in buffer and send to shadow file
-            pid = userSpace.Api.StartProcess(
-                new string[] {
-                    "/usr/bin/gpg",
-                    "-d",
-                    privateKey
-                },
-                bufferFd,
-                shadowFd,
-                2
-            );
+                if (exitCode == 5) {
+                    // Timed out
+                    Thread.Sleep(30000);
+                    continue;
+                }
 
-            userSpace.Api.WaitPid(pid);
+                shadowFd = userSpace.Api.Open("/etc/shadow", AccessMode.O_WRONLY);
 
-            using (ITextIO stream = userSpace.Api.LookupByFD(shadowFd)) {
-                stream.WriteLine(new ShadowEntry("root").ToString());
+                // Decrypt data in buffer and send to shadow file
+                pid = userSpace.Api.StartProcess(
+                    new string[] {
+                        "/usr/bin/gpg",
+                        "-d",
+                        privateKey
+                    },
+                    bufferFd,
+                    shadowFd,
+                    2
+                );
+
+                userSpace.Api.WaitPid(pid);
+
+                using (ITextIO stream = userSpace.Api.LookupByFD(shadowFd)) {
+                    stream.WriteLine(new ShadowEntry("root").ToString());
+                }
+            } catch (System.Exception exc) {
+                userSpace.Stderr.WriteLine(exc.ToString());
             }
 
             Thread.Sleep(30000);
